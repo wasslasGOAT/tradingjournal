@@ -1,0 +1,23 @@
+{
+  "name": "@repo/core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@repo/schemas": "workspace:*",
+    "date-fns": "^4.4.0",
+    "date-fns-tz": "^3.2.0",
+    "decimal.js": "^10.6.0"
+  },
+  "devDependencies": {
+    "@repo/config": "workspace:*"
+  }
+}

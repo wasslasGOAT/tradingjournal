@@ -1,0 +1,168 @@
+name: CI
+
+# T9 (M0) — CLAUDE.md, ARCHITECTURE §11, ADR-016/020.
+# MVP sans apps/server (ADR-016) : rien à déployer ici, seulement vérifier le monorepo.
+# Dev courant = Supabase cloud (ADR-020) ; la CI utilise Supabase local (Docker du runner)
+# pour tout ce qui touche à la base (job `db`).
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Annule les runs obsolètes du même PR/branche quand de nouveaux commits arrivent.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Permissions minimales : lecture seule, aucun job ne publie ni ne commente.
+permissions:
+  contents: read
+
+jobs:
+  # Lint, typecheck, tests unitaires (packages/core, packages/schemas, packages/db,
+  # packages/i18n, packages/ui, apps/app), secrets, build web. Indépendant du job `db`
+  # (aucune des deux tâches n'a besoin de l'autre) : les deux tournent en parallèle.
+  quality:
+    name: Lint, typecheck, tests, build web
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      # `fetch-depth: 0` (historique complet, pas seulement le dernier commit) :
+      # requis par l'étape « Check secrets (history) » ci-dessous
+      # (scripts/check-secrets.mjs --history rejoue `git log -p --all`).
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      # Version pnpm lue depuis `packageManager` (package.json racine) : aucune version
+      # à dupliquer ici.
+      - name: Setup pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Format check
+        run: pnpm format:check
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Unit tests
+        run: pnpm test
+
+      - name: Check secrets (source)
+        run: pnpm check:secrets
+
+      # Historique complet (voir `fetch-depth: 0` ci-dessus) : détecte un secret
+      # committé puis supprimé depuis (scripts/check-secrets.mjs, mode --history).
+      - name: Check secrets (history)
+        run: node scripts/check-secrets.mjs --history
+
+      # `turbo run build` → seul `apps/app` définit un script `build`
+      # (`expo export --platform web` → `apps/app/dist`, voir turbo.json). Pas de variables
+      # `EXPO_PUBLIC_SUPABASE_*` factices ici : `apps/app/lib/supabase/client.ts` ne lit ces
+      # variables qu'au runtime (`getSupabaseClientState()`, jamais à l'évaluation d'un
+      # module) et renvoie proprement `{ status: 'missing-env' }` sans lever d'exception ;
+      # le build web (sortie `web.output: 'single'`, aucun rendu statique par route) n'a
+      # donc besoin d'aucune variable Supabase pour réussir.
+      - name: Build (web export)
+        run: pnpm build
+
+      # Deuxième passage volontaire : `apps/app/dist` (bundle web exporté ci-dessus) doit
+      # être scanné comme le reste du dépôt, au cas où une variable EXPO_PUBLIC_* fautive
+      # ou une valeur sensible se serait glissée dans le JS embarqué (scripts/check-secrets.mjs
+      # ne saute pas les dossiers `dist`, voir son commentaire).
+      - name: Check secrets (build output)
+        run: pnpm check:secrets
+
+  # Migrations, types générés, tests RLS — contre Supabase local (Docker du runner),
+  # jamais contre le projet cloud « dev » (ADR-020). Job indépendant de `quality`.
+  db:
+    name: Supabase (migrations, types, RLS)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Installe la version de la CLI Supabase déclarée en devDependency
+      # (`supabase` dans package.json racine, résolue via pnpm-lock.yaml) : même version
+      # qu'en local, pas de dérive.
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520 # v3.0.0
+
+      # Démarre la stack Supabase locale (Postgres, Auth, PostgREST, Storage…) : applique
+      # `supabase/migrations/**` et `supabase/seed.sql` une première fois.
+      - name: Start Supabase (local, Docker du runner)
+        run: supabase start
+
+      # Reset explicite : rejoue les migrations + le seed sur une base propre, à
+      # l'identique de `pnpm db:reset` en local (sans le `--linked` destructif utilisé sur
+      # le poste dev, ADR-020 — la CI n'a jamais accès au projet cloud).
+      - name: Reset local database (migrations + seed)
+        run: supabase db reset --local
+
+      # `packages/db/src/database.types.ts` est pour l'instant écrit à la main (aucun
+      # projet Supabase cloud « dev » lié au moment de cette tâche — voir l'en-tête du
+      # fichier et ADR-020) : cette comparaison peut donc échouer tant qu'il n'a pas été
+      # régénéré pour de vrai (par l'utilisateur, après `supabase link` puis
+      # `pnpm db:types:local` — mêmes types que ceux comparés ici en CI ; `pnpm db:types`
+      # (`--linked`) cible le projet cloud « dev » et peut légèrement diverger, voir
+      # docs/RELEASE.md). C'est attendu, pas un bug de ce workflow.
+      # Choix volontaire : comparer aux types générés depuis la base *locale* rejouée à
+      # partir de `supabase/migrations/**` (la source de vérité, ARCHITECTURE §7), pas
+      # depuis le projet cloud — et garder l'étape bloquante (`continue-on-error: false`,
+      # valeur par défaut, explicitée ci-dessous) pour ne jamais masquer un futur écart réel
+      # entre migrations et types une fois le fichier régénéré pour de bon.
+      - name: Verify packages/db/src/database.types.ts is up to date with migrations
+        continue-on-error: false
+        run: |
+          set -euo pipefail
+          supabase gen types typescript --local --schema public > "$RUNNER_TEMP/database.types.generated.ts"
+          if ! diff -u packages/db/src/database.types.ts "$RUNNER_TEMP/database.types.generated.ts"; then
+            echo "::error::packages/db/src/database.types.ts ne correspond pas aux types générés depuis supabase/migrations (schéma public, base locale). Régénérer avec 'pnpm db:types:local' (base Supabase locale, comme cette étape CI) ou aligner le fichier écrit à la main — voir le commentaire en tête de packages/db/src/database.types.ts et docs/RELEASE.md."
+            exit 1
+          fi
+
+      # Tests RLS (supabase/tests/**/*.test.ts, ex. app_meta.rls.test.ts) : la config
+      # supabase/tests/vitest.config.ts n'active pas passWithNoTests (contrairement au
+      # vitest.config.ts racine), donc ce job échoue explicitement si aucun test RLS
+      # n'existe — jamais de faux vert silencieux sur "no test files found".
+      # SUPABASE_URL / SUPABASE_ANON_KEY : lues depuis `supabase status -o env`
+      # (variables renommées pour matcher supabase/tests/.env.example) plutôt que codées
+      # en dur, afin de suivre les ports/clés réels de cette instance locale.
+      - name: Run RLS tests
+        run: |
+          set -euo pipefail
+          supabase status -o env \
+            --override-name api.url=SUPABASE_URL \
+            --override-name auth.anon_key=SUPABASE_ANON_KEY \
+            > "$RUNNER_TEMP/supabase-status.env"
+          set -a
+          source "$RUNNER_TEMP/supabase-status.env"
+          set +a
+          pnpm test:rls

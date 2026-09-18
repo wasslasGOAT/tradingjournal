@@ -1,0 +1,39 @@
+# deps & builds
+node_modules/
+.turbo/
+dist/
+web-build/
+coverage/
+*.tsbuildinfo
+
+# expo / native (générés par prebuild)
+.expo/
+apps/app/ios/
+apps/app/android/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# env (seuls les .env.example sont versionnés)
+.env
+.env.*
+!.env.example
+
+# supabase
+supabase/.temp/
+supabase/.branches/
+
+# tests
+playwright-report/
+test-results/
+blob-report/
+
+# os / editors
+.DS_Store
+Thumbs.db
+*.log
+.idea/
+.vscode/*
+!.vscode/extensions.json

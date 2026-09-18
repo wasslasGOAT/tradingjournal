@@ -1,0 +1,13 @@
+packages:
+  - apps/*
+  - packages/*
+
+# Metro / EAS résolvent mal les liens symboliques pnpm : node_modules à plat.
+nodeLinker: hoisted
+
+# Paquets autorisés à exécuter leurs scripts d'installation.
+allowBuilds:
+  esbuild: true
+  supabase: true
+  # eslint-import-resolver-typescript (via eslint-config-expo) : résolveur natif (Rust/NAPI).
+  unrs-resolver: true

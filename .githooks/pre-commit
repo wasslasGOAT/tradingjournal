@@ -1,0 +1,14 @@
+#!/bin/sh
+# .githooks/pre-commit
+#
+# Bloque un commit si des secrets se sont glissés dans les fichiers indexés
+# (CLAUDE.md : « aucun secret côté client » ; ADR-016/020). Ne dépend d'aucun
+# paquet npm : seul Node (>= 24, déjà requis par le monorepo) est nécessaire.
+#
+# Activé via `pnpm install` (script `prepare` racine → `git config
+# core.hooksPath .githooks`). sh POSIX pur : fonctionne sous Git Bash sur
+# Windows comme sous macOS/Linux.
+
+set -e
+
+node "$(git rev-parse --show-toplevel)/scripts/check-secrets.mjs" --staged

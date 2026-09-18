@@ -1,0 +1,13 @@
+{
+  // Fichiers exécutés sous Node (tests Vitest, config Playwright/Vitest, helpers e2e) —
+  // contrairement au reste de ce package (embarqué sous Hermes, iOS/Android/web) — donc
+  // seuls eux ont besoin des globals Node (`Buffer`, `__dirname`, imports `node:*`) via
+  // `types: ["node"]` (correctif revue M0 boucle 2 — Mineur 5 : les exposer dans
+  // `tsconfig.json` compilerait puis planterait sous Hermes).
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"]
+  },
+  "include": ["**/*.test.ts", "e2e/**/*.ts", "vitest.config.mts", "playwright.config.ts"],
+  "exclude": ["node_modules", "dist", "ios", "android"]
+}

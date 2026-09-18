@@ -1,0 +1,11 @@
+-- Seed de développement (exécuté par `supabase db reset` après les migrations).
+--
+-- Rien pour l'instant : `app_meta.schema_version` est inséré directement dans sa
+-- migration (donnée de référence, pas une donnée de démo) — voir
+-- supabase/migrations/20260917172440_app_meta.sql.
+--
+-- Les données de démo (utilisateur démo, comptes, jeu de trades de mars 2026,
+-- entrées de journal) arrivent avec les tables correspondantes : `profiles`,
+-- `preferences`, `accounts`, `cash_movements` en M2 ; `instruments`, `executions`,
+-- `trades`, `tags`, `trade_tags`, `trade_notes`, `attachments` en M4.
+-- Contenu exact : docs/DATA_MODEL.md § Données de démo.

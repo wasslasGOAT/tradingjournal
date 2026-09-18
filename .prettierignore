@@ -1,0 +1,6 @@
+pnpm-lock.yaml
+docs/
+.claude/
+*.md
+supabase/migrations/
+packages/db/src/database.types.ts

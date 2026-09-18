@@ -1,0 +1,50 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+    "verbatimModuleSyntax": true,
+    // Résout `./x` vers `x.native.ts(x)` avant `x.ts(x)`, comme Metro pour iOS/Android
+    // (T6). Pas de suffixe `.web` ici : sur le web, Metro préfère `x.web.ts(x)` quand il
+    // existe, et retombe sur le fichier sans suffixe sinon (jamais sur `x.native.ts(x)`) —
+    // `tsc` ne peut résoudre qu'une seule variante par import, donc cette passe (unique,
+    // ce `moduleSuffixes`) type-vérifie `x.native.ts(x)`/le fichier sans suffixe comme
+    // *cible résolue d'un import* `./x`. Les fichiers `x.web.ts(x)` sont, eux, quand même
+    // type-vérifiés : `include` ci-dessous les liste individuellement (`**/*.tsx`,
+    // `**/*.ts`), donc `tsc` les vérifie comme fichiers autonomes (erreurs internes au
+    // fichier) — mais jamais comme cible résolue d'un import `./x` puisque `moduleSuffixes`
+    // ne tente jamais `.web` ici (correctif revue M0 boucle 2 — Mineur 4 : `expo export
+    // --platform web` ne fait, lui, aucune vérification de types — seulement Metro/Babel
+    // qui retire les annotations sans les valider ; ce n'est donc pas non plus lui qui
+    // couvre cette branche-là — voir README).
+    "moduleSuffixes": [".native", ""],
+    "paths": {
+      "@/*": ["./*"]
+    }
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "**/*.mts",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts",
+    "nativewind-env.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "ios",
+    "android",
+    // Vérifiés séparément par `tsconfig.test.json` (correctif revue M0 boucle 2 — Mineur 5) :
+    // exécutés sous Node (contrairement au reste de ce package, embarqué sous Hermes), ils ont
+    // besoin de `types: ["node"]` (`Buffer`, `__dirname`, imports `node:*`) sans exposer ces
+    // globals au code embarqué.
+    "**/*.test.ts",
+    "e2e/**",
+    "vitest.config.mts",
+    "playwright.config.ts"
+  ]
+}

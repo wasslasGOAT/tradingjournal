@@ -1,0 +1,42 @@
+appId: com.edgebook.app
+---
+# Écran Hello (M0/T6-T10). Sans Java ni émulateur/simulateur sur ce poste, ce
+# flow n'a pas pu être exécuté ici — `pnpm e2e:mobile` vérifie la présence de
+# `maestro` sur le PATH et échoue avec un message clair sinon (voir
+# `apps/app/scripts/e2e-mobile.mjs`). À lancer plus tard (`maestro test
+# .maestro/hello.yaml`), une fois un simulateur/émulateur disponible, avec
+# l'app démarrée via Expo Go ou un build de dev EAS (agent `release`).
+- launchApp
+
+- assertVisible:
+    id: 'hello-screen'
+
+# Laisse le temps au squelette de disparaître (chargement Supabase, ou
+# détection immédiate de configuration manquante) avant de vérifier l'état
+# final — pas d'attente arbitraire, on attend l'état.
+- extendedWaitUntil:
+    notVisible:
+      id: 'hello-skeleton'
+    timeout: 15000
+
+# Deux issues possibles selon qu'`apps/app/.env` (variables build-time
+# EXPO_PUBLIC_*) pointe vers un vrai projet Supabase cloud de dev (ADR-020) :
+# - configuration absente → état « Configuration manquante » (`hello-config-error`) ;
+# - configurée → `app_meta.schema_version` affiché (valeur seedée : "1").
+- runFlow:
+    when:
+      visible:
+        id: 'hello-config-error'
+    commands:
+      - assertVisible:
+          id: 'hello-heading'
+
+- runFlow:
+    when:
+      visible:
+        id: 'hello-content'
+    commands:
+      - assertVisible:
+          id: 'hello-schema-version'
+      - assertVisible:
+          text: '1'

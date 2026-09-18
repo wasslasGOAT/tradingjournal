@@ -10,6 +10,7 @@ Fonctions cœur : import/synchro des trades, dashboard, calendrier P&L/psycholog
 analytics, règles & checklists, coach IA avec score de performance.
 
 ## Où lire avant d'agir
+0. `docs/REPRISE.md` — point de reprise : où on en est, ce qui reste, comment relancer l'environnement.
 1. `docs/ARCHITECTURE.md` — la carte du système (lire en entier au premier démarrage).
 2. `docs/DATA_MODEL.md` — schéma de données et conventions.
 3. `docs/ROADMAP.md` — phases, tâches et critères de fin. **Travailler phase par phase.** On construit d'abord le **MVP** (M0–M9, périmètre : ARCHITECTURE §0).

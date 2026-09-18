@@ -26,15 +26,15 @@ Parallélisation possible : M3 (core) peut démarrer en même temps que M1 et M2
 Réf. : §0, §3, §4, §11 · Release : `docs/RELEASE.md`
 Agents : `release`, `database`, `app-ui`, `core-engine` — lancer avec `/phase M0`
 
-- [ ] `git init`, dépôt GitHub privé — dépôt local + remote `origin` configurés ; **premier commit/push non fait**
+- [x] `git init`, dépôt GitHub privé `wasslasGOAT/tradingjournal` — commits `4827604` et `e3ade54` poussés sur `main` (2026-09-18)
 - [x] Monorepo pnpm + Turborepo, `packages/config` (tsconfig strict, eslint, prettier, `APP_NAME`)
 - [x] `apps/app` : Expo + Expo Router + NativeWind, cible web activée, écran « Hello » — vérifié sur web (Playwright) ; iOS/Android : voir « Reste pour clôturer »
 - [x] Squelettes de `packages/core`, `packages/schemas`, `packages/ui`, `packages/i18n` (structure MVP : ARCHITECTURE §0.2)
 - [x] Supabase (ADR-020) : `supabase init` + lien au projet cloud de dev (UE), migration `app_meta` appliquée (`db:push`), `db:types` (cloud) / `db:types:local` (Docker) → `packages/db` ; `db:reset` = local (CI) — **pas de script `--linked` dédié** (voir Dérives)
 - [x] Client Supabase dans `apps/app/lib` (session persistée : SecureStore + AES-256-GCM natif, stockage web), TanStack Query + persistance (AsyncStorage derrière une interface, ARCHITECTURE §10)
-- [x] Vitest configuré (94 tests) ; tests RLS (deux sessions, 11 tests verts contre le cloud de dev) ; GitHub Actions écrite : lint + typecheck + test + build web + scan de secrets, Supabase local pour `db reset`, contrôle des types et tests RLS — **pas encore exécutée**
+- [x] Vitest configuré (94 tests) ; tests RLS (deux sessions, 12 tests verts contre le cloud de dev, après la migration `20260918090000_harden_rls_guard`) ; GitHub Actions : lint + typecheck + test + build web + scan de secrets, Supabase local pour `db reset`, contrôle des types et tests RLS — déclenchée par le push, **résultat à vérifier**
 - [x] `.env.example` de l'app (URL + clé anon uniquement), documenté
-- [ ] Compte Expo, EAS configuré (projet `@wassimaha/edgebook`, profils development / preview / production) — **build de dev Android non lancé** ; iOS via Expo Go non vérifié
+- [ ] Compte Expo, EAS configuré (projet `@wassimaha/edgebook`, profils development / preview / production) — `expo-dev-client` installé ; **build de dev Android lancé le 2026-09-18** (build `8dab747f-a8e8-4994-aced-79fdc8cdbc31`, en file d’attente pendant un incident EAS) ; iOS via Expo Go non vérifié
 
 Critères de fin :
 - [x] `pnpm dev` lance l'app ; `pnpm lint && pnpm typecheck && pnpm test`, `pnpm build`, `pnpm check:secrets` (source, historique, bundle) au vert
@@ -45,15 +45,16 @@ Critères de fin :
 - [x] Aucun secret autre que la clé anon dans l'app
 
 **Reste pour clôturer** :
-1. Premier commit + push sur `origin` (approuvé par l'utilisateur après la revue), puis CI GitHub verte (jobs qualité et Supabase).
-2. Build de dev Android EAS (`eas build --profile development --platform android`, consomme le quota — accord de l'utilisateur requis), installé sur l'appareil.
+1. ~~Premier commit + push~~ (fait). Vérifier la CI : https://github.com/wasslasGOAT/tradingjournal/actions (jobs `quality` et `db`).
+2. Build de dev Android : lancé ; récupérer l’APK sur https://expo.dev/accounts/wassimaha/projects/edgebook/builds/8dab747f-a8e8-4994-aced-79fdc8cdbc31, l’installer, puis `pnpm dev:app` et ouvrir le projet dans l’app de dev.
 3. Vérification par l'utilisateur sur iPhone (Expo Go) et Android : écran « Hello » + `schema_version = 1`, FR/EN.
 4. Optionnel (non bloquant) : Maestro `apps/app/.maestro/hello.yaml` non exécuté sur ce poste ; cas Playwright « configuration absente » ignorés quand `.env` est présent (couverts en CI).
 
 **Dérives relevées à la clôture** (à trancher, voir rapport architecte du 2026-09-18) :
 - ADR-020 prévoit un script explicite et confirmé pour `db reset --linked` : absent (seul `db:reset` local existe). Aligner (script `db:reset:linked` avec confirmation, `release`) ou acter.
 - ARCHITECTURE §11 cite Playwright dans la CI : non inclus dans `ci.yml`. À ajouter en M1 ou à acter.
-- `docs/RELEASE.md` §1, §2.1, §6 : décrit un `projectId` EAS lu uniquement depuis `EAS_PROJECT_ID` ; le code l'écrit en dur (surchargé par la variable). À aligner (`release`).
+- ~~`docs/RELEASE.md` et `projectId` EAS~~ : aligné le 2026-09-18.
+- EAS signale que `runtimeVersion: appVersion` + `updates.url` supposent `expo-updates`, non installé : à ajouter quand les mises à jour OTA seront utilisées (au plus tard M9).
 
 ---
 

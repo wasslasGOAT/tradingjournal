@@ -1,20 +1,14 @@
 # Point de reprise
 
-> À lire en premier pour reprendre le travail. Mis à jour le **2026-09-18**, à la fin de la session qui a construit la phase M0.
+> À lire en premier pour reprendre le travail. Mis à jour le **2026-09-18**, à la clôture de la phase M0.
 > Le détail fait foi dans `ROADMAP.md` (cases à cocher) et `DECISIONS.md` (ADR).
 
 ## Où on en est
 
 - **Périmètre** : on construit d'abord le **MVP** (phases M0 → M9, ARCHITECTURE §0). Pas de serveur, pas de broker, pas d'import CSV, pas de coach IA (ADR-015/016).
-- **Phase M0 (fondations)** : `En cours`, techniquement terminée. Il reste trois vérifications (voir ci-dessous).
-- **Phases suivantes** : M1 (design system, shell, animations), puis M2 (auth, onboarding, comptes). **M3 (moteur de calcul) peut démarrer en parallèle de M1/M2.**
-
-## Pour clôturer M0
-
-1. **CI GitHub** : vérifier que les jobs `quality` et `db` sont verts. <https://github.com/wasslasGOAT/tradingjournal/actions>
-2. **Build Android de dev** : lancé le 2026-09-18 (build `8dab747f-…`). Télécharger l'APK depuis <https://expo.dev/accounts/wassimaha/projects/edgebook/builds/8dab747f-a8e8-4994-aced-79fdc8cdbc31> et l'installer sur le téléphone Android.
-3. **Test sur téléphones** : lancer `pnpm dev:app`, puis ouvrir l'app sur iPhone (Expo Go) et Android (app de dev). Attendu : « Edgebook » et `schema_version = 1`, en FR et en EN.
-4. Ensuite : demander à Claude la clôture de M0 (statut `Terminée`), puis lancer `/phase M1`.
+- **Phase M0 (fondations)** : `Terminée` le 2026-09-18 (CI verte, build Android de dev EAS, vérifiée sur iPhone ; reste à vérifier sur Android et la bascule FR/EN sur téléphone, en début de M1). Dérives encore ouvertes : voir ROADMAP, Phase M0.
+- **Prochaine étape** : `/phase M1` (design system, shell, animations ; inclut le contraste AA des textes secondaires), puis M2 (auth, onboarding, comptes). **M3 (moteur de calcul) peut démarrer en parallèle de M1/M2.**
+- **CI** : `gh` (GitHub CLI) est installé et authentifié sur ce PC ; la session peut lire les runs elle-même (`gh run list`, `gh run view`).
 
 ## Comptes et ressources
 

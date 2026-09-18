@@ -126,13 +126,8 @@ jobs:
       - name: Reset local database (migrations + seed)
         run: supabase db reset --local
 
-      # `packages/db/src/database.types.ts` est pour l'instant écrit à la main (aucun
-      # projet Supabase cloud « dev » lié au moment de cette tâche — voir l'en-tête du
-      # fichier et ADR-020) : cette comparaison peut donc échouer tant qu'il n'a pas été
-      # régénéré pour de vrai (par l'utilisateur, après `supabase link` puis
-      # `pnpm db:types:local` — mêmes types que ceux comparés ici en CI ; `pnpm db:types`
-      # (`--linked`) cible le projet cloud « dev » et peut légèrement diverger, voir
-      # docs/RELEASE.md). C'est attendu, pas un bug de ce workflow.
+      # `packages/db/src/database.types.ts` est généré depuis le projet cloud de dev
+      # (`pnpm db:types`, ADR-020).
       # Choix volontaire : comparer aux types générés depuis la base *locale* rejouée à
       # partir de `supabase/migrations/**` (la source de vérité, ARCHITECTURE §7), pas
       # depuis le projet cloud — et garder l'étape bloquante (`continue-on-error: false`,

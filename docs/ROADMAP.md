@@ -22,35 +22,32 @@ Parallélisation possible : M3 (core) peut démarrer en même temps que M1 et M2
 
 ---
 
-## Phase M0 — Fondations sans serveur · `En cours`
+## Phase M0 — Fondations sans serveur · `Terminée` (2026-09-18)
 Réf. : §0, §3, §4, §11 · Release : `docs/RELEASE.md`
 Agents : `release`, `database`, `app-ui`, `core-engine` — lancer avec `/phase M0`
 
 - [x] `git init`, dépôt GitHub privé `wasslasGOAT/tradingjournal` — commits `4827604` et `e3ade54` poussés sur `main` (2026-09-18)
 - [x] Monorepo pnpm + Turborepo, `packages/config` (tsconfig strict, eslint, prettier, `APP_NAME`)
-- [x] `apps/app` : Expo + Expo Router + NativeWind, cible web activée, écran « Hello » — vérifié sur web (Playwright) ; iOS/Android : voir « Reste pour clôturer »
+- [x] `apps/app` : Expo + Expo Router + NativeWind, cible web activée, écran « Hello » — vérifié sur web (Playwright) ; iOS vérifié par l'utilisateur (Expo Go), Android : build de dev EAS
 - [x] Squelettes de `packages/core`, `packages/schemas`, `packages/ui`, `packages/i18n` (structure MVP : ARCHITECTURE §0.2)
 - [x] Supabase (ADR-020) : `supabase init` + lien au projet cloud de dev (UE), migration `app_meta` appliquée (`db:push`), `db:types` (cloud) / `db:types:local` (Docker) → `packages/db` ; `db:reset` = local (CI) — **pas de script `--linked` dédié** (voir Dérives)
 - [x] Client Supabase dans `apps/app/lib` (session persistée : SecureStore + AES-256-GCM natif, stockage web), TanStack Query + persistance (AsyncStorage derrière une interface, ARCHITECTURE §10)
-- [x] Vitest configuré (94 tests) ; tests RLS (deux sessions, 12 tests verts contre le cloud de dev, après la migration `20260918090000_harden_rls_guard`) ; GitHub Actions : lint + typecheck + test + build web + scan de secrets, Supabase local pour `db reset`, contrôle des types et tests RLS — déclenchée par le push, **résultat à vérifier**
+- [x] Vitest configuré (94 tests) ; tests RLS (deux sessions, 12 tests verts contre le cloud de dev, après la migration `20260918090000_harden_rls_guard`) ; GitHub Actions : lint + typecheck + test + build web + scan de secrets, Supabase local pour `db reset`, contrôle des types et tests RLS — verte sur GitHub (run `35389269536`, commit `b0a87cd`), types comparés après normalisation (`scripts/normalize-db-types.mjs`)
 - [x] `.env.example` de l'app (URL + clé anon uniquement), documenté
-- [ ] Compte Expo, EAS configuré (projet `@wassimaha/edgebook`, profils development / preview / production) — `expo-dev-client` installé ; **build de dev Android lancé le 2026-09-18** (build `8dab747f-a8e8-4994-aced-79fdc8cdbc31`, en file d’attente pendant un incident EAS) ; iOS via Expo Go non vérifié
+- [x] Compte Expo, EAS configuré (projet `@wassimaha/edgebook`, profils development / preview / production) — `expo-dev-client` installé ; build de dev Android terminé (build `8dab747f-a8e8-4994-aced-79fdc8cdbc31`, APK disponible) ; iOS via Expo Go vérifié
 
 Critères de fin :
 - [x] `pnpm dev` lance l'app ; `pnpm lint && pnpm typecheck && pnpm test`, `pnpm build`, `pnpm check:secrets` (source, historique, bundle) au vert
 - [x] Web : l'app lit `app_meta` (`schema_version = 1`) depuis la base de dev cloud (Playwright)
-- [ ] iOS (Expo Go) et Android (build de dev) lisent `app_meta`
+- [x] iOS (Expo Go) lit `app_meta` — iPhone vérifié par l'utilisateur (« Schema version: 1 »)
+- [ ] Android (build de dev) lit `app_meta`, et bascule FR/EN vérifiée sur téléphone — APK construit, **à vérifier sur l'appareil en début de M1** (reliquat accepté à la clôture)
 - [x] La CI utilise Supabase local (workflow écrit)
-- [ ] La CI passe sur GitHub
+- [x] La CI passe sur GitHub (run `35389269536` : jobs qualité et Supabase verts, tests RLS inclus)
 - [x] Aucun secret autre que la clé anon dans l'app
 
-**Reste pour clôturer** :
-1. ~~Premier commit + push~~ (fait). Vérifier la CI : https://github.com/wasslasGOAT/tradingjournal/actions (jobs `quality` et `db`).
-2. Build de dev Android : lancé ; récupérer l’APK sur https://expo.dev/accounts/wassimaha/projects/edgebook/builds/8dab747f-a8e8-4994-aced-79fdc8cdbc31, l’installer, puis `pnpm dev:app` et ouvrir le projet dans l’app de dev.
-3. Vérification par l'utilisateur sur iPhone (Expo Go) et Android : écran « Hello » + `schema_version = 1`, FR/EN.
-4. Optionnel (non bloquant) : Maestro `apps/app/.maestro/hello.yaml` non exécuté sur ce poste ; cas Playwright « configuration absente » ignorés quand `.env` est présent (couverts en CI).
+**Bilan (2026-09-18)** : fondations en place (monorepo, app Expo web/iOS/Android, Supabase dev + RLS testée, CI verte, EAS). Les trois premiers runs CI échouaient sur la comparaison des types (bloc `__InternalSupabase` présent seulement côté cloud), corrigé par normalisation. Reliquat accepté : vérification Android sur l'appareil et bascule FR/EN sur téléphone, à faire en début de M1. Non bloquant : Maestro non exécuté sur ce poste. Retour utilisateur : textes gris secondaires peu lisibles sur téléphone → tâche M1.
 
-**Dérives relevées à la clôture** (à trancher, voir rapport architecte du 2026-09-18) :
+**Dérives relevées à la clôture** (encore ouvertes, à trancher) :
 - ADR-020 prévoit un script explicite et confirmé pour `db reset --linked` : absent (seul `db:reset` local existe). Aligner (script `db:reset:linked` avec confirmation, `release`) ou acter.
 - ARCHITECTURE §11 cite Playwright dans la CI : non inclus dans `ci.yml`. À ajouter en M1 ou à acter.
 - ~~`docs/RELEASE.md` et `projectId` EAS~~ : aligné le 2026-09-18.
@@ -72,6 +69,7 @@ Agents : `app-ui`, `code-reviewer` — lancer avec `/phase M1`
 - [ ] Layout connecté (ADR-011 appliqué par défaut) : tab bar mobile Dashboard · Calendrier · Trades · Journal · Plus, sidebar web ≥ 1024 px, header avec sélecteur de compte + période (données factices), transitions entre onglets
 - [ ] Bascule de thème et de couleurs P&L sans rechargement ; masquage des montants (icône œil)
 - [ ] Page « catalogue » interne (dev only) affichant tous les composants et leurs états
+- [ ] Contraste AA des textes secondaires (`textMuted` / `textSecondary`, petites tailles), §6.2 — retour utilisateur M0 : peu visibles sur téléphone
 
 **Critères de fin** : le catalogue s'affiche sur iOS, Android et web, en sombre et en clair ; changement de thème instantané ; avec « réduire les animations » activé, aucune animation de déplacement ne joue ; ouverture/fermeture d'une `Sheet` et bascule de `Segmented` à 60 fps sur Android milieu de gamme (build release).
 

@@ -143,8 +143,13 @@ jobs:
         run: |
           set -euo pipefail
           supabase gen types typescript --local --schema public > "$RUNNER_TEMP/database.types.generated.ts"
-          if ! diff -u packages/db/src/database.types.ts "$RUNNER_TEMP/database.types.generated.ts"; then
-            echo "::error::packages/db/src/database.types.ts ne correspond pas aux types générés depuis supabase/migrations (schéma public, base locale). Régénérer avec 'pnpm db:types:local' (base Supabase locale, comme cette étape CI) ou aligner le fichier écrit à la main — voir le commentaire en tête de packages/db/src/database.types.ts et docs/RELEASE.md."
+          # Les types commités sont générés depuis le projet cloud (`pnpm db:types`) : ils
+          # contiennent un bloc `__InternalSupabase` absent de la génération locale. On compare
+          # donc les deux versions normalisées (scripts/normalize-db-types.mjs).
+          node scripts/normalize-db-types.mjs packages/db/src/database.types.ts > "$RUNNER_TEMP/committed.normalized.ts"
+          node scripts/normalize-db-types.mjs "$RUNNER_TEMP/database.types.generated.ts" > "$RUNNER_TEMP/generated.normalized.ts"
+          if ! diff -u "$RUNNER_TEMP/committed.normalized.ts" "$RUNNER_TEMP/generated.normalized.ts"; then
+            echo "::error::packages/db/src/database.types.ts ne correspond pas aux types générés depuis supabase/migrations (schéma public, base locale). Le schéma diffère : appliquer la migration sur la base de dev ('pnpm db:push') puis régénérer ('pnpm db:types') — voir docs/RELEASE.md."
             exit 1
           fi
 

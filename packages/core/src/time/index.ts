@@ -1,3 +1,5 @@
+export { classifySession } from './session';
+export type { Session } from './session';
 export {
   InvalidRolloverTimeError,
   InvalidTimezoneError,

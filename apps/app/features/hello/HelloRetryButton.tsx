@@ -29,7 +29,13 @@ export function HelloRetryButton({
         disabled ? 'bg-surfaceAlt' : 'bg-accent'
       }`}
     >
-      <Text className="text-base font-bold text-textPrimary">{t('hello.retry')}</Text>
+      {/* `onAccent` (pas `textPrimary`) sur `bg-accent` : `textPrimary` ne passe qu'à
+          3,3:1 sur l'accent (M1-1, contrast.test.ts) — `onAccent` est vérifié ≥ 4,5:1. */}
+      <Text
+        className={`font-sans-semibold text-base ${disabled ? 'text-textPrimary' : 'text-onAccent'}`}
+      >
+        {t('hello.retry')}
+      </Text>
     </Pressable>
   );
 }

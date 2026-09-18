@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
-import { AMOUNT_STRING_PATTERN, amountString, currencyCode, tradingDay, uuid } from './common';
+import {
+  AMOUNT_STRING_PATTERN,
+  amountString,
+  CURRENCY_CODE_PATTERN,
+  currencyCode,
+  isNonNegativeAmountString,
+  isPositiveAmountString,
+  tradingDay,
+  uuid,
+} from './common';
 
 describe('AMOUNT_STRING_PATTERN', () => {
   it('est la source réutilisée par amountString (@repo/core parseAmount)', () => {
@@ -32,6 +41,15 @@ describe('amountString', () => {
   });
 });
 
+describe('CURRENCY_CODE_PATTERN', () => {
+  it('est la source réutilisée par currencyCode (@repo/core Money)', () => {
+    expect(CURRENCY_CODE_PATTERN.test('USD')).toBe(true);
+    expect(CURRENCY_CODE_PATTERN.test('USDT')).toBe(true);
+    expect(CURRENCY_CODE_PATTERN.test('usd')).toBe(false);
+    expect(currencyCode.safeParse('EUR').success).toBe(true);
+  });
+});
+
 describe('currencyCode', () => {
   it('accepte un code ISO 4217 à 3 lettres majuscules', () => {
     expect(currencyCode.safeParse('USD').success).toBe(true);
@@ -56,6 +74,33 @@ describe('uuid', () => {
 
   it('rejette une chaîne non UUID', () => {
     expect(uuid.safeParse('not-a-uuid').success).toBe(false);
+  });
+});
+
+describe('isPositiveAmountString', () => {
+  it('vrai pour un montant strictement positif', () => {
+    expect(isPositiveAmountString('1')).toBe(true);
+    expect(isPositiveAmountString('0.01')).toBe(true);
+  });
+
+  it('faux pour 0 (sous toutes ses formes) et pour un montant négatif', () => {
+    expect(isPositiveAmountString('0')).toBe(false);
+    expect(isPositiveAmountString('0.00')).toBe(false);
+    expect(isPositiveAmountString('-0')).toBe(false);
+    expect(isPositiveAmountString('-1')).toBe(false);
+  });
+});
+
+describe('isNonNegativeAmountString', () => {
+  it('vrai pour un montant positif ou nul', () => {
+    expect(isNonNegativeAmountString('1')).toBe(true);
+    expect(isNonNegativeAmountString('0')).toBe(true);
+    expect(isNonNegativeAmountString('-0.00')).toBe(true);
+  });
+
+  it('faux pour un montant strictement négatif', () => {
+    expect(isNonNegativeAmountString('-1')).toBe(false);
+    expect(isNonNegativeAmountString('-0.01')).toBe(false);
   });
 });
 

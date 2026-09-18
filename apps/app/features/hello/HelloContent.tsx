@@ -8,11 +8,16 @@ export function HelloContent({ schemaVersion }: { schemaVersion: string }) {
 
   return (
     <View testID="hello-content" className="items-center gap-sm">
-      <Text testID="hello-heading" className="text-center text-2xl font-bold text-textPrimary">
+      <Text
+        testID="hello-heading"
+        className="text-center font-sans-semibold text-2xl text-textPrimary"
+      >
         {t('hello.title', { appName: APP_NAME })}
       </Text>
-      <Text className="text-center text-base text-textSecondary">{t('hello.subtitle')}</Text>
-      <Text testID="hello-schema-version" className="text-center text-sm text-textMuted">
+      <Text className="text-center font-sans text-base text-textSecondary">
+        {t('hello.subtitle')}
+      </Text>
+      <Text testID="hello-schema-version" className="text-center font-sans text-sm text-textMuted">
         {t('hello.schemaVersion', { version: schemaVersion })}
       </Text>
     </View>

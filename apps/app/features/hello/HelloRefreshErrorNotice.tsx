@@ -29,7 +29,7 @@ export function HelloRefreshErrorNotice({
       accessibilityRole="alert"
       className="w-full max-w-sm items-center gap-xs"
     >
-      <Text className="text-center text-sm text-danger">
+      <Text className="text-center font-sans text-sm text-danger">
         {isRefreshing ? t('hello.refreshError.retrying') : t('hello.refreshError.description')}
       </Text>
       <HelloRetryButton onPress={onRetry} disabled={isRefreshing} />

@@ -31,15 +31,18 @@ export function HelloEmptyState({
 
   return (
     <View testID="hello-empty" className="w-full max-w-sm items-center gap-sm">
-      <Text testID="hello-heading" className="text-center text-lg font-bold text-textPrimary">
+      <Text
+        testID="hello-heading"
+        className="text-center font-sans-semibold text-lg text-textPrimary"
+      >
         {title}
       </Text>
-      <Text className="text-center text-base text-textSecondary">{description}</Text>
+      <Text className="text-center font-sans text-base text-textSecondary">{description}</Text>
       {refreshFailed ? (
         <Text
           testID="hello-refresh-error"
           accessibilityRole="alert"
-          className="text-center text-sm text-danger"
+          className="text-center font-sans text-sm text-danger"
         >
           {isRefreshing ? t('hello.refreshError.retrying') : t('hello.refreshError.description')}
         </Text>

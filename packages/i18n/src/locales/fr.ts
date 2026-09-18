@@ -33,11 +33,69 @@ export const fr = {
           'Dernière actualisation impossible. Les données affichées peuvent être obsolètes.',
         retrying: 'Nouvelle tentative…',
       },
+      catalogButton: 'Voir le catalogue',
     },
     notFound: {
       title: 'Page introuvable',
       description: "Cet écran n'existe pas.",
       backHome: "Retour à l'accueil",
+    },
+    // Catalogue de composants (M1-3, `apps/app/features/catalog`) : accessible en
+    // développement uniquement — voir `apps/app/app/(dev)/catalog.tsx`.
+    catalog: {
+      title: 'Catalogue de composants',
+      subtitle:
+        'Aperçu des primitives du design system, avec des données factices — pour vérification visuelle uniquement.',
+      back: 'Retour',
+      controls: {
+        theme: { label: 'Thème', dark: 'Sombre', light: 'Clair' },
+        pnlColors: { label: 'Couleurs P&L', blueGray: 'Bleu / gris', greenRed: 'Vert / rouge' },
+        hideAmounts: { label: 'Masquer les montants' },
+        language: { label: 'Langue' },
+      },
+      sections: {
+        statTiles: 'StatTile',
+        buttons: 'Button',
+        loaders: 'Chargement',
+        emptyState: 'État vide',
+        calendar: 'DayCell',
+        cards: 'Card / GlowCard',
+      },
+      statTiles: {
+        netPnl: 'P&L net',
+        loss: 'Perte du jour',
+        winRate: 'Taux de réussite',
+        trades: 'Nombre de trades',
+      },
+      buttons: {
+        primary: 'Primaire',
+        secondary: 'Secondaire',
+        ghost: 'Fantôme',
+        danger: 'Danger',
+        loading: 'Chargement…',
+        disabled: 'Désactivé',
+      },
+      emptyState: {
+        title: 'Aucun trade',
+        description: 'Importe ou ajoute ton premier trade pour voir tes statistiques ici.',
+        action: 'Ajouter un trade',
+      },
+      dayCell: {
+        profit: 'Jour gagnant',
+        loss: 'Jour perdant',
+        journalOnly: 'Journal seul',
+        today: "Aujourd'hui",
+        empty: 'Vide',
+      },
+      progress: {
+        label: "Progression de l'objectif mensuel",
+      },
+      cards: {
+        cardTitle: 'Card',
+        cardBody: 'Contenu neutre, ombre discrète.',
+        glowCardTitle: 'GlowCard',
+        glowCardBody: 'Mise en avant, lueur teintée accent.',
+      },
     },
   },
 } as const;

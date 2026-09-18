@@ -85,17 +85,19 @@ Décision : `rule_sets` en JSON versionné et évaluateur générique ; ajouter 
 Réversibilité : facile.
 
 ## ADR-011 — Navigation : tab bar sur mobile, sidebar sur le web large
-Statut : Proposée | Date : 2026-09-17
+Statut : Acceptée (2026-09-18, version MVP ci-dessous) | Date : 2026-09-17
 Contexte : dans la référence, le drawer demande deux taps pour chaque changement d'écran.
 Décision : tabs Dashboard, Calendrier, Journal, Coach, Plus.
 Réversibilité : facile.
-Note MVP (2026-09-17) : reste `Proposée` mais s'applique par défaut dans le MVP (ADR-015). Le Coach étant hors MVP, son onglet est remplacé par **Trades** : Dashboard · Calendrier · Trades · Journal · Plus (Analytics, Règles, Réglages). **À confirmer par l'utilisateur.**
+Note MVP (2026-09-17) : reste `Proposée` mais s'applique par défaut dans le MVP (ADR-015). Le Coach étant hors MVP, son onglet est remplacé par **Trades** : Dashboard · Calendrier · Trades · Journal · Plus (Analytics, Règles, Réglages).
+Validation (utilisateur, 2026-09-18) : onglets mobile **Dashboard · Calendrier · Trades · Journal · Plus** (Analytics, Règles, Réglages) + **bouton d'ajout rapide global** ; sidebar sur le web ≥ 1024 px. L'onglet Coach sera réintroduit post-MVP (P2) par un nouvel ADR.
 
 ## ADR-012 — Identité visuelle et nom
 Statut : Acceptée pour la direction visuelle · Proposée pour le nom et le logo | Date : 2026-09-17 (mise à jour 2026-09-17)
 Contexte : l'app s'inspire de TradeX mais ne doit pas en reprendre le nom, le logo ni les textes.
 Décision initiale : nom de travail « Edgebook », palette sombre avec accent bleu en attendant une identité définitive.
 Mise à jour (validée par l'utilisateur) : la **direction visuelle est acceptée** : thème sombre par défaut (clair disponible), accent bleu, profits en bleu avec option vert/rouge (`preferences.pnl_colors`). Niveau de finition visé : comparable à l'app de référence, sans en copier le nom, le logo, les textes ni les maquettes à l'identique (exigences mesurables : ADR-017). Le nom « Edgebook » et le logo restent **provisoires**.
+Précision (utilisateur, 2026-09-18) : l'accent bleu est **légèrement décalé** de `#5D99F9` (teinte de la référence) pour ne pas en copier l'identité ; valeur exacte fixée dans `packages/ui/tokens.ts` en M1, contraste AA vérifié.
 Réversibilité : facile (`packages/config`, `packages/ui/tokens.ts`). **Nom et logo à décider par l'utilisateur.**
 
 ## ADR-013 — Langues : FR et EN dès la V1
@@ -163,13 +165,14 @@ Recommandation : **B** si le MVP reste en test privé (utilisateurs invités) ; 
 Réversibilité : facile (A et B migrent vers `DELETE /v1/account`, ADR-003).
 
 ## ADR-019 — Agrégats multi-devises pendant le MVP
-Statut : Proposée | Date : 2026-09-17
+Statut : Acceptée (2026-09-18, option A) | Date : 2026-09-17
 Contexte : la vue « Tous les comptes » convertit les comptes dans la devise d'affichage via `fx_rates` (ARCHITECTURE §1.2), table qu'un job serveur devait alimenter ; le MVP n'a pas de serveur et le seed mélange USD et EUR.
 Options :
 - **A. Regroupement par devise** : « Tous les comptes » affiche un total par devise, sans conversion. + Aucun taux à maintenir, chiffres exacts. − Pas de total unique.
 - **B. Taux fournis par migration/seed** (table `fx_rates` lecture publique, mise à jour manuelle). + Total unique. − Taux vite périmés, affichage trompeur.
 - **C. Taux saisis par l'utilisateur** dans les préférences. + Contrôle utilisateur. − Friction, erreurs de saisie.
 Recommandation : **A** pour le MVP ; conversion réelle réintroduite avec le serveur (job de taux journaliers).
+Décision (utilisateur, 2026-09-18) : **option A** — « Tous les comptes » affiche un total par devise, sans conversion. L'API de `packages/core` (agrégation multi-comptes) renvoie une collection par devise et reste prête pour une conversion ultérieure (paramètre de taux optionnel ajoutable sans casser les appelants).
 Réversibilité : facile.
 
 ## ADR-020 — Base Supabase cloud de dev pour le développement local
@@ -185,3 +188,15 @@ Conséquences :
 - `supabase config push` est **proscrit** vers tout projet cloud : `supabase/config.toml` porte des réglages locaux permissifs (confirmation d'e-mail désactivée, mot de passe min 6, redirections `http://localhost:8081/**`, `allowed_cidrs 0.0.0.0/0`). L'auth cloud se règle dans le tableau de bord ; aucune redirection d'auth avec joker `/**` sur un domaine public (liste exacte).
 Alternatives : Docker Desktop local (non installé sur ce poste, ajoutable plus tard) ; base partagée avec la préproduction (rejetée : isolation).
 Réversibilité : facile (ajouter Docker local plus tard ; mêmes migrations).
+
+## ADR-021 — Bibliothèques UI du MVP
+Statut : Acceptée | Date : 2026-09-18
+Contexte : M1 doit fixer graphiques, police et dépendances natives ; l'utilisateur vérifie sur iPhone via Expo Go (pas de compte Apple payant, donc pas de build de dev iOS) et sur Android via EAS.
+Décision :
+- **Graphiques** : `victory-native` (Skia) sur natif, `recharts` sur web, derrière l'interface `Chart` (`.native.tsx` / `.web.tsx`). **Heatmap** sans bibliothèque (grille de vues/`DayCell`).
+- **Police** : Inter via `@expo-google-fonts/inter`, graisses 400/500/600 ; **chiffres tabulaires** (`fontVariant: ['tabular-nums']`) pour tous les montants.
+- **Règle de dépendances** : uniquement des bibliothèques natives **incluses dans Expo Go pour le SDK courant** (vérification iPhone sans compte Apple payant). Une bibliothèque hors Expo Go est refusée, ou isolée derrière un adaptateur avec repli fonctionnel sous Expo Go.
+- **Builds Android** : nouveaux builds EAS (dev, puis preview en build release pour les mesures de performance) acceptés sur le quota gratuit.
+Conséquences : l'interface `Chart` doit rester commune aux deux adaptateurs (rendus proches, pas identiques) ; les versions suivent le SDK Expo (`npx expo install`) ; toute dépendance native nouvelle est vérifiée contre la liste Expo Go avant ajout.
+Alternatives : Skia partout y compris web (CanvasKit lourd au premier chargement) ; ECharts sur web (poids, style moins natif) ; lib de heatmap dédiée (dépendance inutile) ; police système (rendu inégal entre plateformes, chiffres non tabulaires partout) ; builds de dev iOS (compte Apple payant requis).
+Réversibilité : facile (graphiques derrière `Chart`, police en token) ; la règle Expo Go sera levée avec un compte Apple développeur (au plus tard P6).

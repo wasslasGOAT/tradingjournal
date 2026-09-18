@@ -7,7 +7,19 @@ nodeLinker: hoisted
 
 # Paquets autorisés à exécuter leurs scripts d'installation.
 allowBuilds:
+  # M1 (I2, ADR-021) : script de post-install (codegen JSI natif), module déjà inclus
+  # dans Expo Go — bloqué par défaut par pnpm (ERR_PNPM_IGNORED_BUILDS).
+  '@shopify/react-native-skia': true
   esbuild: true
   supabase: true
   # eslint-import-resolver-typescript (via eslint-config-expo) : résolveur natif (Rust/NAPI).
   unrs-resolver: true
+
+minimumReleaseAgeExclude:
+  - '@expo/cli@57.0.26'
+  - expo-asset@57.0.18
+  - expo-constants@57.0.19
+  - expo@57.0.24
+  - '@expo/metro-runtime@57.0.16'
+  - '@expo/ui@57.0.19'
+  - expo-router@57.0.22

@@ -30,11 +30,68 @@ export const en = {
         description: 'Last refresh failed. The data shown may be out of date.',
         retrying: 'Retrying…',
       },
+      catalogButton: 'View catalog',
     },
     notFound: {
       title: 'Page not found',
       description: "This screen doesn't exist.",
       backHome: 'Back to home',
+    },
+    // Component catalog (M1-3, `apps/app/features/catalog`) : development-only —
+    // see `apps/app/app/(dev)/catalog.tsx`.
+    catalog: {
+      title: 'Component catalog',
+      subtitle: 'Preview of the design system primitives, with sample data — for visual review only.',
+      back: 'Back',
+      controls: {
+        theme: { label: 'Theme', dark: 'Dark', light: 'Light' },
+        pnlColors: { label: 'P&L colors', blueGray: 'Blue / gray', greenRed: 'Green / red' },
+        hideAmounts: { label: 'Hide amounts' },
+        language: { label: 'Language' },
+      },
+      sections: {
+        statTiles: 'StatTile',
+        buttons: 'Button',
+        loaders: 'Loading',
+        emptyState: 'Empty state',
+        calendar: 'DayCell',
+        cards: 'Card / GlowCard',
+      },
+      statTiles: {
+        netPnl: 'Net P&L',
+        loss: "Today's loss",
+        winRate: 'Win rate',
+        trades: 'Number of trades',
+      },
+      buttons: {
+        primary: 'Primary',
+        secondary: 'Secondary',
+        ghost: 'Ghost',
+        danger: 'Danger',
+        loading: 'Loading…',
+        disabled: 'Disabled',
+      },
+      emptyState: {
+        title: 'No trades yet',
+        description: 'Import or add your first trade to see your stats here.',
+        action: 'Add a trade',
+      },
+      dayCell: {
+        profit: 'Winning day',
+        loss: 'Losing day',
+        journalOnly: 'Journal only',
+        today: 'Today',
+        empty: 'Empty',
+      },
+      progress: {
+        label: 'Monthly goal progress',
+      },
+      cards: {
+        cardTitle: 'Card',
+        cardBody: 'Neutral content, subtle shadow.',
+        glowCardTitle: 'GlowCard',
+        glowCardBody: 'Highlighted, accent-tinted glow.',
+      },
     },
   },
 } as const;

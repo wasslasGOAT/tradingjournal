@@ -133,5 +133,5 @@ Post-MVP : `jobs` (pg-boss, schéma dédié), `audit_log` (`user_id`, `action`, 
 
 ## Données de démo (seed)
 - Utilisateur démo + 2 comptes : `Prop Challenge 200k` (USD, `prop_challenge` ; rule set type FTMO ajouté en P3 — pendant le MVP, règle perso de perte max 10 % en M8) et `Compte perso actions` (EUR).
-- Jeu de mars 2026 identique à la vidéo de référence (10 jours, 24 trades, P&L du mois −17 527,71, 3 jours gagnants / 7 perdants) + 1 trade le 1er avril (−2 215,72).
+- Jeu de mars 2026 (10 jours, 24 trades, P&L du mois −17 527,71, 3 jours gagnants / 7 perdants) + 1 trade le 1er avril (−2 215,72) : **généré à partir du fixture golden de `packages/core`** (jeu synthétique reproduisant les chiffres de référence, compte `Europe/Paris`, bascule 00:00 — ROADMAP M3).
 - Entrées de journal les 12 et 13 septembre 2026 sans trade.

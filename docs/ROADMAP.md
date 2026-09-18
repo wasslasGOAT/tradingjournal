@@ -49,29 +49,36 @@ Critères de fin :
 
 **Dérives relevées à la clôture** (encore ouvertes, à trancher) :
 - ADR-020 prévoit un script explicite et confirmé pour `db reset --linked` : absent (seul `db:reset` local existe). Aligner (script `db:reset:linked` avec confirmation, `release`) ou acter.
-- ARCHITECTURE §11 cite Playwright dans la CI : non inclus dans `ci.yml`. À ajouter en M1 ou à acter.
+- ARCHITECTURE §11 cite Playwright dans la CI : non inclus dans `ci.yml`. **En cours** : ajout planifié en M1 (validé le 2026-09-18).
 - ~~`docs/RELEASE.md` et `projectId` EAS~~ : aligné le 2026-09-18.
 - EAS signale que `runtimeVersion: appVersion` + `updates.url` supposent `expo-updates`, non installé : à ajouter quand les mises à jour OTA seront utilisées (au plus tard M9).
 
 ---
 
-## Phase M1 — Design system, shell et animations · `À faire`
-Réf. : §6, ADR-012, ADR-017, ADR-011
-Agents : `app-ui`, `code-reviewer` — lancer avec `/phase M1`
+## Phase M1 — Design system, shell et animations · `En cours`
+Réf. : §6, ADR-012, ADR-017, ADR-011, ADR-021
+Agents : `app-ui`, `release` (CI), `code-reviewer` — lancer avec `/phase M1`
 
-- [ ] Tokens (couleurs sombre/clair, accent bleu, couleurs P&L bleu/gris et vert/rouge, typo, rayons, espacements, **durées et courbes d'animation**) branchés sur NativeWind
+- [ ] **Reliquat M0 (en premier)** : sur le téléphone Android (build de dev), lecture de `app_meta` et bascule FR/EN vérifiées
+- [ ] Tokens (couleurs sombre/clair, accent bleu légèrement décalé de `#5D99F9` — ADR-012, couleurs P&L bleu/gris et vert/rouge, typo, rayons, espacements, **durées et courbes d'animation**) branchés sur NativeWind ; police Inter 400/500/600, chiffres tabulaires pour les montants (ADR-021)
+- [ ] `packages/ui/src` inclus dans le `content` de Tailwind (classes des primitives générées)
 - [ ] Primitives : `Screen`, `Card`, `GlowCard`, `StatTile`, `Button`, `IconButton`, `Segmented`, `Select`, `DateRangePicker`, `Sheet`, `Skeleton`, `ShimmerBar`, `ProgressBar`, `DayCell`, `EmptyState`, `Toast`
 - [ ] Animations reanimated (entrées de cartes, sheet, segmented, press states), respect de « réduire les animations »
 - [ ] Interface `Haptics` (`.native` expo-haptics / `.web` vide) utilisée par les primitives interactives
 - [ ] Wrapper de liste virtualisée (FlashList) avec états vide / chargement / fin de liste
-- [ ] Interface `Chart` + adaptateurs `.web` (recharts) / `.native` (victory-native) : ligne/aire, barres, histogramme, heatmap
-- [ ] i18n FR/EN, formatage monnaie/date/nombre selon la locale (`packages/core/format`)
-- [ ] Layout connecté (ADR-011 appliqué par défaut) : tab bar mobile Dashboard · Calendrier · Trades · Journal · Plus, sidebar web ≥ 1024 px, header avec sélecteur de compte + période (données factices), transitions entre onglets
+- [ ] Interface `Chart` + adaptateurs `.web` (recharts) / `.native` (victory-native, Skia) : ligne/aire, barres, histogramme ; heatmap sans bibliothèque (ADR-021 ; dépendances natives limitées à Expo Go)
+- [ ] i18n FR/EN ; affichage des montants/dates/nombres en **consommant `packages/core/format`** (livré par M3, propriétaire `core-engine`)
+- [ ] Layout connecté (ADR-011) : tab bar mobile Dashboard · Calendrier · Trades · Journal · Plus + bouton d'ajout rapide global, sidebar web ≥ 1024 px, header avec sélecteur de compte + période (données factices), transitions entre onglets
 - [ ] Bascule de thème et de couleurs P&L sans rechargement ; masquage des montants (icône œil)
 - [ ] Page « catalogue » interne (dev only) affichant tous les composants et leurs états
 - [ ] Contraste AA des textes secondaires (`textMuted` / `textSecondary`, petites tailles), §6.2 — retour utilisateur M0 : peu visibles sur téléphone
+- [ ] Job Playwright dans la CI (`ci.yml`, propriétaire `release`) — résout la dérive M0
+- [ ] Build EAS Android **preview** (build release) pour la mesure de fluidité (ADR-021, quota gratuit)
 
-**Critères de fin** : le catalogue s'affiche sur iOS, Android et web, en sombre et en clair ; changement de thème instantané ; avec « réduire les animations » activé, aucune animation de déplacement ne joue ; ouverture/fermeture d'une `Sheet` et bascule de `Segmented` à 60 fps sur Android milieu de gamme (build release).
+**Critères de fin** : le catalogue s'affiche sur iOS, Android et web, en sombre et en clair ; changement de thème instantané ; avec « réduire les animations » activé, aucune animation de déplacement ne joue ; fluidité :
+- **Android** : sur l'APK preview (build release), « Profil de rendu HWUI → barres » (options développeur) activé, 10 ouvertures/fermetures de `Sheet` et 10 bascules de `Segmented` : barres sous la ligne verte ;
+- **Web** : test Playwright automatique (CPU ralenti ×4) sur les mêmes interactions : moyenne ≥ 55 fps, aucune image > 50 ms ;
+- mesure Flashlight reportée à M9.
 
 ---
 
@@ -97,7 +104,7 @@ Agents : `database`, `app-ui`, `qa-tests`, `security-auditor` — lancer avec `/
 
 ---
 
-## Phase M3 — Moteur de trading (core) · `À faire`
+## Phase M3 — Moteur de trading (core) · `En cours`
 Réf. : §5.2, §5.4, DATA_MODEL
 Agents : `core-engine`, `code-reviewer` — lancer avec `/phase M3` (parallélisable avec M1/M2)
 
@@ -106,11 +113,14 @@ Agents : `core-engine`, `code-reviewer` — lancer avec `/phase M3` (parallélis
 - [ ] P&L brut/net, multiplicateur de contrat, R multiple ; solde = solde initial + Σ P&L net + mouvements de trésorerie
 - [ ] Stats : win rate, profit factor, espérance, gain/perte moyens, ratio moyen, drawdown (montant, %), séries
 - [ ] Agrégats : par jour de trading (cellules du calendrier, totaux hebdo, stats du mois), série d'equity, par dimension (symbole, setup, tag, session, heure, jour de semaine), distribution des R
-- [ ] Agrégation multi-comptes selon ADR-019
-- [ ] Schémas zod des formulaires dans `packages/schemas` (trade, exécution, compte, journal, règle, checklist)
-- [ ] **Tests golden** sur le jeu de référence ; couverture ≥ 90 % sur `packages/core`
+- [ ] Agrégation multi-comptes selon ADR-019 (total par devise, API prête pour une conversion ultérieure)
+- [ ] Formatage localisé monnaie/date/nombre (`packages/core/format`), FR/EN — consommé par M1
+- [ ] Schémas zod des formulaires dans `packages/schemas` : trade, exécution, compte, mouvement de trésorerie (journal → M6 ; règle, checklist → M8)
+- [ ] Conventions statistiques documentées par `core-engine` (code + DATA_MODEL) : trade à P&L 0 exclu ou non du win rate, drawdown % mesuré depuis le plus haut **incluant le solde initial** ; tout changement ultérieur est soumis à l'utilisateur
+- [ ] **Jeu golden synthétique** (validé le 2026-09-18) : 25 trades (24 en mars 2026 + 1 le 1er avril) respectant exactement tous les chiffres de référence ci-dessous ; compte en `Europe/Paris`, bascule 00:00 ; fixture JSON dans `packages/core`, **réutilisé tel quel par le seed en M4**
+- [ ] **Tests golden** sur ce jeu ; couverture ≥ 90 % sur `packages/core`
 
-**Critères de fin** : `pnpm test --filter core` est vert ; au centime près : solde initial 200 000, P&L −19 743,43 → rendement −9,87 %, win rate 16 %, ratio moyen 2,92, profit factor 0,56 ; mars 2026 = 24 trades, −17 527,71, 3 jours gagnants / 7 perdants ; 1er avril = −2 215,72 ; pire jour = 30 mars 2026.
+**Critères de fin** : `pnpm --filter @repo/core test` et `pnpm --filter @repo/core test:coverage` (≥ 90 %) sont verts ; au centime près : solde initial 200 000, P&L −19 743,43 → rendement −9,87 %, win rate 16 %, ratio moyen 2,92, profit factor 0,56 ; mars 2026 = 24 trades, −17 527,71, 3 jours gagnants / 7 perdants ; 1er avril = −2 215,72 ; pire jour = 30 mars 2026.
 
 ---
 
@@ -121,7 +131,7 @@ Dépend de : M1, M2, M3
 
 - [ ] Tables `instruments` (catalogue de base en lecture publique + instruments créés par l'utilisateur), `executions`, `trades`, `tags`, `trade_tags`, `trade_notes`, `attachments` + bucket Storage + RLS (tables et Storage)
 - [ ] Fonction Postgres transactionnelle d'écriture d'un trade (valeurs calculées par `packages/core`, aucun calcul SQL) — ADR-016
-- [ ] Seed : utilisateur démo, comptes `Prop Challenge 200k` (USD, type `prop_challenge`) et `Compte perso actions` (EUR), jeu de mars 2026 + 1er avril
+- [ ] Seed : utilisateur démo, comptes `Prop Challenge 200k` (USD, type `prop_challenge`) et `Compte perso actions` (EUR), jeu de mars 2026 + 1er avril généré à partir du fixture golden de `packages/core` (M3)
 - [ ] Formulaire de saisie (react-hook-form + zod) : mode simple (entrée/sortie → 2 exécutions) et mode avancé (exécutions partielles) ; aperçu P&L/R en direct via `packages/core` ; bouton d'ajout rapide accessible depuis tous les onglets
 - [ ] Trade log FlashList : filtres (compte, période, symbole, tag, setup, résultat), tri, pagination par curseur
 - [ ] Détail en sheet : édition, suppression, tags/setups, notes, captures (upload Storage)
@@ -217,10 +227,10 @@ Dépend de : M1–M8
 | # | Sujet | Proposition de Claude | Choix provisoire en attendant | Au plus tard |
 |---|---|---|---|---|
 | 1 | Suppression de compte (ADR-018) | B (report) si test privé ; A (Edge Function) si web public | B — report | Avant toute ouverture publique |
-| 2 | « Tous les comptes » multi-devises (ADR-019) | A — un total par devise, sans conversion | A | M5 |
+| 2 | « Tous les comptes » multi-devises (ADR-019) | A — un total par devise, sans conversion | **Tranchée le 2026-09-18 : A** (ADR-019 `Acceptée`) | — |
 | 3 | Écritures atomiques (ADR-016) | Fonction Postgres transactionnelle (trade + exécutions + tags + checklist), valeurs déjà calculées par `packages/core`, aucun calcul SQL | Appliquée | M4 |
 | 4 | Règle `max_total_loss` (perte max vs solde initial) | L'ajouter pour garder le critère « 256,57 $ restants » | Ajoutée | M8 |
-| 5 | Onglets MVP (ADR-011) | Dashboard · Calendrier · Trades · Journal · Plus | Appliqués | M1 |
+| 5 | Onglets MVP (ADR-011) | Dashboard · Calendrier · Trades · Journal · Plus | **Tranchée le 2026-09-18** (ADR-011 `Acceptée`, + ajout rapide global) | — |
 | 6 | Google + Sign in with Apple | Selon les comptes développeur disponibles | Reportés : email + mot de passe + magic link uniquement | P6 (stores) |
 | 7 | Nom et logo (ADR-012) | « Edgebook » provisoire | Edgebook | Avant P6 |
 | 8 | Pondération du score (ADR-008) | 30 / 20 / 25 / 15 / 10 | — (score hors MVP) | P2 |

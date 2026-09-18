@@ -1,4 +1,20 @@
 {
   "extends": "@repo/config/tsconfig.base.json",
+  "compilerOptions": {
+    // M1-1 : premiers composants (`theme/ThemeProvider.tsx`) — JSX React 19 (pas de
+    // `types` explicite : les types React Native/React sont résolus depuis
+    // `apps/app` via le hoisting pnpm, cf. `pnpm-workspace.yaml` `nodeLinker: hoisted`).
+    "jsx": "react-jsx",
+    // M1-2 : `haptics`/`motion` et les composants (`Button`, `IconButton`…) sont
+    // scindés en `Xxx.native.ts(x)`/`Xxx.web.ts(x)` (CLAUDE.md), importés via
+    // `./Xxx` sans fichier de repli. Même réglage et même justification que
+    // `apps/app/tsconfig.json` (Metro préfère `.native` sur iOS/Android, tsc ne
+    // peut vérifier qu'une seule branche résolue par import) : cette passe
+    // type-vérifie la branche native comme cible résolue d'un import ; la
+    // branche web est quand même vérifiée en tant que fichier autonome (`include`
+    // ci-dessous), et sa résolution réelle est couverte par `expo export --platform
+    // web` (Metro), pas par `tsc`.
+    "moduleSuffixes": [".native", ""]
+  },
   "include": ["src", "*.ts", "*.js"]
 }

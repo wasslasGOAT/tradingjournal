@@ -51,7 +51,7 @@ Structure du monorepo pendant le MVP : celle du §4 **sans** `apps/server` ni `p
 - Montants lus en chaîne (`net_pnl::text`…) puis convertis en `Decimal` : PostgREST sérialise `numeric` en nombre JSON.
 - Clés de requête : `[domaine, accountId | 'all', période/mois, filtres]` ; mutations optimistes avec invalidation ciblée des clés calendrier/dashboard/analytics.
 - Changement de fuseau ou d'heure de bascule d'un compte : recalcul et réécriture de `trades.trading_day` par l'app.
-- « Tous les comptes » multi-devises : ADR-019 (en attente).
+- « Tous les comptes » multi-devises : un total par devise, sans conversion (ADR-019).
 
 ### 0.4 Écarts avec les sections suivantes pendant le MVP
 | Section | Pendant le MVP |
@@ -157,7 +157,7 @@ flowchart TB
 | Styles | NativeWind (Tailwind pour RN) + tokens partagés | Même vocabulaire que Tailwind | Tamagui, Unistyles |
 | Composants | Kit maison dans `packages/ui` (primitives RN) | Contrôle total du design | react-native-reusables |
 | Icônes | lucide-react-native | Même set que l'app de référence | — |
-| Graphiques | Interface `Chart` avec adaptateurs : `victory-native` (natif) / `recharts` (web) | Aucune lib n'est excellente partout | Skia partout, ECharts web |
+| Graphiques | Interface `Chart` avec adaptateurs : `victory-native` (natif) / `recharts` (web), heatmap sans lib (ADR-021) | Aucune lib n'est excellente partout | Skia partout, ECharts web |
 | Données client | TanStack Query (+ persistance) | Cache, offline, invalidation | — |
 | État UI | Zustand | Léger | Jotai |
 | Formulaires | react-hook-form + zod | Schémas zod partagés avec l'API | — |
@@ -328,13 +328,13 @@ Synchro terminée/échouée, règle proche de la limite ou violée, rappel de jo
 
 ### 6.1 Navigation **[modifiable]**
 - **Mobile** : tab bar (Dashboard · Calendrier · Journal · Coach · Plus). « Plus » contient Trades, Analytics, Règles, Réglages.
-  MVP (ADR-011 appliqué par défaut, sans Coach) : Dashboard · Calendrier · Trades · Journal · Plus (Analytics, Règles, Réglages) ; ajout rapide de trade accessible depuis tous les onglets.
+  MVP (ADR-011, acceptée) : Dashboard · Calendrier · Trades · Journal · Plus (Analytics, Règles, Réglages) ; bouton d'ajout rapide de trade global.
 - **Web ≥ 1024 px** : sidebar fixe avec toutes les sections ; en dessous, même tab bar que le mobile.
 - Header : sélecteur de compte global (« Tous les comptes » inclus) + période, persistés dans Zustand + URL (web).
 
 ### 6.2 Design system
 - Tokens dans `packages/ui/tokens.ts` (couleurs, rayons, espacements, typo), exposés à NativeWind.
-- Direction visuelle **acceptée** (ADR-012) : fond noir, cartes `#0E0E11`, accent bleu (`#5D99F9` comme point de départ), profits en bleu. Nom et logo restent provisoires (ADR-012). Aucun nom, logo, texte ni maquette de la référence n'est copié.
+- Direction visuelle **acceptée** (ADR-012) : fond noir, cartes `#0E0E11`, accent bleu légèrement décalé de `#5D99F9` (ADR-012), police Inter (ADR-021), profits en bleu. Nom et logo restent provisoires (ADR-012). Aucun nom, logo, texte ni maquette de la référence n'est copié.
 - Thème sombre par défaut, thème clair prévu dans les tokens.
 - Option « couleurs P&L » : bleu/gris (défaut) ou vert/rouge.
 - Composants de base : `Screen`, `Card`, `GlowCard`, `StatTile`, `Button`, `IconButton`, `Segmented`, `Select`, `DateRangePicker`, `Sheet`, `Skeleton`, `ShimmerBar`, `ProgressBar`, `ScoreRing` (post-MVP), `DayCell`, `EmptyState`, `Toast`, `Chart`.

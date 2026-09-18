@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { HelloCatalogLink } from './HelloCatalogLink';
 import { HelloContent } from './HelloContent';
 import { HelloEmptyState } from './HelloEmptyState';
 import { HelloErrorState } from './HelloErrorState';
@@ -26,6 +27,10 @@ import { useSchemaVersion } from './useSchemaVersion';
  * refetch en échec se traduit alors par un indicateur discret
  * (`HelloRefreshErrorNotice` / `HelloEmptyState.refreshFailed`) plutôt qu'un
  * écran d'erreur plein écran.
+ *
+ * `HelloCatalogLink` (M1-3) : toujours affiché, quel que soit l'état ci-dessus
+ * — lien de développement vers `app/(dev)/catalog`, en attendant les vrais
+ * écrans du MVP (TODO(M1-9) : à retirer du build de production).
  */
 export function HelloScreen() {
   const { t } = useTranslation('common');
@@ -87,6 +92,7 @@ export function HelloScreen() {
           isRefreshing={result.query.isFetching}
         />
       )}
+      <HelloCatalogLink />
     </View>
   );
 }

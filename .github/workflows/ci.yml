@@ -120,11 +120,20 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # Chromium uniquement (seul projet déclaré dans `playwright.config.ts`) : pas de
-      # WebKit/Firefox à installer, moindre coût CI.
+      # Chromium uniquement (les deux projets de `playwright.config.ts`, `chromium` et
+      # `chromium-perf-prod`, utilisent le même navigateur) : pas de WebKit/Firefox à
+      # installer, moindre coût CI.
       - name: Install Playwright browser (Chromium)
         run: pnpm --filter @repo/app exec playwright install --with-deps chromium
 
+      # Sans filtre `--project` : exécute les deux projets déclarés dans
+      # `playwright.config.ts` — `chromium` (serveur de dev, port 8081, tous les specs
+      # sauf `performance.spec.ts`) et `chromium-perf-prod` (export de production,
+      # port 4173, `performance.spec.ts` uniquement — ADR-017, voir l'en-tête de ce
+      # fichier de test). Les deux `webServer` (dev + export/serve statique) démarrent
+      # en parallèle ; l'export de production (~10-20 s) ajoute un budget raisonnable
+      # au démarrage, sans concurrencer l'exécution des autres specs sur le serveur de
+      # dev une fois les deux serveurs prêts.
       - name: Run Playwright (web)
         run: pnpm e2e:web
 

@@ -9,4 +9,10 @@ export {
   sumMoneyByCurrency,
 } from './money';
 export type { Money } from './money';
-export { AmountParseError, parseAmount, toAmountString, toDbAmount } from './parseAmount';
+export {
+  AmountParseError,
+  parseAmount,
+  sumAmountStrings,
+  toAmountString,
+  toDbAmount,
+} from './parseAmount';

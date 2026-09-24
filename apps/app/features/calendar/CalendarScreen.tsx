@@ -1,9 +1,8 @@
 import {
-  Decimal,
   formatDayNumber,
   formatMonthLabel,
   formatWeekdayShort,
-  parseAmount,
+  sumAmountStrings,
 } from '@repo/core';
 import { resolveLocale } from '@repo/i18n';
 import { DayCell, Screen, StatTile, useVisibilityStore } from '@repo/ui';
@@ -91,12 +90,14 @@ export function CalendarScreen() {
 
         <View className="gap-xs">
           {weeks.map((week, weekIndex) => {
-            const weekTotal = week
-              .filter((cell) => cell.inCurrentMonth)
-              .reduce((total, cell) => {
-                const day = dayByTradingDay.get(cell.tradingDay);
-                return day?.pnl != null ? total.plus(parseAmount(day.pnl)) : total;
-              }, new Decimal(0));
+            // `sumAmountStrings` (`@repo/core`, revue M1 bloquant #1) plutôt qu'un `reduce`
+            // local : même point d'agrégation « chaîne -> Decimal » que le reste de l'app,
+            // ignore nativement les jours sans donnée (`pnl` absent).
+            const weekTotal = sumAmountStrings(
+              week
+                .filter((cell) => cell.inCurrentMonth)
+                .map((cell) => dayByTradingDay.get(cell.tradingDay)?.pnl),
+            );
 
             return (
               <View key={`week-${weekIndex}`} className="gap-xs">
@@ -185,13 +186,15 @@ export function CalendarScreen() {
           locale={locale}
           hideAmounts={hideAmounts}
         />
+        {/* Comptages (`kind="number"`) : jamais `hideAmounts` — le masquage global ne
+            concerne que les montants/pourcentages, pas le nombre de jours gagnants/trades
+            (revue M1, Important #8). */}
         <StatTile
           testID="calendar-stat-winning-days"
           label={t('calendar.monthStats.winningDays')}
           kind="number"
           value={SAMPLE_MONTH_STATS.winningDays}
           locale={locale}
-          hideAmounts={hideAmounts}
         />
         <StatTile
           testID="calendar-stat-losing-days"
@@ -199,7 +202,6 @@ export function CalendarScreen() {
           kind="number"
           value={SAMPLE_MONTH_STATS.losingDays}
           locale={locale}
-          hideAmounts={hideAmounts}
         />
         <StatTile
           testID="calendar-stat-trades-count"
@@ -207,7 +209,6 @@ export function CalendarScreen() {
           kind="number"
           value={SAMPLE_MONTH_STATS.tradesCount}
           locale={locale}
-          hideAmounts={hideAmounts}
         />
       </View>
     </Screen>

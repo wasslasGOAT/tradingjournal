@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { computeDomain, computeTicks, createLinearScale, padDomain } from './scale';
+import {
+  computeDomain,
+  computeTicks,
+  createLinearScale,
+  domainIncludingZero,
+  padDomain,
+} from './scale';
 
 describe('computeDomain', () => {
   it('domaine [0,0] pour un tableau vide', () => {
@@ -73,6 +79,30 @@ describe('computeTicks', () => {
     const ticks = computeTicks([0, 1], 10);
     const unique = new Set(ticks.map((t) => t.toFixed(6)));
     expect(unique.size).toBe(ticks.length);
+  });
+});
+
+describe('domainIncludingZero', () => {
+  it('inclut toujours 0, même pour des valeurs toutes positives', () => {
+    expect(domainIncludingZero([3, 10, 7])).toEqual([0, 10]);
+  });
+
+  it('inclut toujours 0, même pour des valeurs toutes négatives', () => {
+    expect(domainIncludingZero([-5, -2, -9])).toEqual([-9, 0]);
+  });
+
+  it('couvre les valeurs positives et négatives', () => {
+    expect(domainIncludingZero([-4, 6, -1, 2])).toEqual([-4, 6]);
+  });
+
+  it('[0, 0] pour un tableau vide', () => {
+    expect(domainIncludingZero([])).toEqual([0, 0]);
+  });
+
+  it('ne dépasse pas la limite d’arguments d’un appel pour un très grand tableau', () => {
+    const values = Array.from({ length: 200_000 }, (_, i) => (i % 2 === 0 ? i : -i));
+    expect(() => domainIncludingZero(values)).not.toThrow();
+    expect(domainIncludingZero(values)).toEqual([-199_999, 199_998]);
   });
 });
 

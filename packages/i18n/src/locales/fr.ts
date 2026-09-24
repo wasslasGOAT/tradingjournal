@@ -276,6 +276,37 @@ export const fr = {
         },
       },
     },
+    // Écran Réglages (M1-9) : bascules persistées entre deux lancements
+    // (thème, couleurs P&L, masquage des montants, langue).
+    settings: {
+      title: 'Réglages',
+      sections: {
+        appearance: 'Apparence',
+        language: 'Langue',
+      },
+      theme: {
+        label: 'Thème',
+        system: 'Système',
+        dark: 'Sombre',
+        light: 'Clair',
+      },
+      pnlColors: {
+        label: 'Couleurs P&L',
+        blueGray: 'Bleu / gris',
+        greenRed: 'Vert / rouge',
+      },
+      hideAmounts: {
+        label: 'Montants',
+        visible: 'Visibles',
+        hidden: 'Masqués',
+      },
+      language: {
+        label: 'Langue de l’app',
+        system: 'Système',
+        fr: 'Français',
+        en: 'English',
+      },
+    },
     comingSoon: {
       title: 'Bientôt disponible',
       description: 'Cet écran est en cours de construction.',

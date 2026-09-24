@@ -16,11 +16,23 @@ export {
 export type { ThemeMode, PnlColorScheme, PnlIntent, ColorTokens } from './tokens';
 
 export { ThemeProvider, useThemeMode } from './theme/ThemeProvider';
+export type { ThemeProviderProps } from './theme/ThemeProvider';
 export { useThemeStore } from './theme/themeStore';
 export { useVisibilityStore } from './theme/visibilityStore';
 export { resolveThemeMode, buildThemeVars } from './theme/themeMode';
 export type { ThemePreference, SystemColorScheme } from './theme/themeMode';
 export { hexToRgba } from './theme/withAlpha';
+export {
+  PREFERENCES_STORAGE_KEYS,
+  loadPersistedPreferences,
+  parseHideAmounts,
+  parsePnlColorScheme,
+  parseThemePreference,
+  persistHideAmounts,
+  persistPnlColorScheme,
+  persistThemePreference,
+} from './theme/preferencesStorage';
+export type { PersistedPreferences, PreferencesStorage } from './theme/preferencesStorage';
 
 export { haptics } from './haptics';
 export type { HapticsAdapter } from './haptics';

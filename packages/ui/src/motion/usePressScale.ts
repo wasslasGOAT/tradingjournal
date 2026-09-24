@@ -34,6 +34,15 @@ export function usePressScale(options: UsePressScaleOptions = {}): PressScaleHan
 
   const animateTo = (target: number) => {
     const config = resolveSpringConfig(spring, reduceMotion);
+    // `react-hooks/immutability` (revue M1, Important #3) : faux positif connu sur
+    // `SharedValue` Reanimated — la règle reconnaît `useRef`/`.current` comme mutable
+    // (voir `isRefOrRefValue`, `mutate()` dans le plugin) mais pas encore les valeurs
+    // partagées Reanimated (`useSharedValue`/`.value`, la même API, même contrat de
+    // mutation hors rendu), malgré `environment.enableCustomTypeDefinitionForReanimated`
+    // activé ci-dessus (`eslint.config.js`) — ce drapeau alimente la reconnaissance du
+    // *type* mais pas encore l'exception de mutation. `scale.value` n'est écrit que dans
+    // des gestionnaires d'événements (`onPressIn`/`onPressOut`), jamais pendant le rendu.
+    // eslint-disable-next-line react-hooks/immutability
     scale.value = config ? withSpring(target, config) : target;
   };
 

@@ -18,7 +18,7 @@ import {
 import { useMotionPreference } from '../motion';
 import { useThemeMode } from '../theme/ThemeProvider';
 import { useThemeStore } from '../theme/themeStore';
-import { pnlColorSchemes, themes } from '../tokens';
+import { pnlColorSchemes, themes, typography } from '../tokens';
 import type { ColorTokens } from '../tokens';
 import { ChartEmptyState } from './ChartEmptyState';
 import { ChartSkeleton } from './ChartSkeleton';
@@ -27,7 +27,7 @@ import type { ChartPnlPalette } from './colors';
 import { resolveChartColor } from './colors';
 import { HeatmapGrid } from './HeatmapGrid';
 import { mergeLineSeries } from './mergeLineSeries';
-import { computeDomain, computeTicks, padDomain } from './scale';
+import { computeDomain, computeTicks, domainIncludingZero, padDomain } from './scale';
 import type {
   ChartActivePoint,
   ChartBarProps,
@@ -44,7 +44,13 @@ import type {
  */
 
 const DEFAULT_HEIGHT = 220;
-const AXIS_TICK_STYLE = { fontSize: 11, fontFamily: 'Inter_400Regular, sans-serif' };
+// Depuis les tokens plutôt qu'en dur (revue M1, Mineur #11) : même graisse/famille qu'ailleurs
+// dans l'app (`typography.fontFamily.sans`, ADR-021), même échelle de taille que les
+// libellés d'axe natifs (`Chart.native.tsx`, `text-2xs`).
+const AXIS_TICK_STYLE = {
+  fontSize: parseInt(typography.fontSize['2xs']?.[0] ?? '10px', 10),
+  fontFamily: (typography.fontFamily.sans ?? ['Inter_400Regular', 'sans-serif']).join(', '),
+};
 
 interface ThemeContext {
   readonly colors: ColorTokens;
@@ -102,9 +108,11 @@ function TooltipBridge({
 
   // Dépendances par valeur (pas par référence) : `point` est un objet recréé
   // à chaque rendu de `recharts` (même position) — dépendre de ses champs
-  // scalaires évite une invalidation en boucle.
+  // scalaires évite une invalidation en boucle. `point` lui-même exclu
+  // volontairement de la liste (revue M1, Important #3).
   useEffect(() => {
     onActivePointChange?.(point);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [point?.x, point?.y, point?.seriesId, onActivePointChange]);
 
   if (!point) return null;
@@ -165,6 +173,19 @@ function LineAreaChartView({
   }, [series]);
   const lastIndex = data.length - 1;
   const ChartComponent = type === 'area' ? AreaChart : LineChart;
+  // Mémoïsé (revue M1, Mineur #16) : `makeLastPointDot` est une fabrique — sans `useMemo`,
+  // chaque rendu recréait une fonction `dot` de nouvelle identité par série, invalidant sa
+  // mémoïsation interne côté `recharts`.
+  const dotRenderers = useMemo(
+    () =>
+      new Map(
+        series.map((s) => [
+          s.id,
+          makeLastPointDot(lastIndex, resolveChartColor(s.intent, colors, pnl), colors.surface),
+        ]),
+      ),
+    [series, lastIndex, colors, pnl],
+  );
 
   return (
     <ResponsiveContainer width="100%" height="100%">
@@ -213,7 +234,7 @@ function LineAreaChartView({
         />
         {series.map((s) => {
           const color = resolveChartColor(s.intent, colors, pnl);
-          const dot = makeLastPointDot(lastIndex, color, colors.surface);
+          const dot = dotRenderers.get(s.id);
           return type === 'area' ? (
             <Area
               key={s.id}
@@ -264,8 +285,7 @@ function BarChartView({
   // La ligne de base (0) doit rester dans le domaine visible (sinon la barre
   // "flotte", `recharts` calcule sa hauteur depuis `baseValue = 0` quel que
   // soit le domaine affiché) — couvre aussi les valeurs négatives.
-  const yValues = data.map((d) => d.y);
-  const yDomain: [number, number] = [Math.min(0, ...yValues), Math.max(0, ...yValues)];
+  const yDomain = domainIncludingZero(data.map((d) => d.y));
 
   return (
     <ResponsiveContainer width="100%" height="100%">
@@ -330,8 +350,7 @@ function HistogramChartView({
     [bins],
   );
   const xDomain = computeDomain(rows.map((row) => row.x));
-  const yValues = rows.map((row) => row.y);
-  const yDomain: [number, number] = [Math.min(0, ...yValues), Math.max(0, ...yValues)];
+  const yDomain = domainIncludingZero(rows.map((row) => row.y));
 
   return (
     <ResponsiveContainer width="100%" height="100%">

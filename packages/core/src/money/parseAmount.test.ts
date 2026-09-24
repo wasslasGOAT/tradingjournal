@@ -1,7 +1,13 @@
 import Decimal from 'decimal.js';
 import { describe, expect, it } from 'vitest';
 
-import { AmountParseError, parseAmount, toAmountString, toDbAmount } from './parseAmount';
+import {
+  AmountParseError,
+  parseAmount,
+  sumAmountStrings,
+  toAmountString,
+  toDbAmount,
+} from './parseAmount';
 
 describe('parseAmount', () => {
   it('parse une chaîne numérique Postgres avec décimales', () => {
@@ -119,5 +125,47 @@ describe('toDbAmount (revue M3 #10)', () => {
     // que numeric(20,8) n'en accepte : toDbAmount arrondit explicitement, jamais Postgres.
     const computed = new Decimal('1').dividedBy(new Decimal('3')); // 0.3333...3 (40 chiffres)
     expect(toDbAmount(computed, 8)).toBe('0.33333333');
+  });
+});
+
+describe('sumAmountStrings (revue M1 bloquant #1 : total hebdo hors du composant calendrier)', () => {
+  it('retourne 0 pour une liste vide', () => {
+    expect(sumAmountStrings([]).toString()).toBe('0');
+  });
+
+  it('ignore les valeurs null/undefined mélangées à des montants', () => {
+    const result = sumAmountStrings(['100.5', null, '-50.25', undefined, '10']);
+    expect(result.toString()).toBe('60.25');
+  });
+
+  it('retourne 0 si toutes les valeurs sont absentes', () => {
+    expect(sumAmountStrings([null, undefined, null]).toString()).toBe('0');
+  });
+
+  it('somme exacte sur des montants à 8 décimales (pas de dérive flottante)', () => {
+    const result = sumAmountStrings(['0.10000001', '0.20000002', '0.30000003']);
+    expect(result.toString()).toBe('0.60000006');
+  });
+
+  it('reproduit le total hebdo du jeu golden (10 jours, P&L net -17527.71)', () => {
+    // Répartition arbitraire de -17527.71 sur 3 jours actifs + jours vides (weekend).
+    const result = sumAmountStrings([
+      '-8000.11',
+      null,
+      '-5000.00',
+      undefined,
+      '-4527.60',
+      null,
+      null,
+    ]);
+    expect(result.toString()).toBe('-17527.71');
+  });
+
+  it('rejette une valeur invalide via AmountParseError (parseAmount)', () => {
+    expect(() => sumAmountStrings(['100', 'abc'])).toThrow(AmountParseError);
+  });
+
+  it('rejette un number JS glissé dans le tableau (typage contourné)', () => {
+    expect(() => sumAmountStrings(['100', 17.5 as unknown as string])).toThrow(AmountParseError);
   });
 });

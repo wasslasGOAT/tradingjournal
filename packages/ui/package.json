@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./theme/preferencesStorage": "./src/theme/preferencesStorage.ts",
     "./tailwind-preset": "./tailwind-preset.cjs"
   },
   "scripts": {
@@ -19,6 +20,7 @@
     "@expo-google-fonts/inter": "*",
     "@shopify/flash-list": "*",
     "@shopify/react-native-skia": "*",
+    "expo-blur": "*",
     "expo-font": "*",
     "expo-haptics": "*",
     "lucide-react-native": "*",
@@ -27,8 +29,7 @@
     "react-native-svg": "*",
     "recharts": "*",
     "victory-native": "*",
-    "zustand": "*",
-    "expo-blur": "*"
+    "zustand": "*"
   },
   "peerDependenciesMeta": {
     "@expo-google-fonts/inter": {
@@ -64,6 +65,7 @@
   },
   "devDependencies": {
     "@repo/config": "workspace:*",
-    "eslint-plugin-i18next": "^6.1.5"
+    "eslint-plugin-i18next": "^6.1.5",
+    "eslint-plugin-react-hooks": "^7.1.1"
   }
 }

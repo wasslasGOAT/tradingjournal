@@ -23,6 +23,12 @@ export interface VirtualizedListProps<TItem> {
   readonly testID?: string;
   readonly sections: readonly ListSection<TItem>[];
   readonly renderItem: (item: TItem, index: number) => ReactElement;
+  /**
+   * Doit être référentiellement stable d'un rendu à l'autre (mémoïsée par l'appelant, ex.
+   * `useCallback`, ou définie hors composant) — utilisée comme dépendance de `useMemo` pour
+   * `buildSectionedRows` ci-dessous : une fonction recréée à chaque rendu (arrow inline)
+   * annule cette mémoïsation et recalcule les lignes à chaque frame (revue M1, Mineur #17).
+   */
   readonly keyExtractor: (item: TItem, index: number) => string;
   readonly loading?: boolean;
   readonly loadingRowCount?: number;

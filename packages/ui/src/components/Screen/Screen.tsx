@@ -51,12 +51,18 @@ export function Screen({
   };
 
   if (scroll) {
+    // `edgeStyle` va sur `contentContainerStyle`, pas sur `style` : le fond
+    // (`bg-background`) reste plein écran via `style`/`className`, tandis que
+    // le contenu défilant obtient sa réserve de bas d'écran — sinon le
+    // contenu s'arrête au-dessus de la tab bar flottante au lieu de défiler
+    // sous elle, et le flou (`expo-blur`) n'a alors rien à flouter (revue M1,
+    // Important #6).
     return (
       <ScrollView
         testID={testID}
         className={`flex-1 bg-background ${className ?? ''}`}
-        style={edgeStyle}
         contentContainerClassName={`gap-md px-lg py-md ${contentClassName ?? ''}`}
+        contentContainerStyle={edgeStyle}
       >
         {children}
       </ScrollView>

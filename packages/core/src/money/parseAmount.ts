@@ -88,3 +88,32 @@ export function toAmountString(amount: Decimal): string {
 export function toDbAmount(amount: Decimal, scale = 8): string {
   return amount.toDecimalPlaces(scale, Decimal.ROUND_HALF_EVEN).toFixed(scale);
 }
+
+/**
+ * Somme une liste de montants sérialisés (ex. `pnl` par jour d'une semaine
+ * de calendrier, ARCHITECTURE §5.5), en `Decimal`.
+ *
+ * Formule : `Σ parseAmount(value)` pour chaque `value` non nul/`undefined` —
+ * une valeur absente (`null`/`undefined`, ex. jour sans trade ni mouvement)
+ * est ignorée, pas traitée comme zéro implicite ni comme une erreur.
+ *
+ * Volontairement générique (chaînes en entrée, pas un type de domaine
+ * `DayAggregate`) : c'est le point d'agrégation le plus réutilisable pour
+ * de la logique d'UI qui doit sommer des montants déjà résolus par jour —
+ * total hebdomadaire du calendrier (`CalendarScreen`, revue M1 bloquant #1),
+ * futurs totaux mensuels/multi-comptes (M5) — sans dupliquer de `reduce`
+ * dans un composant. Un appelant qui possède déjà des `DayAggregate`/objets
+ * typés passe simplement `days.map((d) => d.netPnl)`.
+ *
+ * @param values montants sérialisés, `null`/`undefined` autorisés (ignorés)
+ * @throws {AmountParseError} si une valeur présente n'est pas une chaîne
+ *   numérique décimale valide (voir {@link parseAmount})
+ * @returns somme en `Decimal`, `0` si `values` est vide ou ne contient que
+ *   des valeurs absentes
+ */
+export function sumAmountStrings(values: readonly (string | null | undefined)[]): Decimal {
+  return values.reduce<Decimal>((total, value) => {
+    if (value == null) return total;
+    return total.plus(parseAmount(value));
+  }, new Decimal(0));
+}

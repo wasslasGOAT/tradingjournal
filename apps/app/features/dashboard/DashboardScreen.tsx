@@ -57,8 +57,16 @@ export function DashboardScreen() {
   };
   const formatEquityYLabel = (y: number) =>
     formatAmount(new Decimal(y), SAMPLE_DASHBOARD_CURRENCY, { locale, hideAmounts, decimals: 0 });
-  const formatEquityTooltipValue = (point: ChartActivePoint) =>
-    `${t('dashboard.equity.tooltipLabel')} ${formatAmount(new Decimal(point.y), SAMPLE_DASHBOARD_CURRENCY, { locale, hideAmounts })}`;
+  // Repart de la chaîne source (`SAMPLE_EQUITY_CURVE[…].balance`, `parseAmount`) plutôt que du
+  // `number` de tracé (`point.y`, dérivé via `.toNumber()` pour Skia/recharts) — l'affichage
+  // ne doit jamais recalculer un montant depuis un flottant (CLAUDE.md, revue M1, Important #7).
+  // Repli sur `point.y` seulement si l'index n'a pas de correspondance (ne devrait pas arriver :
+  // `point.x` vient toujours d'un index de `equityPoints`, lui-même dérivé 1:1 de `SAMPLE_EQUITY_CURVE`).
+  const formatEquityTooltipValue = (point: ChartActivePoint) => {
+    const source = SAMPLE_EQUITY_CURVE[Math.round(point.x)];
+    const amount = source ? parseAmount(source.balance) : new Decimal(point.y);
+    return `${t('dashboard.equity.tooltipLabel')} ${formatAmount(amount, SAMPLE_DASHBOARD_CURRENCY, { locale, hideAmounts })}`;
+  };
 
   return (
     <Screen

@@ -1,7 +1,7 @@
 import { formatDayNumber, formatMonthLabel, formatWeekdayShort, toTradingDay } from '@repo/core';
 import type { SupportedLocale, TradingDay } from '@repo/core';
 import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { haptics } from '../../haptics';
@@ -98,16 +98,21 @@ export function DateRangePicker({
     readonly end: TradingDay | null;
   }>({ start: value.start, end: value.end });
   const [displayedMonth, setDisplayedMonth] = useState(() => monthOf(value.start));
-
-  // Repart de la valeur validée à chaque ouverture — « Annuler » abandonne toute édition en cours.
-  useEffect(() => {
-    if (!open) return;
-    setDraftShortcut(shortcut);
-    setDraftRange({ start: value.start, end: value.end });
-    setDisplayedMonth(monthOf(value.start));
-    // `shortcut`/`value` volontairement hors dépendances : lus seulement à l'ouverture (`open`),
-    // pas à chaque changement de prop pendant que la sheet est ouverte.
-  }, [open]);
+  // Trace la dernière valeur de `open` déjà « consommée » pour ré-initialiser le brouillon une
+  // seule fois par ouverture, ajusté pendant le rendu plutôt que dans un effet : « Adjusting
+  // state when a prop changes » (https://react.dev/learn/you-might-not-need-an-effect#adjusting-state-based-on-a-prop-change)
+  // — évite un rendu jetable avec l'ancien brouillon avant que l'effet ne s'exécute
+  // (`react-hooks/set-state-in-effect`, revue M1, Important #3). `shortcut`/`value` lus
+  // seulement à l'ouverture, pas à chaque changement de prop pendant que la sheet est ouverte.
+  const [openSnapshot, setOpenSnapshot] = useState(open);
+  if (open !== openSnapshot) {
+    setOpenSnapshot(open);
+    if (open) {
+      setDraftShortcut(shortcut);
+      setDraftRange({ start: value.start, end: value.end });
+      setDisplayedMonth(monthOf(value.start));
+    }
+  }
 
   const applyShortcut = (nextShortcut: Exclude<DateRangeShortcut, 'custom'>) => {
     haptics.selection();

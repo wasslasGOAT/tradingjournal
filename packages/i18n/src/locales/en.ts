@@ -273,6 +273,37 @@ export const en = {
         },
       },
     },
+    // Settings screen (M1-9) : toggles persisted between launches (theme,
+    // P&L colors, hide amounts, language).
+    settings: {
+      title: 'Settings',
+      sections: {
+        appearance: 'Appearance',
+        language: 'Language',
+      },
+      theme: {
+        label: 'Theme',
+        system: 'System',
+        dark: 'Dark',
+        light: 'Light',
+      },
+      pnlColors: {
+        label: 'P&L colors',
+        blueGray: 'Blue / gray',
+        greenRed: 'Green / red',
+      },
+      hideAmounts: {
+        label: 'Amounts',
+        visible: 'Visible',
+        hidden: 'Hidden',
+      },
+      language: {
+        label: 'App language',
+        system: 'System',
+        fr: 'Français',
+        en: 'English',
+      },
+    },
     comingSoon: {
       title: 'Coming soon',
       description: 'This screen is under construction.',

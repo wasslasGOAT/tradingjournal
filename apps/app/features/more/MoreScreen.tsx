@@ -4,13 +4,20 @@ import { BarChart3, Blocks, Settings, ShieldCheck } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
+import { CATALOG_ENABLED } from '@/lib/flags';
+
 import { MoreListItem } from './MoreListItem';
+
+// M1-9 : le catalogue de composants est un outil de développement, exclu du bundle de
+// production côté Metro (`metro.config.js`, `resolver.blockList`) — l'entrée de menu doit
+// disparaître avec lui, sinon elle pointerait vers une route absente du bundle.
+// Voir `@/lib/flags` pour la règle (mode développement, surchargeable).
 
 /**
  * Écran « Plus » (M1-8, ADR-011 : contient Analytics, Règles, Réglages sur
  * mobile — la sidebar web ≥ 1024 px les affiche directement, ce groupement
  * n'y apparaît pas). Le catalogue de composants (développement) reste
- * accessible d'ici (CLAUDE.md M1-8).
+ * accessible d'ici (CLAUDE.md M1-8), uniquement quand activé (M1-9).
  */
 export function MoreScreen() {
   const { t } = useTranslation('common');
@@ -45,13 +52,15 @@ export function MoreScreen() {
           description={t('more.sections.settings.description')}
           onPress={() => router.push('/settings')}
         />
-        <MoreListItem
-          testID="more-item-catalog"
-          icon={Blocks}
-          label={t('more.sections.catalog.label')}
-          description={t('more.sections.catalog.description')}
-          onPress={() => router.push('/catalog')}
-        />
+        {CATALOG_ENABLED ? (
+          <MoreListItem
+            testID="more-item-catalog"
+            icon={Blocks}
+            label={t('more.sections.catalog.label')}
+            description={t('more.sections.catalog.description')}
+            onPress={() => router.push('/catalog')}
+          />
+        ) : null}
       </View>
     </Screen>
   );

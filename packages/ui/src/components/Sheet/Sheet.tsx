@@ -1,3 +1,4 @@
+import { X as CloseIcon } from 'lucide-react-native';
 import type { ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { Modal, Platform, Pressable, Text, View } from 'react-native';
@@ -78,9 +79,22 @@ export function Sheet({
   const panelRef = useRef<View>(null);
   const previouslyFocusedElement = useRef<Element | null>(null);
 
+  // Monte le panneau dès que `visible` devient vrai, ajusté pendant le rendu plutôt que dans
+  // un effet : « Adjusting state when a prop changes »
+  // (https://react.dev/learn/you-might-not-need-an-effect#adjusting-state-based-on-a-prop-change)
+  // — évite un rendu jetable où `mounted` est encore `false` avant que l'effet ne s'exécute
+  // (`react-hooks/set-state-in-effect`, revue M1, Important #3). Le démontage (`mounted` →
+  // `false`) reste piloté par l'effet ci-dessous : asynchrone, à la fin de l'animation de sortie.
+  const [visibleSnapshot, setVisibleSnapshot] = useState(visible);
+  if (visible !== visibleSnapshot) {
+    setVisibleSnapshot(visible);
+    if (visible) setMounted(true);
+  }
+
+  // `progress` volontairement hors dépendances : valeur partagée (`useSharedValue`), pas un
+  // déclencheur de ce calcul (revue M1, Important #3).
   useEffect(() => {
     if (visible) {
-      setMounted(true);
       const config = resolveSpringConfig('default', reduceMotion);
       progress.value = config ? withSpring(1, config) : 1;
       return;
@@ -90,9 +104,8 @@ export function Sheet({
     progress.value = withTiming(0, config, (finished) => {
       if (finished) runOnJS(setMounted)(false);
     });
-    // `progress`/`mounted` volontairement hors dépendances : valeurs lues/partagées (`useSharedValue`,
-    // état déjà gardé par le `if` ci-dessus), pas des déclencheurs de ce calcul.
-  }, [visible, reduceMotion]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, reduceMotion, mounted]);
 
   useEffect(() => {
     if (Platform.OS !== 'web' || !mounted) return;
@@ -103,7 +116,33 @@ export function Sheet({
       node?.focus?.();
     });
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
+      if (event.key === 'Escape') {
+        onClose();
+        return;
+      }
+      // Piège à focus (revue M1, Important #9) : `Tab`/`Shift+Tab` restent dans le panneau
+      // tant qu'il est le seul contenu accessible (fond masqué aux lecteurs d'écran, voir
+      // `importantForAccessibility="no-hide-descendants"` ci-dessous) — sans ce piège, `Tab`
+      // fait sortir le focus vers le contenu masqué derrière la sheet.
+      if (event.key !== 'Tab') return;
+      const node = panelRef.current as unknown as HTMLElement | null;
+      if (!node) return;
+      const focusable = Array.from(
+        node.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((element) => element.offsetParent !== null);
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+      if (event.shiftKey && active === first) {
+        event.preventDefault();
+        last?.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first?.focus();
+      }
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => {
@@ -191,22 +230,28 @@ export function Sheet({
             <View className="items-center pt-xs">
               <View className="h-1 w-10 rounded-full bg-border" />
             </View>
-            {title ? (
-              <View className="flex-row items-center justify-between px-lg pb-sm pt-sm">
+            {/* Bouton de fermeture inconditionnel (revue M1, Important #9) : sans `title`, le
+                panneau n'offrait aucun moyen visible de fermer alors que le fond est masqué aux
+                lecteurs d'écran (`importantForAccessibility="no-hide-descendants"` ci-dessus) —
+                seul le geste de glissement (non découvrable) restait disponible. */}
+            <View className="flex-row items-center justify-between px-lg pb-sm pt-sm">
+              {title ? (
                 <Text
                   className="flex-1 font-sans-semibold text-md text-textPrimary"
                   numberOfLines={1}
                 >
                   {title}
                 </Text>
-                <IconButton
-                  testID={testID ? `${testID}-close` : undefined}
-                  icon={CloseIcon}
-                  accessibilityLabel={closeAccessibilityLabel}
-                  onPress={requestClose}
-                />
-              </View>
-            ) : null}
+              ) : (
+                <View className="flex-1" />
+              )}
+              <IconButton
+                testID={testID ? `${testID}-close` : undefined}
+                icon={CloseIcon}
+                accessibilityLabel={closeAccessibilityLabel}
+                onPress={requestClose}
+              />
+            </View>
             <View className={`px-lg pb-lg ${contentClassName ?? ''}`}>{children}</View>
           </Animated.View>
         </GestureDetector>
@@ -214,7 +259,3 @@ export function Sheet({
     </Modal>
   );
 }
-
-// Import tardif (après le composant) pour garder le bloc d'imports groupé par origine (convention du dépôt) —
-// `lucide-react-native` seulement pour cette icône, évite d'alourdir le diff des imports ci-dessus.
-import { X as CloseIcon } from 'lucide-react-native';

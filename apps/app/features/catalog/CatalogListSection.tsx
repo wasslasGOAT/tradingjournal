@@ -12,6 +12,12 @@ import { CatalogSection } from './CatalogSection';
 const SAMPLE_TRADE_COUNT = 1000;
 const SAMPLE_CURRENCY = 'USD';
 
+// Hors composant plutôt qu'une arrow inline : `VirtualizedList` demande un `keyExtractor`
+// référentiellement stable (revue M1, Mineur #17) pour que sa mémoïsation interne fonctionne.
+function extractTradeKey(item: { readonly id: string }): string {
+  return item.id;
+}
+
 /**
  * Démo de `VirtualizedList` (M1-5, ADR-017 : « listes virtualisées au-delà de
  * 50 éléments ») : 1 000 lignes de trade factices groupées par jour, pour
@@ -40,7 +46,7 @@ export function CatalogListSection() {
         <VirtualizedList
           testID="catalog-trade-list"
           sections={sections}
-          keyExtractor={(item) => item.id}
+          keyExtractor={extractTradeKey}
           emptyState={{
             icon: Inbox,
             title: t('catalog.list.empty.title'),

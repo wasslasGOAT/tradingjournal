@@ -11,8 +11,8 @@ import { create } from 'zustand';
  * partagés par tous les écrans de données (dashboard, calendrier, trades…).
  *
  * État en mémoire uniquement pour l'instant (persistance réelle + reflet
- * dans les préférences utilisateur : M2). Le reflet dans l'URL sur le web est
- * géré séparément par `useSyncFiltersWithUrl` (`(app)/_layout.tsx`), pas ici :
+ * dans les préférences utilisateur : M2). Pas de reflet dans l'URL sur le web
+ * non plus pour l'instant (pas de hook dédié — à ajouter si besoin, M2+) :
  * ce store reste la source de vérité unique, lue aussi bien par le header que
  * par les futures clés de requête TanStack Query (compte + période, ADR-017 :
  * « aucune donnée périmée visible »).
@@ -45,6 +45,14 @@ interface FilterState {
   setDateRange: (range: TradingDayRange, shortcut: DateRangeShortcut) => void;
 }
 
+// Snapshot pris au chargement du module, pour la seule période *par défaut* du store
+// (« mois en cours » à l'ouverture). Limite connue (revue M1, Mineur #12) : une session
+// laissée ouverte à cheval sur minuit garde ce défaut jusqu'à un changement manuel de
+// filtre — sans conséquence tant que le mois ne change pas pendant la session ; au pire
+// (31 déc. → 1er janv.) le défaut initial reste « décembre » au lieu de « janvier ».
+// `PeriodSelector` ne dépend pas de cette valeur : il rappelle `resolveApproximateToday()`
+// à chaque rendu pour la grille du sélecteur personnalisé. À revisiter en même temps que
+// le vrai calcul de jour de trading par compte (M2, `@repo/core/time#tradingDayOf`).
 const today = resolveApproximateToday();
 
 export const useFilterStore = create<FilterState>((set) => ({

@@ -79,6 +79,22 @@ export function computeTicks(domain: NumericDomain, count = 4): number[] {
 }
 
 /**
+ * Domaine `[min, max]` d'un ensemble de valeurs, toujours élargi pour inclure `0` — la ligne
+ * de base d'un graphique en barres doit rester dans le domaine visible, sinon `yScale(0)`
+ * extrapole hors du canvas et les barres semblent flotter (`BarChartView`/`HistogramChartView`,
+ * `Chart.web.tsx` ; `CategoricalBarChart`, `Chart.native.tsx`). `reduce` plutôt que
+ * `Math.min(0, ...values)`/`Math.max(0, ...values)` (revue M1, Mineur #15) : l'étalement d'un
+ * grand tableau en arguments peut dépasser la limite d'arguments d'un appel de fonction sur
+ * certains moteurs JS pour de très longues séries.
+ */
+export function domainIncludingZero(values: readonly number[]): NumericDomain {
+  return values.reduce<NumericDomain>(
+    ([min, max], value) => [Math.min(min, value), Math.max(max, value)],
+    [0, 0],
+  );
+}
+
+/**
  * Élargit un domaine de quelques pourcents de part et d'autre, pour les séries
  * dont les valeurs sont loin de zéro (courbe d'equity : un axe partant de `0`
  * écrase toute la courbe contre le haut du graphique — défaut constaté en M1-6).

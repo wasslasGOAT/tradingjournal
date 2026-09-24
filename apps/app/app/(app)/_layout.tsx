@@ -1,4 +1,11 @@
-import { ScreenBottomInsetProvider, haptics, spacing, themes, useThemeMode } from '@repo/ui';
+import {
+  ScreenBottomInsetProvider,
+  elevation,
+  haptics,
+  spacing,
+  themes,
+  useThemeMode,
+} from '@repo/ui';
 import { Slot } from 'expo-router';
 import { Tabs } from 'expo-router/js-tabs';
 import { useTranslation } from 'react-i18next';
@@ -88,7 +95,13 @@ export default function AppLayout() {
                 backgroundColor: 'transparent',
                 borderTopWidth: 0,
                 elevation: 8,
-                shadowColor: '#000',
+                // Token plutôt que `#000` en dur (revue M1, Mineur #10) : `elevation.card[mode]`
+                // pose déjà la bonne teinte d'ombre par thème (`#000000` sombre, `#1B1F27` clair) —
+                // une ombre noire pure sur le thème clair paraîtrait fausse/trop dure. Cast : les
+                // valeurs de `elevation.card` sont typées `unknown` (`tokens.data.d.cts`, données
+                // partagées avec Tailwind — pas de type RN dédié), comme `elevation.card[mode]`
+                // spread tel quel dans `Sheet.tsx`.
+                shadowColor: elevation.card[mode].shadowColor as string,
                 shadowOpacity: 0.3,
                 shadowRadius: 16,
                 shadowOffset: { width: 0, height: 6 },

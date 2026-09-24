@@ -34,12 +34,19 @@ describe('resolveStatTileClassName', () => {
 describe('formatStatTileValue', () => {
   it('formate un montant signé avec devise', () => {
     expect(
-      formatStatTileValue({ kind: 'signedAmount', value: new Decimal('292'), locale: 'en', currency: 'USD' }),
+      formatStatTileValue({
+        kind: 'signedAmount',
+        value: new Decimal('292'),
+        locale: 'en',
+        currency: 'USD',
+      }),
     ).toBe('+$292.00');
   });
 
   it('formate un pourcentage', () => {
-    expect(formatStatTileValue({ kind: 'percent', value: new Decimal('0.655'), locale: 'en' })).toBe('65.50%');
+    expect(
+      formatStatTileValue({ kind: 'percent', value: new Decimal('0.655'), locale: 'en' }),
+    ).toBe('65.50%');
   });
 
   it('masque la valeur quand hideAmounts est actif', () => {

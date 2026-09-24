@@ -1,7 +1,7 @@
 {
-  "description": "Jeu golden synthétique Edgebook (ROADMAP M3-8) — compte Prop Challenge 200k, USD, Europe/Paris, bascule 00:00. Généré par build.mjs, ne pas éditer à la main.",
+  "description": "Jeu golden synthétique Edgebook (ROADMAP M3-8) — compte Prop Challenge 200k, USD, Europe/Paris, bascule 00:00. Généré par build.mjs, ne pas éditer à la main. Identifiants en UUID v5 déterministes (revue M3 #14) : réutilisable tel quel comme seed M4.",
   "account": {
-    "id": "acct-prop-challenge-200k",
+    "id": "cd2dbda2-eb2e-5843-82ee-b96d4531932a",
     "name": "Prop Challenge 200k",
     "kind": "prop_challenge",
     "currency": "USD",
@@ -12,587 +12,640 @@
   },
   "instruments": [
     {
-      "id": "GBPUSD",
+      "id": "b8ce14fc-92f4-5b44-af44-1c6f8509804c",
       "symbol": "GBPUSD",
       "asset_class": "forex",
-      "contract_multiplier": "100000"
+      "contract_multiplier": "100000",
+      "quote_ccy": "USD"
     },
     {
-      "id": "EURUSD",
+      "id": "c79dcb2f-113e-5b39-afed-c2924948a8d9",
       "symbol": "EURUSD",
       "asset_class": "forex",
-      "contract_multiplier": "100000"
+      "contract_multiplier": "100000",
+      "quote_ccy": "USD"
     },
     {
-      "id": "XAUUSD",
+      "id": "abb7cf9f-9c52-5eb8-8781-4593ed1803de",
       "symbol": "XAUUSD",
       "asset_class": "metal",
-      "contract_multiplier": "100"
+      "contract_multiplier": "100",
+      "quote_ccy": "USD"
     },
     {
-      "id": "NAS100",
+      "id": "e2df7929-3862-587e-a077-a26fe8cc106d",
       "symbol": "NAS100",
       "asset_class": "index",
-      "contract_multiplier": "100"
+      "contract_multiplier": "100",
+      "quote_ccy": "USD"
     }
   ],
   "executions": [
     {
-      "id": "exec-0001-mar2-a-open",
-      "account_id": "acct-prop-challenge-200k",
-      "instrument_id": "GBPUSD",
+      "id": "d2cfe31e-4033-512a-82b3-99a06d137f4b",
+      "account_id": "cd2dbda2-eb2e-5843-82ee-b96d4531932a",
+      "instrument_id": "b8ce14fc-92f4-5b44-af44-1c6f8509804c",
       "side": "buy",
       "quantity": "1",
       "price": "1.265",
       "commission": "0.00",
       "fees": "0",
-      "executed_at": "2026-03-02T08:15:00Z"
+      "executed_at": "2026-03-02T08:15:00Z",
+      "sequence": 1
     },
     {
-      "id": "exec-0002-mar2-a-close",
-      "account_id": "acct-prop-challenge-200k",
-      "instrument_id": "GBPUSD",
+      "id": "7313a2b4-2a05-5c65-a62a-ce1425edb0ec",
+      "account_id": "cd2dbda2-eb2e-5843-82ee-b96d4531932a",
+      "instrument_id": "b8ce14fc-92f4-5b44-af44-1c6f8509804c",
       "side": "sell",
       "quantity": "1",
       "price": "1.347",
       "commission": "0",
       "fees": "0.00",
-      "executed_at": "2026-03-02T14:45:00Z"
+      "executed_at": "2026-03-02T14:45:00Z",
+      "sequence": 2
     },
     {
-      "id": "exec-0003-mar2-b-open",
-      "account_id": "acct-prop-challenge-200k",
-      "instrument_id": "EURUSD",
+      "id": "96f3a2f8-d2f3-5aa2-be7e-618528f4e090",
+      "account_id": "cd2dbda2-eb2e-5843-82ee-b96d4531932a",
+      "instrument_id": "c79dcb2f-113e-5b39-afed-c2924948a8d9",
       "side": "buy",
       "quantity": "1",
       "price": "1.083",
       "commission": "0.00",
       "fees": "0",
-      "executed_at": "2026-03-02T09:00:00Z"
+      "executed_at": "2026-03-02T09:00:00Z",
+      "sequence": 3
     },
     {
-      "id": "exec-0004-mar2-b-close",
-      "account_id": "acct-prop-challenge-200k",
-      "instrument_id": "EURUSD",
+      "id": "91c55eed-905f-5abd-900f-f29983eb49c2",
+      "account_id": "cd2dbda2-eb2e-5843-82ee-b96d4531932a",
+      "instrument_id": "c79dcb2f-113e-5b39-afed-c2924948a8d9",
       "side": "sell",
       "quantity": "1",
       "price": "1.146",
       "commission": "0",
       "fees": "0.00",
-      "executed_at": "2026-03-02T15:30:00Z"
+      "executed_at": "2026-03-02T15:30:00Z",
+      "sequence": 4
     },
     {
-      "id": "exec-0005-mar5-a-open",
-      "account_id": "acct-prop-challenge-200k",
-      "instrument_id": "EURUSD",
+      "id": "3221ea2f-a863-5ec0-b8ce-284c7405764d",
+      "account_id": "cd2dbda2-eb2e-5843-82ee-b96d4531932a",
+      "instrument_id": "c79dcb2f-113e-5b39-afed-c2924948a8d9",
       "side": "sell",
       "quantity": "1",
       "price": "1.088",
       "commission": "0.00",
       "fees": "0",
-      "executed_at": "2026-03-05T07:00:00Z"
+      "executed_at": "2026-03-05T07:00:00Z",
+      "sequence": 5
     },
     {
-      "id": "exec-0006-mar5-a-close",
-      "account_id": "acct-prop-challenge-200k",
-      "instrument_id": "EURUSD",
+      "id": "432a45cb-393c-5596-9d11-b50b3819b28e",
+      "account_id": "cd2dbda2-eb2e-5843-82ee-b96d4531932a",
+      "instrument_id": "c79dcb2f-113e-5b39-afed-c2924948a8d9",
       "side": "buy",
       "quantity": "1",
       "price": "1.108",
       "commission": "0",
       "fees": "0.00",
-      "executed_at": "2026-03-05T10:00:00Z"
+      "executed_at": "2026-03-05T10:00:00Z",
+      "sequence": 6
     },
     {
-      "id": "exec-0007-mar5-b-open",
-      "account_id": "acct-prop-challenge-200k",
-      "instrument_id": "GBPUSD",
+      "id": "35a2638e-f0af-5636-a703-0cf2f1b3a593",
+      "account_id": "cd2dbda2-eb2e-5843-82ee-b96d4531932a",
+      "instrument_id": "b8ce14fc-92f4-5b44-af44-1c6f8509804c",
       "side": "sell",
       "quantity": "1",
       "price": "1.272",
       "commission": "0.00",
       "fees": "0",
-      "executed_at": "2026-03-05T11:00:00Z"
+      "executed_at": "2026-03-05T11:00:00Z",
+      "sequence": 7
     },
     {
-      "id": "exec-0008-mar5-b-close",
-      "account_id": "acct-prop-challenge-200k",
-      "instrument_id": "GBPUSD",
+      "id": "fd3b4c4a-63de-5611-9744-429520444ac0",
+      "account_id": "cd2dbda2-eb2e-5843-82ee-b96d4531932a",
+      "instrument_id": "b8ce14fc-92f4-5b44-af44-1c6f8509804c",
       "side": "buy",
       "quantity": "1",
       "price": "1.287",
       "commission": "0",
       "fees": "0.00",
-      "executed_at": "2026-03-05T13:00:00Z"
+      "executed_at": "2026-03-05T13:00:00Z",
+      "sequence": 8
     },
     {
-      "id": "exec-0009-mar5-c-open",
-      "account_id": "acct-prop-challenge-200k",
-      "instrument_id": "XAUUSD",
+      "id": "e6a52a0c-609c-5223-8de9-07fedcc9e342",
+      "account_id": "cd2dbda2-eb2e-5843-82ee-b96d4531932a",
+      "instrument_id": "abb7cf9f-9c52-5eb8-8781-4593ed1803de",
       "side": "sell",
       "quantity": "1",
       "price": "2155",
       "commission": "0.00",
       "fees": "0",
-      "executed_at": "2026-03-05T14:00:00Z"
+      "executed_at": "2026-03-05T14:00:00Z",
+      "sequence": 9
     },
     {
-      "id": "exec-0010-mar5-c-close",
-      "account_id": "acct-prop-challenge-200k",
-      "instrument_id": "XAUUSD",
+      "id": "654fd6b5-2119-5022-a05d-209b23eac961",
+      "account_id": "cd2dbda2-eb2e-5843-82ee-b96d4531932a",
+      "instrument_id": "abb7cf9f-9c52-5eb8-8781-4593ed1803de",
       "side": "buy",
       "quantity": "1",
       "price": "2170",
       "commission": "0",
       "fees": "0.00",
-      "executed_at": "2026-03-05T16:00:00Z"
+      "executed_at": "2026-03-05T16:00:00Z",
+      "sequence": 10
     },
     {
-      "id": "exec-0011-mar9-a-open",
-      "account_id": "acct-prop-challenge-200k",
-      "instrument_id": "NAS100",
+      "id": "648d7c12-9175-553c-a77d-fe1d18bb9925",
+      "account_id": "cd2dbda2-eb2e-5843-82ee-b96d4531932a",
+      "instrument_id": "e2df7929-3862-587e-a077-a26fe8cc106d",
       "side": "sell",
       "quantity": "1",
       "price": "18700",
       "commission": "0.00",
       "fees": "0",
-      "executed_at": "2026-03-09T06:30:00Z"
+      "executed_at": "2026-03-09T06:30:00Z",
+      "sequence": 11
     },
     {
-      "id": "exec-0012-mar9-a-close",
-      "account_id": "acct-prop-challenge-200k",
-      "instrument_id": "NAS100",
+      "id": "fe4e4747-fbd2-5d3a-9fae-a445c44f4791",
+      "account_id": "cd2dbda2-eb2e-5843-82ee-b96d4531932a",
+      "instrument_id": "e2df7929-3862-587e-a077-a26fe8cc106d",
       "side": "buy",
       "quantity": "1",
       "price": "18718",
       "commission": "0",
       "fees": "0.00",
-      "executed_at": "2026-03-09T08:00:00Z"
+      "executed_at": "2026-03-09T08:00:00Z",
+      "sequence": 12
     },
     {
-      "id": "exec-0013-mar9-b-open",
-      "account_id": "acct-prop-challenge-200k",
-      "instrument_id": "GBPUSD",
+      "id": "e33ab70d-9b3e-5182-8fc9-539aacfebccb",
+      "account_id": "cd2dbda2-eb2e-5843-82ee-b96d4531932a",
+      "instrument_id": "b8ce14fc-92f4-5b44-af44-1c6f8509804c",
       "side": "buy",
       "quantity": "1",
       "price": "1.269",
       "commission": "0.00",
       "fees": "0",
-      "executed_at": "2026-03-09T09:30:00Z"
+      "executed_at": "2026-03-09T09:30:00Z",
+      "sequence": 13
     },
     {
-      "id": "exec-0014-mar9-b-close",
-      "account_id": "acct-prop-challenge-200k",
-      "instrument_id": "GBPUSD",
+      "id": "41758aaa-a3c4-534d-81ea-1f19a9f172a8",
+      "account_id": "cd2dbda2-eb2e-5843-82ee-b96d4531932a",
+      "instrument_id": "b8ce14fc-92f4-5b44-af44-1c6f8509804c",
       "side": "sell",
       "quantity": "1",
       "price": "1.252",
       "commission": "0",
       "fees": "0.00",
-      "executed_at": "2026-03-09T12:00:00Z"
+      "executed_at": "2026-03-09T12:00:00Z",
+      "sequence": 14
     },
     {
-      "id": "exec-0015-mar9-c-open",
-      "account_id": "acct-prop-challenge-200k",
-      "instrument_id": "EURUSD",
+      "id": "c5191f0a-6917-5e80-b34c-30284873ccb1",
+      "account_id": "cd2dbda2-eb2e-5843-82ee-b96d4531932a",
+      "instrument_id": "c79dcb2f-113e-5b39-afed-c2924948a8d9",
       "side": "sell",
       "quantity": "1",
       "price": "1.086",
       "commission": "0.00",
       "fees": "0",
-      "executed_at": "2026-03-09T13:00:00Z"
+      "executed_at": "2026-03-09T13:00:00Z",
+      "sequence": 15
     },
     {
-      "id": "exec-0016-mar9-c-close",
-      "account_id": "acct-prop-challenge-200k",
-      "instrument_id": "EURUSD",
+      "id": "a6a9ac86-95b3-5f81-b9e5-ca999547bd45",
+      "account_id": "cd2dbda2-eb2e-5843-82ee-b96d4531932a",
+      "instrument_id": "c79dcb2f-113e-5b39-afed-c2924948a8d9",
       "side": "buy",
       "quantity": "1",
       "price": "1.101",
       "commission": "0",
       "fees": "0.00",
-      "executed_at": "2026-03-09T15:00:00Z"
+      "executed_at": "2026-03-09T15:00:00Z",
+      "sequence": 16
     },
     {
-      "id": "exec-0017-mar12-a-open",
-      "account_id": "acct-prop-challenge-200k",
-      "instrument_id": "XAUUSD",
+      "id": "8f3e931f-086b-5e6e-bb6a-bcd0948a5f5c",
+      "account_id": "cd2dbda2-eb2e-5843-82ee-b96d4531932a",
+      "instrument_id": "abb7cf9f-9c52-5eb8-8781-4593ed1803de",
       "side": "buy",
       "quantity": "1",
       "price": "2148",
       "commission": "0.00",
       "fees": "0",
-      "executed_at": "2026-03-12T08:00:00Z"
+      "executed_at": "2026-03-12T08:00:00Z",
+      "sequence": 17
     },
     {
-      "id": "exec-0018-mar12-a-close",
-      "account_id": "acct-prop-challenge-200k",
-      "instrument_id": "XAUUSD",
+      "id": "97880351-cd47-5c32-bb71-0784d7c2193f",
+      "account_id": "cd2dbda2-eb2e-5843-82ee-b96d4531932a",
+      "instrument_id": "abb7cf9f-9c52-5eb8-8781-4593ed1803de",
       "side": "sell",
       "quantity": "1",
       "price": "2199",
       "commission": "0",
       "fees": "0.00",
-      "executed_at": "2026-03-12T15:00:00Z"
+      "executed_at": "2026-03-12T15:00:00Z",
+      "sequence": 18
     },
     {
-      "id": "exec-0019-mar16-a-open",
-      "account_id": "acct-prop-challenge-200k",
-      "instrument_id": "XAUUSD",
+      "id": "f433e41f-1a8e-5746-b55c-4e303b78b5c7",
+      "account_id": "cd2dbda2-eb2e-5843-82ee-b96d4531932a",
+      "instrument_id": "abb7cf9f-9c52-5eb8-8781-4593ed1803de",
       "side": "sell",
       "quantity": "1",
       "price": "2160",
       "commission": "0.00",
       "fees": "0",
-      "executed_at": "2026-03-16T07:30:00Z"
+      "executed_at": "2026-03-16T07:30:00Z",
+      "sequence": 19
     },
     {
-      "id": "exec-0020-mar16-a-close",
-      "account_id": "acct-prop-challenge-200k",
-      "instrument_id": "XAUUSD",
+      "id": "d1c159cd-2b3c-593a-b3bf-305d8f2d5527",
+      "account_id": "cd2dbda2-eb2e-5843-82ee-b96d4531932a",
+      "instrument_id": "abb7cf9f-9c52-5eb8-8781-4593ed1803de",
       "side": "buy",
       "quantity": "1",
       "price": "2182",
       "commission": "0",
       "fees": "0.00",
-      "executed_at": "2026-03-16T09:45:00Z"
+      "executed_at": "2026-03-16T09:45:00Z",
+      "sequence": 20
     },
     {
-      "id": "exec-0021-mar16-b-open",
-      "account_id": "acct-prop-challenge-200k",
-      "instrument_id": "EURUSD",
+      "id": "0c522755-d1fe-5e6c-9320-ab109d66ca54",
+      "account_id": "cd2dbda2-eb2e-5843-82ee-b96d4531932a",
+      "instrument_id": "c79dcb2f-113e-5b39-afed-c2924948a8d9",
       "side": "buy",
       "quantity": "1",
       "price": "1.09",
       "commission": "0.00",
       "fees": "0",
-      "executed_at": "2026-03-16T10:15:00Z"
+      "executed_at": "2026-03-16T10:15:00Z",
+      "sequence": 21
     },
     {
-      "id": "exec-0022-mar16-b-close",
-      "account_id": "acct-prop-challenge-200k",
-      "instrument_id": "EURUSD",
+      "id": "ded05a5a-ebe6-5068-a9c4-7af85ad10224",
+      "account_id": "cd2dbda2-eb2e-5843-82ee-b96d4531932a",
+      "instrument_id": "c79dcb2f-113e-5b39-afed-c2924948a8d9",
       "side": "sell",
       "quantity": "1",
       "price": "1.074",
       "commission": "0",
       "fees": "0.00",
-      "executed_at": "2026-03-16T12:30:00Z"
+      "executed_at": "2026-03-16T12:30:00Z",
+      "sequence": 22
     },
     {
-      "id": "exec-0023-mar16-c-open",
-      "account_id": "acct-prop-challenge-200k",
-      "instrument_id": "GBPUSD",
+      "id": "f2b1543c-6a75-57a3-9182-823520de19b2",
+      "account_id": "cd2dbda2-eb2e-5843-82ee-b96d4531932a",
+      "instrument_id": "b8ce14fc-92f4-5b44-af44-1c6f8509804c",
       "side": "sell",
       "quantity": "1",
       "price": "1.275",
       "commission": "0.00",
       "fees": "0",
-      "executed_at": "2026-03-16T13:15:00Z"
+      "executed_at": "2026-03-16T13:15:00Z",
+      "sequence": 23
     },
     {
-      "id": "exec-0024-mar16-c-close",
-      "account_id": "acct-prop-challenge-200k",
-      "instrument_id": "GBPUSD",
+      "id": "d303577c-603c-5aa0-aed9-63a671813d0f",
+      "account_id": "cd2dbda2-eb2e-5843-82ee-b96d4531932a",
+      "instrument_id": "b8ce14fc-92f4-5b44-af44-1c6f8509804c",
       "side": "buy",
       "quantity": "1",
       "price": "1.287",
       "commission": "0",
       "fees": "0.00",
-      "executed_at": "2026-03-16T15:00:00Z"
+      "executed_at": "2026-03-16T15:00:00Z",
+      "sequence": 24
     },
     {
-      "id": "exec-0025-mar19-a-open",
-      "account_id": "acct-prop-challenge-200k",
-      "instrument_id": "NAS100",
+      "id": "c8e7005e-a155-5b6e-afa3-449ae856d3fb",
+      "account_id": "cd2dbda2-eb2e-5843-82ee-b96d4531932a",
+      "instrument_id": "e2df7929-3862-587e-a077-a26fe8cc106d",
       "side": "buy",
       "quantity": "1",
       "price": "18900",
       "commission": "0.00",
       "fees": "0",
-      "executed_at": "2026-03-19T06:45:00Z"
+      "executed_at": "2026-03-19T06:45:00Z",
+      "sequence": 25
     },
     {
-      "id": "exec-0026-mar19-a-close",
-      "account_id": "acct-prop-challenge-200k",
-      "instrument_id": "NAS100",
+      "id": "bec62239-3eb0-5444-802d-0eaeb7ef1c08",
+      "account_id": "cd2dbda2-eb2e-5843-82ee-b96d4531932a",
+      "instrument_id": "e2df7929-3862-587e-a077-a26fe8cc106d",
       "side": "sell",
       "quantity": "1",
       "price": "18875",
       "commission": "0",
       "fees": "0.00",
-      "executed_at": "2026-03-19T09:00:00Z"
+      "executed_at": "2026-03-19T09:00:00Z",
+      "sequence": 26
     },
     {
-      "id": "exec-0027-mar19-b-open",
-      "account_id": "acct-prop-challenge-200k",
-      "instrument_id": "GBPUSD",
+      "id": "e1ab86ed-34ec-5cf7-b19b-ec453090d3ae",
+      "account_id": "cd2dbda2-eb2e-5843-82ee-b96d4531932a",
+      "instrument_id": "b8ce14fc-92f4-5b44-af44-1c6f8509804c",
       "side": "sell",
       "quantity": "1",
       "price": "1.268",
       "commission": "0.00",
       "fees": "0",
-      "executed_at": "2026-03-19T10:30:00Z"
+      "executed_at": "2026-03-19T10:30:00Z",
+      "sequence": 27
     },
     {
-      "id": "exec-0028-mar19-b-close",
-      "account_id": "acct-prop-challenge-200k",
-      "instrument_id": "GBPUSD",
+      "id": "fe36cb0b-ac1d-5383-8642-ee0eb4dd2154",
+      "account_id": "cd2dbda2-eb2e-5843-82ee-b96d4531932a",
+      "instrument_id": "b8ce14fc-92f4-5b44-af44-1c6f8509804c",
       "side": "buy",
       "quantity": "1",
       "price": "1.283",
       "commission": "0",
       "fees": "0.00",
-      "executed_at": "2026-03-19T12:45:00Z"
+      "executed_at": "2026-03-19T12:45:00Z",
+      "sequence": 28
     },
     {
-      "id": "exec-0029-mar19-c-open",
-      "account_id": "acct-prop-challenge-200k",
-      "instrument_id": "XAUUSD",
+      "id": "883f3029-d21f-5276-af91-88df40643a6b",
+      "account_id": "cd2dbda2-eb2e-5843-82ee-b96d4531932a",
+      "instrument_id": "abb7cf9f-9c52-5eb8-8781-4593ed1803de",
       "side": "sell",
       "quantity": "1",
       "price": "2165",
       "commission": "0.00",
       "fees": "0",
-      "executed_at": "2026-03-19T13:30:00Z"
+      "executed_at": "2026-03-19T13:30:00Z",
+      "sequence": 29
     },
     {
-      "id": "exec-0030-mar19-c-close",
-      "account_id": "acct-prop-challenge-200k",
-      "instrument_id": "XAUUSD",
+      "id": "0d2fe92e-c4c9-5b28-8346-217c2b6b5e5f",
+      "account_id": "cd2dbda2-eb2e-5843-82ee-b96d4531932a",
+      "instrument_id": "abb7cf9f-9c52-5eb8-8781-4593ed1803de",
       "side": "buy",
       "quantity": "1",
       "price": "2175",
       "commission": "0",
       "fees": "0.00",
-      "executed_at": "2026-03-19T16:15:00Z"
+      "executed_at": "2026-03-19T16:15:00Z",
+      "sequence": 30
     },
     {
-      "id": "exec-0031-mar23-a-open",
-      "account_id": "acct-prop-challenge-200k",
-      "instrument_id": "NAS100",
+      "id": "6cb16048-faf3-544a-8e3a-9f88d9af479f",
+      "account_id": "cd2dbda2-eb2e-5843-82ee-b96d4531932a",
+      "instrument_id": "e2df7929-3862-587e-a077-a26fe8cc106d",
       "side": "buy",
       "quantity": "1",
       "price": "18600",
       "commission": "0.00",
       "fees": "0",
-      "executed_at": "2026-03-23T07:00:00Z"
+      "executed_at": "2026-03-23T07:00:00Z",
+      "sequence": 31
     },
     {
-      "id": "exec-0032-mar23-a-close",
-      "account_id": "acct-prop-challenge-200k",
-      "instrument_id": "NAS100",
+      "id": "91a456fa-3501-5292-93c3-822bc79cd193",
+      "account_id": "cd2dbda2-eb2e-5843-82ee-b96d4531932a",
+      "instrument_id": "e2df7929-3862-587e-a077-a26fe8cc106d",
       "side": "sell",
       "quantity": "1",
       "price": "18651.5",
       "commission": "0",
       "fees": "0.00",
-      "executed_at": "2026-03-23T14:00:00Z"
+      "executed_at": "2026-03-23T14:00:00Z",
+      "sequence": 32
     },
     {
-      "id": "exec-0033-mar26-a-open",
-      "account_id": "acct-prop-challenge-200k",
-      "instrument_id": "EURUSD",
+      "id": "34d1f6c6-81c7-5291-923d-2fe448dbf920",
+      "account_id": "cd2dbda2-eb2e-5843-82ee-b96d4531932a",
+      "instrument_id": "c79dcb2f-113e-5b39-afed-c2924948a8d9",
       "side": "sell",
       "quantity": "1",
       "price": "1.089",
       "commission": "0.00",
       "fees": "0",
-      "executed_at": "2026-03-26T07:15:00Z"
+      "executed_at": "2026-03-26T07:15:00Z",
+      "sequence": 33
     },
     {
-      "id": "exec-0034-mar26-a-close",
-      "account_id": "acct-prop-challenge-200k",
-      "instrument_id": "EURUSD",
+      "id": "5a09e7e7-8386-5317-9033-bc52969735cf",
+      "account_id": "cd2dbda2-eb2e-5843-82ee-b96d4531932a",
+      "instrument_id": "c79dcb2f-113e-5b39-afed-c2924948a8d9",
       "side": "buy",
       "quantity": "1",
       "price": "1.108",
       "commission": "0",
       "fees": "0.00",
-      "executed_at": "2026-03-26T09:30:00Z"
+      "executed_at": "2026-03-26T09:30:00Z",
+      "sequence": 34
     },
     {
-      "id": "exec-0035-mar26-b-open",
-      "account_id": "acct-prop-challenge-200k",
-      "instrument_id": "NAS100",
+      "id": "18542197-9d74-50f3-a62d-d7561506596d",
+      "account_id": "cd2dbda2-eb2e-5843-82ee-b96d4531932a",
+      "instrument_id": "e2df7929-3862-587e-a077-a26fe8cc106d",
       "side": "sell",
       "quantity": "1",
       "price": "18800",
       "commission": "0.00",
       "fees": "0",
-      "executed_at": "2026-03-26T10:00:00Z"
+      "executed_at": "2026-03-26T10:00:00Z",
+      "sequence": 35
     },
     {
-      "id": "exec-0036-mar26-b-close",
-      "account_id": "acct-prop-challenge-200k",
-      "instrument_id": "NAS100",
+      "id": "88225486-32c3-536d-ac4d-3efdcda95f2c",
+      "account_id": "cd2dbda2-eb2e-5843-82ee-b96d4531932a",
+      "instrument_id": "e2df7929-3862-587e-a077-a26fe8cc106d",
       "side": "buy",
       "quantity": "1",
       "price": "18816",
       "commission": "0",
       "fees": "0.00",
-      "executed_at": "2026-03-26T12:15:00Z"
+      "executed_at": "2026-03-26T12:15:00Z",
+      "sequence": 36
     },
     {
-      "id": "exec-0037-mar26-c-open",
-      "account_id": "acct-prop-challenge-200k",
-      "instrument_id": "GBPUSD",
+      "id": "d97d1b22-3492-5112-8cde-fa1eb6fe0a7a",
+      "account_id": "cd2dbda2-eb2e-5843-82ee-b96d4531932a",
+      "instrument_id": "b8ce14fc-92f4-5b44-af44-1c6f8509804c",
       "side": "buy",
       "quantity": "1",
       "price": "1.273",
       "commission": "0.00",
       "fees": "0",
-      "executed_at": "2026-03-26T13:00:00Z"
+      "executed_at": "2026-03-26T13:00:00Z",
+      "sequence": 37
     },
     {
-      "id": "exec-0038-mar26-c-close",
-      "account_id": "acct-prop-challenge-200k",
-      "instrument_id": "GBPUSD",
+      "id": "2bf42122-d12f-543a-adea-a71430d4c438",
+      "account_id": "cd2dbda2-eb2e-5843-82ee-b96d4531932a",
+      "instrument_id": "b8ce14fc-92f4-5b44-af44-1c6f8509804c",
       "side": "sell",
       "quantity": "1",
       "price": "1.258",
       "commission": "0",
       "fees": "0.00",
-      "executed_at": "2026-03-26T15:15:00Z"
+      "executed_at": "2026-03-26T15:15:00Z",
+      "sequence": 38
     },
     {
-      "id": "exec-0039-mar29-a-open",
-      "account_id": "acct-prop-challenge-200k",
-      "instrument_id": "GBPUSD",
+      "id": "2e8bb579-0bf3-5a17-820f-90175b783a41",
+      "account_id": "cd2dbda2-eb2e-5843-82ee-b96d4531932a",
+      "instrument_id": "b8ce14fc-92f4-5b44-af44-1c6f8509804c",
       "side": "sell",
       "quantity": "1",
       "price": "1.265",
       "commission": "0.00",
       "fees": "0",
-      "executed_at": "2026-03-29T00:30:00Z"
+      "executed_at": "2026-03-29T00:30:00Z",
+      "sequence": 39
     },
     {
-      "id": "exec-0040-mar29-a-close",
-      "account_id": "acct-prop-challenge-200k",
-      "instrument_id": "GBPUSD",
+      "id": "83ca917c-6c3c-5438-9234-25e7338ffe80",
+      "account_id": "cd2dbda2-eb2e-5843-82ee-b96d4531932a",
+      "instrument_id": "b8ce14fc-92f4-5b44-af44-1c6f8509804c",
       "side": "buy",
       "quantity": "1",
       "price": "1.295",
       "commission": "0",
       "fees": "0.00",
-      "executed_at": "2026-03-29T02:30:00Z"
+      "executed_at": "2026-03-29T02:30:00Z",
+      "sequence": 40
     },
     {
-      "id": "exec-0041-mar29-b-open",
-      "account_id": "acct-prop-challenge-200k",
-      "instrument_id": "XAUUSD",
+      "id": "a0fa695c-d492-5486-9756-75fa5f7ec37b",
+      "account_id": "cd2dbda2-eb2e-5843-82ee-b96d4531932a",
+      "instrument_id": "abb7cf9f-9c52-5eb8-8781-4593ed1803de",
       "side": "sell",
       "quantity": "1",
       "price": "2158",
       "commission": "0.00",
       "fees": "0",
-      "executed_at": "2026-03-29T10:00:00Z"
+      "executed_at": "2026-03-29T10:00:00Z",
+      "sequence": 41
     },
     {
-      "id": "exec-0042-mar29-b-close",
-      "account_id": "acct-prop-challenge-200k",
-      "instrument_id": "XAUUSD",
+      "id": "92c7b3ea-50d7-514a-bd45-7a4425d915ee",
+      "account_id": "cd2dbda2-eb2e-5843-82ee-b96d4531932a",
+      "instrument_id": "abb7cf9f-9c52-5eb8-8781-4593ed1803de",
       "side": "buy",
       "quantity": "1",
       "price": "2178",
       "commission": "0",
       "fees": "0.00",
-      "executed_at": "2026-03-29T12:00:00Z"
+      "executed_at": "2026-03-29T12:00:00Z",
+      "sequence": 42
     },
     {
-      "id": "exec-0043-mar30-a-open",
-      "account_id": "acct-prop-challenge-200k",
-      "instrument_id": "NAS100",
+      "id": "59c54655-88df-5c7b-8fc3-c5bc6a75666c",
+      "account_id": "cd2dbda2-eb2e-5843-82ee-b96d4531932a",
+      "instrument_id": "e2df7929-3862-587e-a077-a26fe8cc106d",
       "side": "sell",
       "quantity": "1",
       "price": "18750",
       "commission": "0.00",
       "fees": "0",
-      "executed_at": "2026-03-30T07:00:00Z"
+      "executed_at": "2026-03-30T07:00:00Z",
+      "sequence": 43
     },
     {
-      "id": "exec-0044-mar30-a-close",
-      "account_id": "acct-prop-challenge-200k",
-      "instrument_id": "NAS100",
+      "id": "b21187be-8651-54ef-b32c-d2ca22cbf388",
+      "account_id": "cd2dbda2-eb2e-5843-82ee-b96d4531932a",
+      "instrument_id": "e2df7929-3862-587e-a077-a26fe8cc106d",
       "side": "buy",
       "quantity": "1",
       "price": "18810",
       "commission": "0",
       "fees": "0.00",
-      "executed_at": "2026-03-30T09:30:00Z"
+      "executed_at": "2026-03-30T09:30:00Z",
+      "sequence": 44
     },
     {
-      "id": "exec-0045-mar30-b-open",
-      "account_id": "acct-prop-challenge-200k",
-      "instrument_id": "EURUSD",
+      "id": "f59915ea-c54b-5d1c-b64d-48185cec5364",
+      "account_id": "cd2dbda2-eb2e-5843-82ee-b96d4531932a",
+      "instrument_id": "c79dcb2f-113e-5b39-afed-c2924948a8d9",
       "side": "sell",
       "quantity": "1",
       "price": "1.087",
       "commission": "0.00",
       "fees": "0",
-      "executed_at": "2026-03-30T10:00:00Z"
+      "executed_at": "2026-03-30T10:00:00Z",
+      "sequence": 45
     },
     {
-      "id": "exec-0046-mar30-b-close",
-      "account_id": "acct-prop-challenge-200k",
-      "instrument_id": "EURUSD",
+      "id": "7daf9905-4bfc-5be1-8ffc-42fbce8c7c83",
+      "account_id": "cd2dbda2-eb2e-5843-82ee-b96d4531932a",
+      "instrument_id": "c79dcb2f-113e-5b39-afed-c2924948a8d9",
       "side": "buy",
       "quantity": "1",
       "price": "1.127",
       "commission": "0",
       "fees": "0.00",
-      "executed_at": "2026-03-30T12:00:00Z"
+      "executed_at": "2026-03-30T12:00:00Z",
+      "sequence": 46
     },
     {
-      "id": "exec-0047-mar30-c-open",
-      "account_id": "acct-prop-challenge-200k",
-      "instrument_id": "GBPUSD",
+      "id": "31814faf-ca4b-5514-8cd3-7171c2abb0db",
+      "account_id": "cd2dbda2-eb2e-5843-82ee-b96d4531932a",
+      "instrument_id": "b8ce14fc-92f4-5b44-af44-1c6f8509804c",
       "side": "sell",
       "quantity": "1",
       "price": "1.265",
       "commission": "50.00",
       "fees": "0",
-      "executed_at": "2026-03-30T13:00:00Z"
+      "executed_at": "2026-03-30T13:00:00Z",
+      "sequence": 47
     },
     {
-      "id": "exec-0048-mar30-c-close",
-      "account_id": "acct-prop-challenge-200k",
-      "instrument_id": "GBPUSD",
+      "id": "13911175-0a89-5421-833c-2fcfff396656",
+      "account_id": "cd2dbda2-eb2e-5843-82ee-b96d4531932a",
+      "instrument_id": "b8ce14fc-92f4-5b44-af44-1c6f8509804c",
       "side": "buy",
       "quantity": "1",
       "price": "1.287",
       "commission": "0",
       "fees": "20.00",
-      "executed_at": "2026-03-30T15:30:00Z"
+      "executed_at": "2026-03-30T15:30:00Z",
+      "sequence": 48
     },
     {
-      "id": "exec-0049-apr1-a-open",
-      "account_id": "acct-prop-challenge-200k",
-      "instrument_id": "XAUUSD",
+      "id": "70115ce4-db8f-580e-9be6-ad38588d2e12",
+      "account_id": "cd2dbda2-eb2e-5843-82ee-b96d4531932a",
+      "instrument_id": "abb7cf9f-9c52-5eb8-8781-4593ed1803de",
       "side": "sell",
       "quantity": "1",
       "price": "2162",
       "commission": "0.00",
       "fees": "0",
-      "executed_at": "2026-04-01T08:00:00Z"
+      "executed_at": "2026-04-01T08:00:00Z",
+      "sequence": 49
     },
     {
-      "id": "exec-0050-apr1-a-close",
-      "account_id": "acct-prop-challenge-200k",
-      "instrument_id": "XAUUSD",
+      "id": "b260b2f5-2c84-5e72-9360-5216427402a9",
+      "account_id": "cd2dbda2-eb2e-5843-82ee-b96d4531932a",
+      "instrument_id": "abb7cf9f-9c52-5eb8-8781-4593ed1803de",
       "side": "buy",
       "quantity": "1",
       "price": "2184.1572",
       "commission": "0",
       "fees": "0.00",
-      "executed_at": "2026-04-01T10:30:00Z"
+      "executed_at": "2026-04-01T10:30:00Z",
+      "sequence": 50
     }
   ],
   "cash_movements": [],
-  "swap_adjustments": [
+  "trade_swaps": [
     {
-      "instrument_id": "GBPUSD",
-      "opened_at": "2026-03-30T13:00:00Z",
+      "entry_execution_id": "31814faf-ca4b-5514-8cd3-7171c2abb0db",
       "swap": "7.71"
     }
   ]

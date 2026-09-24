@@ -33,19 +33,24 @@ export function computeNetPnl(
 /**
  * R multiple d'un trade : P&L net exprimé en multiples du risque initialement pris.
  *
- * Formule (ARCHITECTURE §5.2) : `r = netPnl / |initialRisk|`. `initialRisk`
+ * Formule (ARCHITECTURE §5.2) : `r = netPnl / initialRisk`. `initialRisk`
  * est une valeur monétaire toujours positive (distance au stop × quantité ×
  * multiplicateur de contrat, ou risque saisi manuellement) ; son signe n'a
- * pas de sens métier, la valeur absolue est donc utilisée si un signe est
- * fourni par erreur — mais `0` ou une valeur négative sont rejetés comme
- * invalides plutôt que silencieusement corrigés.
+ * pas de sens métier, mais plutôt que de corriger silencieusement une valeur
+ * fournie par erreur (via une valeur absolue), `0` ou une valeur négative
+ * sont **rejetés** comme invalides — un risque initial négatif ou nul est
+ * plus probablement un bug amont (mauvaise donnée saisie/importée) qu'un
+ * signe à ignorer.
  *
  * @param netPnl P&L net du trade ({@link computeNetPnl})
  * @param initialRisk risque initial en valeur monétaire, ou `null`/`undefined` si inconnu
  * @returns le R multiple, ou `null` si `initialRisk` n'est pas connu
  * @throws {InvalidInitialRiskError} si `initialRisk` est fourni mais `<= 0`
  */
-export function computeRMultiple(netPnl: Decimal, initialRisk: Decimal | null | undefined): Decimal | null {
+export function computeRMultiple(
+  netPnl: Decimal,
+  initialRisk: Decimal | null | undefined,
+): Decimal | null {
   if (initialRisk == null) {
     return null;
   }

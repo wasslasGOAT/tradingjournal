@@ -4,13 +4,39 @@ import { buildTrade, d } from './testHelpers';
 import { computeStreaks } from './streaks';
 
 function trade(netPnl: string, closedAt: string): ReturnType<typeof buildTrade> {
-  return buildTrade({ netPnl: d(netPnl), closedAt: new Date(closedAt), openedAt: new Date(closedAt) });
+  return buildTrade({
+    netPnl: d(netPnl),
+    closedAt: new Date(closedAt),
+    openedAt: new Date(closedAt),
+  });
 }
 
 describe('computeStreaks', () => {
   it('0 trade : aucune série', () => {
     const result = computeStreaks([]);
-    expect(result).toEqual({ longestWinStreak: 0, longestLossStreak: 0, current: { type: 'none', count: 0 } });
+    expect(result).toEqual({
+      longestWinStreak: 0,
+      longestLossStreak: 0,
+      current: { type: 'none', count: 0 },
+    });
+  });
+
+  it('revue M3 #5 : un trade "open" (même avec commission) est ignoré, la série continue autour de lui', () => {
+    const openTrade = buildTrade({
+      netPnl: d('-9999'),
+      status: 'open',
+      closedAt: null,
+      commission: d('5'),
+      openedAt: new Date('2026-03-02T00:00:00Z'),
+    });
+    const trades = [
+      trade('10', '2026-03-01T00:00:00Z'),
+      openTrade,
+      trade('20', '2026-03-03T00:00:00Z'),
+    ];
+    const result = computeStreaks(trades);
+    expect(result.longestWinStreak).toBe(2); // pas cassé par le trade open, qui n'existe pas pour cette fonction
+    expect(result.current).toEqual({ type: 'win', count: 2 });
   });
 
   it('série gagnante puis perdante, série en cours = la dernière', () => {

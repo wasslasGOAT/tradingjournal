@@ -1,9 +1,9 @@
 import { formatInTimeZone } from 'date-fns-tz';
 
 import { Decimal } from '../money';
-import { computeWinLossCounts, computeWinRate } from '../stats';
+import { compareOrdinal, computeWinLossCounts, computeWinRate, filterClosedTrades } from '../stats';
 import type { TradeRecord } from '../stats';
-import { tradingDayWeekday } from './week';
+import { localWeekdayOf } from './week';
 
 /** Clé utilisée pour regrouper les trades sans `setup` renseigné (voir {@link aggregateBySetup}). */
 export const UNSET_SETUP_KEY = null;
@@ -25,12 +25,22 @@ function summarize<Key>(key: Key, trades: readonly TradeRecord[]): DimensionAggr
   const { wins, losses, breakeven } = computeWinLossCounts(trades);
   const grossPnl = trades.reduce((acc, t) => acc.plus(t.grossPnl), new Decimal(0));
   const netPnl = trades.reduce((acc, t) => acc.plus(t.netPnl), new Decimal(0));
-  return { key, tradesCount: trades.length, wins, losses, breakeven, grossPnl, netPnl, winRate: computeWinRate(trades) };
+  return {
+    key,
+    tradesCount: trades.length,
+    wins,
+    losses,
+    breakeven,
+    grossPnl,
+    netPnl,
+    winRate: computeWinRate(trades),
+  };
 }
 
 /**
  * Regroupe `trades` par clé (un trade peut alimenter plusieurs groupes si
  * `keyOf` renvoie plusieurs clés, ex. les tags) puis résume chaque groupe.
+ * **Trades `open` exclus** (revue M3 #5, voir {@link filterClosedTrades}).
  * Non exporté : détail d'implémentation commun aux fonctions `aggregateBy*`
  * ci-dessous.
  */
@@ -39,7 +49,7 @@ function groupBy<Key>(
   keyOf: (trade: TradeRecord) => readonly Key[],
 ): Map<Key, TradeRecord[]> {
   const groups = new Map<Key, TradeRecord[]>();
-  for (const trade of trades) {
+  for (const trade of filterClosedTrades(trades)) {
     for (const key of keyOf(trade)) {
       const list = groups.get(key);
       if (list) list.push(trade);
@@ -53,7 +63,7 @@ function groupBy<Key>(
 export function aggregateBySymbol(trades: readonly TradeRecord[]): DimensionAggregate<string>[] {
   const groups = groupBy(trades, (t) => [t.symbol]);
   return [...groups.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
+    .sort(([a], [b]) => compareOrdinal(a, b))
     .map(([key, group]) => summarize(key, group));
 }
 
@@ -70,7 +80,7 @@ export function aggregateBySetup(
     .sort(([a], [b]) => {
       if (a === null) return 1;
       if (b === null) return -1;
-      return a.localeCompare(b);
+      return compareOrdinal(a, b);
     })
     .map(([key, group]) => summarize(key, group));
 }
@@ -86,7 +96,7 @@ export function aggregateBySetup(
 export function aggregateByTag(trades: readonly TradeRecord[]): DimensionAggregate<string>[] {
   const groups = groupBy(trades, (t) => t.tags ?? []);
   return [...groups.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
+    .sort(([a], [b]) => compareOrdinal(a, b))
     .map(([key, group]) => summarize(key, group));
 }
 
@@ -100,12 +110,21 @@ export function aggregateBySession(
 }
 
 /**
- * Agrège par jour de semaine (`0` dimanche .. `6` samedi), calculé sur le
- * `tradingDay` déjà résolu de chaque trade (voir {@link tradingDayWeekday}) —
- * indépendant du fuseau (le `tradingDay` l'a déjà pris en compte).
+ * Agrège par jour de semaine local (`0` dimanche .. `6` samedi), calculé sur
+ * `openedAt` **dans `timezone`** (voir {@link localWeekdayOf}) — **revue M3
+ * #9** : dérivé du même instant/fuseau que {@link aggregateByHourOfDay}
+ * plutôt que du `tradingDay` déjà résolu (qui dépend de `day_rollover_time`
+ * et peut retomber sur un jour civil différent, ex. bascule 17:00 New York),
+ * pour que jour de semaine et heure restent cohérents entre eux et avec la
+ * heatmap (`computeHeatmap`).
+ *
+ * @param timezone fuseau IANA utilisé pour résoudre le jour civil local (typiquement `accounts.timezone`)
  */
-export function aggregateByWeekday(trades: readonly TradeRecord[]): DimensionAggregate<number>[] {
-  const groups = groupBy(trades, (t) => [tradingDayWeekday(t.tradingDay)]);
+export function aggregateByWeekday(
+  trades: readonly TradeRecord[],
+  timezone: string,
+): DimensionAggregate<number>[] {
+  const groups = groupBy(trades, (t) => [localWeekdayOf(t.openedAt, timezone)]);
   return [...groups.entries()]
     .sort(([a], [b]) => a - b)
     .map(([key, group]) => summarize(key, group));
@@ -116,7 +135,8 @@ export function aggregateByWeekday(trades: readonly TradeRecord[]): DimensionAgg
  * (typiquement le fuseau du compte, `accounts.timezone`) à partir de
  * `openedAt` (UTC) — même technique que `packages/core/time` `tradingDayOf`
  * (`formatInTimeZone` directement sur l'instant UTC, correct pendant les
- * changements d'heure).
+ * changements d'heure). `Number(...)` ici porte une heure `0`..`23` (pas un
+ * montant) : conversion sûre, voir CLAUDE.md sur l'argent.
  */
 export function aggregateByHourOfDay(
   trades: readonly TradeRecord[],

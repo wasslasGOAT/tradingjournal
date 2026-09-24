@@ -1,4 +1,5 @@
 import type { Decimal } from '../money';
+import { compareOrdinal } from '../stats';
 
 /** Valeurs monétaires d'un compte à agréger (voir {@link aggregateAccountsByCurrency}). */
 export interface AccountMoneyValues {
@@ -60,8 +61,16 @@ export function aggregateAccountsByCurrency(
       ? accounts.map((a) => ({
           accountId: a.accountId,
           currency: options.targetCurrency as string,
-          balance: (options.convert as ConvertFn)(a.balance, a.currency, options.targetCurrency as string),
-          netPnl: (options.convert as ConvertFn)(a.netPnl, a.currency, options.targetCurrency as string),
+          balance: (options.convert as ConvertFn)(
+            a.balance,
+            a.currency,
+            options.targetCurrency as string,
+          ),
+          netPnl: (options.convert as ConvertFn)(
+            a.netPnl,
+            a.currency,
+            options.targetCurrency as string,
+          ),
         }))
       : accounts;
 
@@ -78,11 +87,11 @@ export function aggregateAccountsByCurrency(
   }
 
   return [...totals.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
+    .sort(([a], [b]) => compareOrdinal(a, b))
     .map(([currency, totalsForCurrency]) => ({
       currency,
       balance: totalsForCurrency.balance,
       netPnl: totalsForCurrency.netPnl,
-      accountIds: [...totalsForCurrency.accountIds].sort((a, b) => a.localeCompare(b)),
+      accountIds: [...totalsForCurrency.accountIds].sort(compareOrdinal),
     }));
 }

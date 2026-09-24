@@ -46,7 +46,12 @@ describe('aggregateByWeek', () => {
     const days = aggregateByTradingDay(d('1000'), trades);
     const weeks = aggregateByWeek(days, 1);
     expect(weeks).toHaveLength(1);
-    expect(weeks[0]).toMatchObject({ weekStart: '2026-03-02', weekEnd: '2026-03-08', tradesCount: 2, activeDays: 2 });
+    expect(weeks[0]).toMatchObject({
+      weekStart: '2026-03-02',
+      weekEnd: '2026-03-08',
+      tradesCount: 2,
+      activeDays: 2,
+    });
     expect(weeks[0]?.netPnl.toString()).toBe('60');
   });
 

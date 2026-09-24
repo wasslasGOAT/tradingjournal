@@ -1,4 +1,4 @@
-import { sortTradesChronologically } from './types';
+import { filterClosedTrades, sortTradesChronologically } from './types';
 import type { TradeRecord } from './types';
 
 /** Type de série en cours : `'win'`/`'loss'` si le dernier trade n'est pas `breakeven`, `'none'` sinon (aucun trade, ou dernier trade à P&L = 0). */
@@ -21,10 +21,10 @@ export interface StreaksResult {
  * toute série en cours (ni gagnante ni perdante) sans démarrer de nouvelle
  * série — il agit comme un trade neutre entre deux séries. Ordre
  * chronologique par `closedAt` (repli `openedAt`), voir
- * {@link sortTradesChronologically}.
+ * {@link sortTradesChronologically}. Trades `open` exclus (voir {@link filterClosedTrades}).
  */
 export function computeStreaks(trades: readonly TradeRecord[]): StreaksResult {
-  const ordered = sortTradesChronologically(trades);
+  const ordered = sortTradesChronologically(filterClosedTrades(trades));
 
   let longestWinStreak = 0;
   let longestLossStreak = 0;

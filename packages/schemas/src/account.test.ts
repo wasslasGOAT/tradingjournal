@@ -37,8 +37,18 @@ describe('accountFormSchema', () => {
   });
 
   it('accepte les champs optionnels (broker, platform, externalAccountId)', () => {
-    const result = accountFormSchema.safeParse({ ...valid, broker: 'IG', platform: 'MT5', externalAccountId: 'ACC-1' });
+    const result = accountFormSchema.safeParse({
+      ...valid,
+      broker: 'IG',
+      platform: 'MT5',
+      externalAccountId: 'ACC-1',
+    });
     expect(result.success).toBe(true);
+  });
+
+  it('rejette un solde initial nul ou négatif (revue M3 #12)', () => {
+    expect(accountFormSchema.safeParse({ ...valid, startingBalance: '0' }).success).toBe(false);
+    expect(accountFormSchema.safeParse({ ...valid, startingBalance: '-1' }).success).toBe(false);
   });
 });
 

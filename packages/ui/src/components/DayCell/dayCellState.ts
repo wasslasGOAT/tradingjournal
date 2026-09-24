@@ -14,7 +14,10 @@ import type { PnlIntent } from '../../tokens';
 export type DayCellContentState = 'trades' | 'journalOnly' | 'empty';
 
 /** `pnl === null` -> pas de trade ce jour-là (journal seul ou vide selon `hasJournalEntry`). */
-export function resolveDayCellContentState(pnl: Decimal | null, hasJournalEntry: boolean): DayCellContentState {
+export function resolveDayCellContentState(
+  pnl: Decimal | null,
+  hasJournalEntry: boolean,
+): DayCellContentState {
   if (pnl !== null) return 'trades';
   return hasJournalEntry ? 'journalOnly' : 'empty';
 }

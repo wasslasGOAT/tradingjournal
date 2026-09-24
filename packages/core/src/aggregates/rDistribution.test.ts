@@ -9,6 +9,18 @@ describe('computeRDistribution', () => {
     expect(result).toEqual({ bins: [], unknownCount: 0 });
   });
 
+  it('revue M3 #5 : un trade "open" (même avec commission et R multiple renseigné) est exclu', () => {
+    const openTrade = buildTrade({
+      netPnl: d('-9999'),
+      status: 'open',
+      closedAt: null,
+      commission: d('5'),
+      rMultiple: d('3'),
+    });
+    const result = computeRDistribution([openTrade], d('0.5'));
+    expect(result).toEqual({ bins: [], unknownCount: 0 }); // ni classé, ni compté en "inconnu"
+  });
+
   it('exclut les trades sans R multiple connu, les compte dans unknownCount', () => {
     const trades = [buildTrade({ netPnl: d('10'), rMultiple: null })];
     const result = computeRDistribution(trades, d('0.5'));

@@ -4,7 +4,12 @@ import { Decimal } from '../money';
 import { aggregateAccountsByCurrency } from './multiAccount';
 import type { AccountMoneyValues } from './multiAccount';
 
-function account(accountId: string, currency: string, balance: string, netPnl: string): AccountMoneyValues {
+function account(
+  accountId: string,
+  currency: string,
+  balance: string,
+  netPnl: string,
+): AccountMoneyValues {
   return { accountId, currency, balance: new Decimal(balance), netPnl: new Decimal(netPnl) };
 }
 
@@ -28,7 +33,10 @@ describe('aggregateAccountsByCurrency', () => {
   });
 
   it('avec convert + targetCurrency : un seul total, dans la devise cible', () => {
-    const accounts = [account('acc-eur', 'EUR', '1000', '100'), account('acc-usd', 'USD', '1080', '100')];
+    const accounts = [
+      account('acc-eur', 'EUR', '1000', '100'),
+      account('acc-usd', 'USD', '1080', '100'),
+    ];
     const totals = aggregateAccountsByCurrency(accounts, {
       targetCurrency: 'USD',
       convert: (amount, from, to) => {
@@ -46,6 +54,13 @@ describe('aggregateAccountsByCurrency', () => {
   it('ignore `convert` si `targetCurrency` est absent (reste en mode option A)', () => {
     const accounts = [account('acc-eur', 'EUR', '1000', '0')];
     const totals = aggregateAccountsByCurrency(accounts, { convert: (amount) => amount.times(2) });
-    expect(totals).toEqual([{ currency: 'EUR', balance: new Decimal('1000'), netPnl: new Decimal('0'), accountIds: ['acc-eur'] }]);
+    expect(totals).toEqual([
+      {
+        currency: 'EUR',
+        balance: new Decimal('1000'),
+        netPnl: new Decimal('0'),
+        accountIds: ['acc-eur'],
+      },
+    ]);
   });
 });

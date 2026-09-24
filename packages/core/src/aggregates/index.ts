@@ -17,9 +17,14 @@ export type { HeatmapCell } from './heatmap';
 export { computeMonthStats } from './month';
 export type { BestWorstDay, MonthStats } from './month';
 export { aggregateAccountsByCurrency } from './multiAccount';
-export type { AccountMoneyValues, AggregateMultiAccountOptions, ConvertFn, CurrencyTotal } from './multiAccount';
+export type {
+  AccountMoneyValues,
+  AggregateMultiAccountOptions,
+  ConvertFn,
+  CurrencyTotal,
+} from './multiAccount';
 export { computeRDistribution } from './rDistribution';
 export type { RBin, RDistributionResult } from './rDistribution';
 export type { WeekStartsOn } from './types';
-export { aggregateByWeek, tradingDayWeekday, weekStartOf } from './week';
+export { aggregateByWeek, localWeekdayOf, tradingDayWeekday, weekStartOf } from './week';
 export type { WeekAggregate } from './week';

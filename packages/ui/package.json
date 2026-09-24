@@ -30,15 +30,33 @@
     "zustand": "*"
   },
   "peerDependenciesMeta": {
-    "@expo-google-fonts/inter": { "optional": true },
-    "@shopify/flash-list": { "optional": true },
-    "@shopify/react-native-skia": { "optional": true },
-    "expo-font": { "optional": true },
-    "expo-haptics": { "optional": true },
-    "lucide-react-native": { "optional": true },
-    "react-native-svg": { "optional": true },
-    "recharts": { "optional": true },
-    "victory-native": { "optional": true }
+    "@expo-google-fonts/inter": {
+      "optional": true
+    },
+    "@shopify/flash-list": {
+      "optional": true
+    },
+    "@shopify/react-native-skia": {
+      "optional": true
+    },
+    "expo-font": {
+      "optional": true
+    },
+    "expo-haptics": {
+      "optional": true
+    },
+    "lucide-react-native": {
+      "optional": true
+    },
+    "react-native-svg": {
+      "optional": true
+    },
+    "recharts": {
+      "optional": true
+    },
+    "victory-native": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@repo/config": "workspace:*",

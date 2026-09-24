@@ -1,7 +1,7 @@
 import Decimal from 'decimal.js';
 import { describe, expect, it } from 'vitest';
 
-import { AmountParseError, parseAmount, toAmountString } from './parseAmount';
+import { AmountParseError, parseAmount, toAmountString, toDbAmount } from './parseAmount';
 
 describe('parseAmount', () => {
   it('parse une chaîne numérique Postgres avec décimales', () => {
@@ -68,6 +68,11 @@ describe('parseAmount', () => {
       expect((error as AmountParseError).receivedValue).toBe('nope');
     }
   });
+
+  it("décrit une valeur ni number ni string (ex. null/objet) dans le message d'erreur", () => {
+    expect(() => parseAmount(null as unknown as string)).toThrow(/object/);
+    expect(() => parseAmount(undefined as unknown as string)).toThrow(/undefined/);
+  });
 });
 
 describe('toAmountString', () => {
@@ -87,5 +92,32 @@ describe('toAmountString', () => {
   it('round-trip parseAmount -> toAmountString sur le cas golden', () => {
     const parsed = parseAmount('-19743.43000000');
     expect(toAmountString(parsed)).toBe('-19743.43');
+  });
+});
+
+describe('toDbAmount (revue M3 #10)', () => {
+  it('arrondit ROUND_HALF_EVEN à scale décimales (défaut 8)', () => {
+    expect(toDbAmount(new Decimal('1.123456789'))).toBe('1.12345679');
+  });
+
+  it('accepte un scale personnalisé (ex. 2 pour un affichage centime)', () => {
+    expect(toDbAmount(new Decimal('2.005'), 2)).toBe('2.00'); // ROUND_HALF_EVEN : 2.00 est pair
+    expect(toDbAmount(new Decimal('2.015'), 2)).toBe('2.02');
+  });
+
+  it("complète toujours avec des zéros jusqu'à scale (contrairement à toAmountString)", () => {
+    expect(toDbAmount(new Decimal('200000'), 2)).toBe('200000.00');
+    expect(toAmountString(new Decimal('200000'))).toBe('200000'); // pas de zéros ajoutés
+  });
+
+  it('ne produit jamais de notation exponentielle même pour un tout petit montant', () => {
+    expect(toDbAmount(new Decimal('0.0000000001'), 8)).not.toMatch(/e/i);
+  });
+
+  it("tronque un Decimal à 40 chiffres significatifs (ADR-005) à l'échelle numeric(20,8) avant écriture", () => {
+    // Un Decimal calculé (ex. profit factor) peut porter beaucoup plus de décimales
+    // que numeric(20,8) n'en accepte : toDbAmount arrondit explicitement, jamais Postgres.
+    const computed = new Decimal('1').dividedBy(new Decimal('3')); // 0.3333...3 (40 chiffres)
+    expect(toDbAmount(computed, 8)).toBe('0.33333333');
   });
 });

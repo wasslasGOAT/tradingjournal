@@ -13,7 +13,13 @@ export type {
   ExecutionSide,
   GroupedTrade,
   GroupingMethod,
+  InstrumentContractInfo,
   TradeDirection,
   TradeStatus,
 } from './types';
-export { InvalidExecutionError, UnknownInstrumentError } from './types';
+export {
+  InstrumentCurrencyMismatchError,
+  InvalidContractMultiplierError,
+  InvalidExecutionError,
+  UnknownInstrumentError,
+} from './types';

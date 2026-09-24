@@ -87,6 +87,6 @@ export function sumMoneyByCurrency(items: readonly Money[]): Money[] {
     totals.set(item.currency, running.plus(item.amount));
   }
   return [...totals.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
     .map(([currency, amount]) => ({ amount, currency }));
 }

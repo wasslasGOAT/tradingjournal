@@ -26,6 +26,25 @@ describe('aggregateByTradingDay', () => {
     expect(days[0]?.endBalance.toString()).toBe('1070');
   });
 
+  it('revue M3 #5 : un trade "open" (même avec commission) est exclu du jour et de endBalance', () => {
+    const trades = [
+      buildTrade({ id: 't1', netPnl: d('100'), tradingDay: '2026-03-02' }),
+      buildTrade({
+        id: 't2-open',
+        netPnl: d('-9999'),
+        status: 'open',
+        closedAt: null,
+        commission: d('5'),
+        tradingDay: '2026-03-02',
+      }),
+    ];
+    const days = aggregateByTradingDay(d('1000'), trades);
+    expect(days).toHaveLength(1);
+    expect(days[0]).toMatchObject({ tradesCount: 1, wins: 1, losses: 0 });
+    expect(days[0]?.netPnl.toString()).toBe('100');
+    expect(days[0]?.endBalance.toString()).toBe('1100');
+  });
+
   it('trie les jours et cumule le solde de fin jour après jour', () => {
     const trades = [
       buildTrade({ id: 't2', netPnl: d('-50'), tradingDay: '2026-03-05' }),
@@ -61,7 +80,9 @@ describe('aggregateByTradingDay', () => {
     ]);
     expect(withR[0]?.rTotal?.toString()).toBe('1');
 
-    const withoutR = aggregateByTradingDay(d('1000'), [buildTrade({ netPnl: d('100'), rMultiple: null })]);
+    const withoutR = aggregateByTradingDay(d('1000'), [
+      buildTrade({ netPnl: d('100'), rMultiple: null }),
+    ]);
     expect(withoutR[0]?.rTotal).toBeNull();
   });
 
@@ -79,7 +100,11 @@ describe('aggregateByTradingDay', () => {
   });
 
   it('un jour avec un mouvement de trésorerie mais aucun trade apparaît quand même', () => {
-    const days = aggregateByTradingDay(d('1000'), [], [{ tradingDay: '2026-03-02', signedAmount: d('200') }]);
+    const days = aggregateByTradingDay(
+      d('1000'),
+      [],
+      [{ tradingDay: '2026-03-02', signedAmount: d('200') }],
+    );
     expect(days).toHaveLength(1);
     expect(days[0]).toMatchObject({ tradingDay: '2026-03-02', tradesCount: 0 });
     expect(days[0]?.endBalance.toString()).toBe('1200');

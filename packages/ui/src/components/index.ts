@@ -7,7 +7,12 @@ export type { CardProps } from './Card';
 export { GlowCard } from './GlowCard';
 export type { GlowCardProps } from './GlowCard';
 
-export { StatTile, formatStatTileValue, resolvePnlIntent, resolveStatTileClassName } from './StatTile';
+export {
+  StatTile,
+  formatStatTileValue,
+  resolvePnlIntent,
+  resolveStatTileClassName,
+} from './StatTile';
 export type { StatTileKind, StatTileProps } from './StatTile';
 
 export { Button, resolveButtonClassNames, resolveButtonSpinnerColor } from './Button';

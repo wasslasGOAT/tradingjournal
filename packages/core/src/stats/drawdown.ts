@@ -1,5 +1,5 @@
 import { Decimal } from '../money';
-import { sortTradesChronologically } from './types';
+import { filterClosedTrades, sortTradesChronologically } from './types';
 import type { TradeRecord } from './types';
 
 export interface DrawdownResult {
@@ -24,27 +24,30 @@ export interface DrawdownResult {
  * Drawdown maximal d'un compte : perte maximale entre un plus haut de
  * l'equity et le creux qui le suit, en montant et en pourcentage.
  *
- * **Convention (ROADMAP M3, à valider par l'utilisateur)** : le plus haut de
+ * **Convention (validé le 2026-09-19)** : le plus haut de
  * référence inclut le **solde initial** — c'est le premier point de la série
  * d'equity (avant tout trade), pas seulement les soldes atteints après des
  * gains. Un compte qui ne fait que perdre depuis le premier trade a donc un
  * drawdown mesuré depuis `startingBalance`, pas depuis `0`.
  *
- * Formule : construit la série d'equity (`startingBalance`, puis
- * `+= netPnl` pour chaque trade dans l'ordre chronologique de `closedAt`),
- * puis pour chaque point calcule `drawdown = peakSoFar - equity` et
+ * Formule : construit la série d'**equity de trading** (`startingBalance`,
+ * puis `+= netPnl` pour chaque trade `closed` dans l'ordre chronologique de
+ * `closedAt` — **sans** les mouvements de trésorerie, voir revue M3 #8 :
+ * un dépôt ne doit ni combler ni aggraver artificiellement un drawdown), puis
+ * pour chaque point calcule `drawdown = peakSoFar - equity` et
  * `drawdownPercent = drawdown / peakSoFar` (`peakSoFar` = maximum de
  * l'equity jusqu'à ce point inclus, jamais inférieur à `startingBalance`).
- * Renvoie le maximum de chaque série.
+ * Renvoie le maximum de chaque série. Trades `open` exclus (voir
+ * {@link filterClosedTrades}).
  *
  * @param startingBalance solde initial du compte (`accounts.starting_balance`)
- * @param trades trades à inclure (typiquement tous les trades clos du compte/de la période)
+ * @param trades trades à inclure (trades `open` ignorés, voir ci-dessus)
  */
 export function computeMaxDrawdown(
   startingBalance: Decimal,
   trades: readonly TradeRecord[],
 ): DrawdownResult {
-  const ordered = sortTradesChronologically(trades);
+  const ordered = sortTradesChronologically(filterClosedTrades(trades));
 
   let equity = startingBalance;
   let peak = startingBalance;

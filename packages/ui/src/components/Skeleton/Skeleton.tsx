@@ -37,7 +37,13 @@ const RADIUS_CLASS_NAME: Record<SkeletonRadius, string> = {
  * information, l'écran qui l'affiche doit décrire l'état de chargement
  * séparément (ex. `accessibilityLiveRegion`/texte sur le conteneur parent).
  */
-export function Skeleton({ testID, width = '100%', height = 16, radius = 'md', className }: SkeletonProps) {
+export function Skeleton({
+  testID,
+  width = '100%',
+  height = 16,
+  radius = 'md',
+  className,
+}: SkeletonProps) {
   const { reduceMotion } = useMotionPreference();
   const opacity = useSharedValue(0.5);
 
@@ -48,7 +54,11 @@ export function Skeleton({ testID, width = '100%', height = 16, radius = 'md', c
       return;
     }
     const config = resolveTimingConfig('slow', 'standard', reduceMotion);
-    opacity.value = withRepeat(withSequence(withTiming(0.8, config), withTiming(0.35, config)), -1, true);
+    opacity.value = withRepeat(
+      withSequence(withTiming(0.8, config), withTiming(0.35, config)),
+      -1,
+      true,
+    );
     return () => cancelAnimation(opacity);
   }, [reduceMotion, opacity]);
 

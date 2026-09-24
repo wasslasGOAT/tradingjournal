@@ -13,9 +13,11 @@
 // Exécuté une seule fois pour produire `fixture.json` (commité) ; pas exécuté
 // par les tests (qui relisent `fixture.json`). Aucune dépendance ajoutée :
 // `decimal.js` est déjà une dépendance de `@repo/core`, résolue depuis ici
-// via la résolution Node standard (pnpm).
+// via la résolution Node standard (pnpm) ; `node:crypto` (UUID v5, voir
+// `uuidV5` ci-dessous) fait partie du runtime Node, pas une dépendance.
 //
 // Usage : node packages/core/test/golden/build.mjs
+import { createHash } from 'node:crypto';
 import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
@@ -23,12 +25,48 @@ import DecimalJs from 'decimal.js';
 
 const Decimal = DecimalJs.clone({ precision: 40, rounding: DecimalJs.ROUND_HALF_EVEN });
 
-/** Multiplicateurs de contrat par symbole — toujours une puissance de 10 (voir en-tête). */
+/**
+ * UUID v5 déterministe (RFC 4122 §4.3), implémenté à la main avec
+ * `node:crypto` (SHA-1) — revue M3 #14 : `fixture.json` doit être réutilisable
+ * comme seed M4 (`packages/schemas` `uuid` = `z.uuid()`), donc des
+ * identifiants UUID plutôt que des chaînes lisibles (`"acct-prop-challenge-200k"`,
+ * `"GBPUSD"`) ; déterministe (même `name` -> même UUID à chaque régénération)
+ * pour que le fixture ne bouge pas à chaque exécution de ce script sans
+ * changement réel de contenu.
+ *
+ * @param name chaîne d'entrée (ex. `"account:acct-prop-challenge-200k"`)
+ * @param namespace UUID de namespace (voir {@link EDGEBOOK_NAMESPACE})
+ */
+function uuidV5(name, namespace) {
+  const namespaceBytes = Buffer.from(namespace.replace(/-/g, ''), 'hex');
+  const nameBytes = Buffer.from(name, 'utf8');
+  const hash = createHash('sha1')
+    .update(Buffer.concat([namespaceBytes, nameBytes]))
+    .digest();
+  const bytes = Buffer.from(hash.subarray(0, 16));
+  bytes[6] = (bytes[6] & 0x0f) | 0x50; // version 5
+  bytes[8] = (bytes[8] & 0x3f) | 0x80; // variant RFC 4122
+  const hex = bytes.toString('hex');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
+/** Namespace UUID fixe et arbitraire d'Edgebook (constante du projet, jamais régénérée). */
+const EDGEBOOK_NAMESPACE = '2f6b1a9e-2f0e-4c7b-8f3f-6d6a8c9d1a2b';
+
+const accountUuid = uuidV5('account:acct-prop-challenge-200k', EDGEBOOK_NAMESPACE);
+function instrumentUuid(symbol) {
+  return uuidV5(`instrument:${symbol}`, EDGEBOOK_NAMESPACE);
+}
+function executionUuid(slug) {
+  return uuidV5(`execution:${slug}`, EDGEBOOK_NAMESPACE);
+}
+
+/** Multiplicateurs de contrat par symbole — toujours une puissance de 10 (voir en-tête). Coté en USD (`quote_ccy`), même devise que le compte (ADR-019, `packages/core/trading` `InstrumentCurrencyMismatchError`). */
 const INSTRUMENTS = {
-  GBPUSD: { assetClass: 'forex', contractMultiplier: '100000', priceDecimals: 5 },
-  EURUSD: { assetClass: 'forex', contractMultiplier: '100000', priceDecimals: 5 },
-  XAUUSD: { assetClass: 'metal', contractMultiplier: '100', priceDecimals: 2 },
-  NAS100: { assetClass: 'index', contractMultiplier: '100', priceDecimals: 2 },
+  GBPUSD: { assetClass: 'forex', contractMultiplier: '100000', priceDecimals: 5, quoteCcy: 'USD' },
+  EURUSD: { assetClass: 'forex', contractMultiplier: '100000', priceDecimals: 5, quoteCcy: 'USD' },
+  XAUUSD: { assetClass: 'metal', contractMultiplier: '100', priceDecimals: 2, quoteCcy: 'USD' },
+  NAS100: { assetClass: 'index', contractMultiplier: '100', priceDecimals: 2, quoteCcy: 'USD' },
 };
 
 /**
@@ -40,55 +78,283 @@ const INSTRUMENTS = {
  */
 const TRADES = [
   // --- Mar 2 (lundi) — jour gagnant : +14500.00 ---
-  { id: 'mar2-a', day: '2026-03-02', symbol: 'GBPUSD', direction: 'long', netTarget: '8200.00', entry: '1.26500', openedAt: '2026-03-02T08:15:00Z', closedAt: '2026-03-02T14:45:00Z' },
-  { id: 'mar2-b', day: '2026-03-02', symbol: 'EURUSD', direction: 'long', netTarget: '6300.00', entry: '1.08300', openedAt: '2026-03-02T09:00:00Z', closedAt: '2026-03-02T15:30:00Z' },
+  {
+    id: 'mar2-a',
+    day: '2026-03-02',
+    symbol: 'GBPUSD',
+    direction: 'long',
+    netTarget: '8200.00',
+    entry: '1.26500',
+    openedAt: '2026-03-02T08:15:00Z',
+    closedAt: '2026-03-02T14:45:00Z',
+  },
+  {
+    id: 'mar2-b',
+    day: '2026-03-02',
+    symbol: 'EURUSD',
+    direction: 'long',
+    netTarget: '6300.00',
+    entry: '1.08300',
+    openedAt: '2026-03-02T09:00:00Z',
+    closedAt: '2026-03-02T15:30:00Z',
+  },
 
   // --- Mar 5 (jeudi) — jour perdant : -5000.00 ---
-  { id: 'mar5-a', day: '2026-03-05', symbol: 'EURUSD', direction: 'short', netTarget: '-2000.00', entry: '1.08800', openedAt: '2026-03-05T07:00:00Z', closedAt: '2026-03-05T10:00:00Z' },
-  { id: 'mar5-b', day: '2026-03-05', symbol: 'GBPUSD', direction: 'short', netTarget: '-1500.00', entry: '1.27200', openedAt: '2026-03-05T11:00:00Z', closedAt: '2026-03-05T13:00:00Z' },
-  { id: 'mar5-c', day: '2026-03-05', symbol: 'XAUUSD', direction: 'short', netTarget: '-1500.00', entry: '2155.00', openedAt: '2026-03-05T14:00:00Z', closedAt: '2026-03-05T16:00:00Z' },
+  {
+    id: 'mar5-a',
+    day: '2026-03-05',
+    symbol: 'EURUSD',
+    direction: 'short',
+    netTarget: '-2000.00',
+    entry: '1.08800',
+    openedAt: '2026-03-05T07:00:00Z',
+    closedAt: '2026-03-05T10:00:00Z',
+  },
+  {
+    id: 'mar5-b',
+    day: '2026-03-05',
+    symbol: 'GBPUSD',
+    direction: 'short',
+    netTarget: '-1500.00',
+    entry: '1.27200',
+    openedAt: '2026-03-05T11:00:00Z',
+    closedAt: '2026-03-05T13:00:00Z',
+  },
+  {
+    id: 'mar5-c',
+    day: '2026-03-05',
+    symbol: 'XAUUSD',
+    direction: 'short',
+    netTarget: '-1500.00',
+    entry: '2155.00',
+    openedAt: '2026-03-05T14:00:00Z',
+    closedAt: '2026-03-05T16:00:00Z',
+  },
 
   // --- Mar 9 (lundi) — jour perdant : -5000.00 ---
-  { id: 'mar9-a', day: '2026-03-09', symbol: 'NAS100', direction: 'short', netTarget: '-1800.00', entry: '18700.00', openedAt: '2026-03-09T06:30:00Z', closedAt: '2026-03-09T08:00:00Z' },
-  { id: 'mar9-b', day: '2026-03-09', symbol: 'GBPUSD', direction: 'long', netTarget: '-1700.00', entry: '1.26900', openedAt: '2026-03-09T09:30:00Z', closedAt: '2026-03-09T12:00:00Z' },
-  { id: 'mar9-c', day: '2026-03-09', symbol: 'EURUSD', direction: 'short', netTarget: '-1500.00', entry: '1.08600', openedAt: '2026-03-09T13:00:00Z', closedAt: '2026-03-09T15:00:00Z' },
+  {
+    id: 'mar9-a',
+    day: '2026-03-09',
+    symbol: 'NAS100',
+    direction: 'short',
+    netTarget: '-1800.00',
+    entry: '18700.00',
+    openedAt: '2026-03-09T06:30:00Z',
+    closedAt: '2026-03-09T08:00:00Z',
+  },
+  {
+    id: 'mar9-b',
+    day: '2026-03-09',
+    symbol: 'GBPUSD',
+    direction: 'long',
+    netTarget: '-1700.00',
+    entry: '1.26900',
+    openedAt: '2026-03-09T09:30:00Z',
+    closedAt: '2026-03-09T12:00:00Z',
+  },
+  {
+    id: 'mar9-c',
+    day: '2026-03-09',
+    symbol: 'EURUSD',
+    direction: 'short',
+    netTarget: '-1500.00',
+    entry: '1.08600',
+    openedAt: '2026-03-09T13:00:00Z',
+    closedAt: '2026-03-09T15:00:00Z',
+  },
 
   // --- Mar 12 (jeudi) — jour gagnant : +5100.00 ---
-  { id: 'mar12-a', day: '2026-03-12', symbol: 'XAUUSD', direction: 'long', netTarget: '5100.00', entry: '2148.00', openedAt: '2026-03-12T08:00:00Z', closedAt: '2026-03-12T15:00:00Z' },
+  {
+    id: 'mar12-a',
+    day: '2026-03-12',
+    symbol: 'XAUUSD',
+    direction: 'long',
+    netTarget: '5100.00',
+    entry: '2148.00',
+    openedAt: '2026-03-12T08:00:00Z',
+    closedAt: '2026-03-12T15:00:00Z',
+  },
 
   // --- Mar 16 (lundi) — jour perdant : -5000.00 ---
-  { id: 'mar16-a', day: '2026-03-16', symbol: 'XAUUSD', direction: 'short', netTarget: '-2200.00', entry: '2160.00', openedAt: '2026-03-16T07:30:00Z', closedAt: '2026-03-16T09:45:00Z' },
-  { id: 'mar16-b', day: '2026-03-16', symbol: 'EURUSD', direction: 'long', netTarget: '-1600.00', entry: '1.09000', openedAt: '2026-03-16T10:15:00Z', closedAt: '2026-03-16T12:30:00Z' },
-  { id: 'mar16-c', day: '2026-03-16', symbol: 'GBPUSD', direction: 'short', netTarget: '-1200.00', entry: '1.27500', openedAt: '2026-03-16T13:15:00Z', closedAt: '2026-03-16T15:00:00Z' },
+  {
+    id: 'mar16-a',
+    day: '2026-03-16',
+    symbol: 'XAUUSD',
+    direction: 'short',
+    netTarget: '-2200.00',
+    entry: '2160.00',
+    openedAt: '2026-03-16T07:30:00Z',
+    closedAt: '2026-03-16T09:45:00Z',
+  },
+  {
+    id: 'mar16-b',
+    day: '2026-03-16',
+    symbol: 'EURUSD',
+    direction: 'long',
+    netTarget: '-1600.00',
+    entry: '1.09000',
+    openedAt: '2026-03-16T10:15:00Z',
+    closedAt: '2026-03-16T12:30:00Z',
+  },
+  {
+    id: 'mar16-c',
+    day: '2026-03-16',
+    symbol: 'GBPUSD',
+    direction: 'short',
+    netTarget: '-1200.00',
+    entry: '1.27500',
+    openedAt: '2026-03-16T13:15:00Z',
+    closedAt: '2026-03-16T15:00:00Z',
+  },
 
   // --- Mar 19 (jeudi) — jour perdant : -5000.00 ---
-  { id: 'mar19-a', day: '2026-03-19', symbol: 'NAS100', direction: 'long', netTarget: '-2500.00', entry: '18900.00', openedAt: '2026-03-19T06:45:00Z', closedAt: '2026-03-19T09:00:00Z' },
-  { id: 'mar19-b', day: '2026-03-19', symbol: 'GBPUSD', direction: 'short', netTarget: '-1500.00', entry: '1.26800', openedAt: '2026-03-19T10:30:00Z', closedAt: '2026-03-19T12:45:00Z' },
-  { id: 'mar19-c', day: '2026-03-19', symbol: 'XAUUSD', direction: 'short', netTarget: '-1000.00', entry: '2165.00', openedAt: '2026-03-19T13:30:00Z', closedAt: '2026-03-19T16:15:00Z' },
+  {
+    id: 'mar19-a',
+    day: '2026-03-19',
+    symbol: 'NAS100',
+    direction: 'long',
+    netTarget: '-2500.00',
+    entry: '18900.00',
+    openedAt: '2026-03-19T06:45:00Z',
+    closedAt: '2026-03-19T09:00:00Z',
+  },
+  {
+    id: 'mar19-b',
+    day: '2026-03-19',
+    symbol: 'GBPUSD',
+    direction: 'short',
+    netTarget: '-1500.00',
+    entry: '1.26800',
+    openedAt: '2026-03-19T10:30:00Z',
+    closedAt: '2026-03-19T12:45:00Z',
+  },
+  {
+    id: 'mar19-c',
+    day: '2026-03-19',
+    symbol: 'XAUUSD',
+    direction: 'short',
+    netTarget: '-1000.00',
+    entry: '2165.00',
+    openedAt: '2026-03-19T13:30:00Z',
+    closedAt: '2026-03-19T16:15:00Z',
+  },
 
   // --- Mar 23 (lundi) — jour gagnant : +5150.00 ---
-  { id: 'mar23-a', day: '2026-03-23', symbol: 'NAS100', direction: 'long', netTarget: '5150.00', entry: '18600.00', openedAt: '2026-03-23T07:00:00Z', closedAt: '2026-03-23T14:00:00Z' },
+  {
+    id: 'mar23-a',
+    day: '2026-03-23',
+    symbol: 'NAS100',
+    direction: 'long',
+    netTarget: '5150.00',
+    entry: '18600.00',
+    openedAt: '2026-03-23T07:00:00Z',
+    closedAt: '2026-03-23T14:00:00Z',
+  },
 
   // --- Mar 26 (jeudi) — jour perdant : -5000.00 ---
-  { id: 'mar26-a', day: '2026-03-26', symbol: 'EURUSD', direction: 'short', netTarget: '-1900.00', entry: '1.08900', openedAt: '2026-03-26T07:15:00Z', closedAt: '2026-03-26T09:30:00Z' },
-  { id: 'mar26-b', day: '2026-03-26', symbol: 'NAS100', direction: 'short', netTarget: '-1600.00', entry: '18800.00', openedAt: '2026-03-26T10:00:00Z', closedAt: '2026-03-26T12:15:00Z' },
-  { id: 'mar26-c', day: '2026-03-26', symbol: 'GBPUSD', direction: 'long', netTarget: '-1500.00', entry: '1.27300', openedAt: '2026-03-26T13:00:00Z', closedAt: '2026-03-26T15:15:00Z' },
+  {
+    id: 'mar26-a',
+    day: '2026-03-26',
+    symbol: 'EURUSD',
+    direction: 'short',
+    netTarget: '-1900.00',
+    entry: '1.08900',
+    openedAt: '2026-03-26T07:15:00Z',
+    closedAt: '2026-03-26T09:30:00Z',
+  },
+  {
+    id: 'mar26-b',
+    day: '2026-03-26',
+    symbol: 'NAS100',
+    direction: 'short',
+    netTarget: '-1600.00',
+    entry: '18800.00',
+    openedAt: '2026-03-26T10:00:00Z',
+    closedAt: '2026-03-26T12:15:00Z',
+  },
+  {
+    id: 'mar26-c',
+    day: '2026-03-26',
+    symbol: 'GBPUSD',
+    direction: 'long',
+    netTarget: '-1500.00',
+    entry: '1.27300',
+    openedAt: '2026-03-26T13:00:00Z',
+    closedAt: '2026-03-26T15:15:00Z',
+  },
 
   // --- Mar 29 (dimanche, changement d'heure Europe) — jour perdant : -5000.00 ---
   // mar29-a traverse le passage CET -> CEST (2026-03-29 01:00 UTC) : ouverte
   // 00:30 UTC (01:30 CET), clôturée 02:30 UTC (04:30 CEST, l'heure locale a
   // sauté de 02:00 à 03:00 CET entre les deux exécutions).
-  { id: 'mar29-a', day: '2026-03-29', symbol: 'GBPUSD', direction: 'short', netTarget: '-3000.00', entry: '1.26500', openedAt: '2026-03-29T00:30:00Z', closedAt: '2026-03-29T02:30:00Z' },
-  { id: 'mar29-b', day: '2026-03-29', symbol: 'XAUUSD', direction: 'short', netTarget: '-2000.00', entry: '2158.00', openedAt: '2026-03-29T10:00:00Z', closedAt: '2026-03-29T12:00:00Z' },
+  {
+    id: 'mar29-a',
+    day: '2026-03-29',
+    symbol: 'GBPUSD',
+    direction: 'short',
+    netTarget: '-3000.00',
+    entry: '1.26500',
+    openedAt: '2026-03-29T00:30:00Z',
+    closedAt: '2026-03-29T02:30:00Z',
+  },
+  {
+    id: 'mar29-b',
+    day: '2026-03-29',
+    symbol: 'XAUUSD',
+    direction: 'short',
+    netTarget: '-2000.00',
+    entry: '2158.00',
+    openedAt: '2026-03-29T10:00:00Z',
+    closedAt: '2026-03-29T12:00:00Z',
+  },
 
   // --- Mar 30 (lundi) — PIRE jour : -12277.71 ---
-  { id: 'mar30-a', day: '2026-03-30', symbol: 'NAS100', direction: 'short', netTarget: '-6000.00', entry: '18750.00', openedAt: '2026-03-30T07:00:00Z', closedAt: '2026-03-30T09:30:00Z' },
-  { id: 'mar30-b', day: '2026-03-30', symbol: 'EURUSD', direction: 'short', netTarget: '-4000.00', entry: '1.08700', openedAt: '2026-03-30T10:00:00Z', closedAt: '2026-03-30T12:00:00Z' },
+  {
+    id: 'mar30-a',
+    day: '2026-03-30',
+    symbol: 'NAS100',
+    direction: 'short',
+    netTarget: '-6000.00',
+    entry: '18750.00',
+    openedAt: '2026-03-30T07:00:00Z',
+    closedAt: '2026-03-30T09:30:00Z',
+  },
+  {
+    id: 'mar30-b',
+    day: '2026-03-30',
+    symbol: 'EURUSD',
+    direction: 'short',
+    netTarget: '-4000.00',
+    entry: '1.08700',
+    openedAt: '2026-03-30T10:00:00Z',
+    closedAt: '2026-03-30T12:00:00Z',
+  },
   // Seul trade avec commission/frais/swap non nuls (ROADMAP M3-8).
-  { id: 'mar30-c', day: '2026-03-30', symbol: 'GBPUSD', direction: 'short', netTarget: '-2277.71', commission: '50.00', fees: '20.00', swap: '7.71', entry: '1.26500', openedAt: '2026-03-30T13:00:00Z', closedAt: '2026-03-30T15:30:00Z' },
+  {
+    id: 'mar30-c',
+    day: '2026-03-30',
+    symbol: 'GBPUSD',
+    direction: 'short',
+    netTarget: '-2277.71',
+    commission: '50.00',
+    fees: '20.00',
+    swap: '7.71',
+    entry: '1.26500',
+    openedAt: '2026-03-30T13:00:00Z',
+    closedAt: '2026-03-30T15:30:00Z',
+  },
 
   // --- 1er avril (mercredi) — seul trade hors mars ---
-  { id: 'apr1-a', day: '2026-04-01', symbol: 'XAUUSD', direction: 'short', netTarget: '-2215.72', entry: '2162.00', openedAt: '2026-04-01T08:00:00Z', closedAt: '2026-04-01T10:30:00Z' },
+  {
+    id: 'apr1-a',
+    day: '2026-04-01',
+    symbol: 'XAUUSD',
+    direction: 'short',
+    netTarget: '-2215.72',
+    entry: '2162.00',
+    openedAt: '2026-04-01T08:00:00Z',
+    closedAt: '2026-04-01T10:30:00Z',
+  },
 ];
 
 function decimalFromMaybe(value, fallback = '0') {
@@ -98,7 +364,15 @@ function decimalFromMaybe(value, fallback = '0') {
 const quantity = new Decimal(1);
 
 const executions = [];
-const swapAdjustments = [];
+/**
+ * Swap porté par la ligne de trade (revue M3 #14, DATA_MODEL `trades.swap` —
+ * pas une table `swap_adjustments` séparée) : indexé par l'id **UUID de
+ * l'exécution d'entrée** de chaque trade (ancre stable, indépendante du
+ * fuseau/de l'horodatage — contrairement à un ancien appariement par
+ * `(instrument_id, opened_at)`), car les exécutions brutes du fixture ne
+ * portent pas encore de `trade_id` (regroupé seulement au moment du test).
+ */
+const tradeSwaps = [];
 let execCounter = 0;
 
 for (const trade of TRADES) {
@@ -119,52 +393,60 @@ for (const trade of TRADES) {
   const exitPrice = entryPrice.plus(diff.times(positionSign));
 
   // Vérification immédiate (échoue tôt si une hypothèse de conception est fausse).
-  const recomputedGross = exitPrice.minus(entryPrice).times(positionSign).times(quantity).times(multiplier);
+  const recomputedGross = exitPrice
+    .minus(entryPrice)
+    .times(positionSign)
+    .times(quantity)
+    .times(multiplier);
   if (!recomputedGross.equals(grossBeforeFees)) {
-    throw new Error(`Incohérence P&L brut pour ${trade.id} : attendu ${grossBeforeFees}, obtenu ${recomputedGross}`);
+    throw new Error(
+      `Incohérence P&L brut pour ${trade.id} : attendu ${grossBeforeFees}, obtenu ${recomputedGross}`,
+    );
   }
   const recomputedNet = recomputedGross.minus(commission).minus(fees).minus(swap);
   if (!recomputedNet.equals(netTarget)) {
-    throw new Error(`Incohérence P&L net pour ${trade.id} : attendu ${netTarget}, obtenu ${recomputedNet}`);
+    throw new Error(
+      `Incohérence P&L net pour ${trade.id} : attendu ${netTarget}, obtenu ${recomputedNet}`,
+    );
   }
 
   const entrySide = trade.direction === 'long' ? 'buy' : 'sell';
   const exitSide = trade.direction === 'long' ? 'sell' : 'buy';
 
   execCounter += 1;
-  const entryId = `exec-${String(execCounter).padStart(4, '0')}-${trade.id}-open`;
+  const entrySlug = `${trade.id}-open`;
+  const entryId = executionUuid(entrySlug);
   executions.push({
     id: entryId,
-    account_id: 'acct-prop-challenge-200k',
-    instrument_id: trade.symbol,
+    account_id: accountUuid,
+    instrument_id: instrumentUuid(trade.symbol),
     side: entrySide,
     quantity: quantity.toFixed(),
     price: entryPrice.toFixed(),
     commission: commission.toFixed(2),
     fees: '0',
     executed_at: trade.openedAt,
+    sequence: execCounter,
   });
 
   execCounter += 1;
-  const exitId = `exec-${String(execCounter).padStart(4, '0')}-${trade.id}-close`;
+  const exitSlug = `${trade.id}-close`;
+  const exitId = executionUuid(exitSlug);
   executions.push({
     id: exitId,
-    account_id: 'acct-prop-challenge-200k',
-    instrument_id: trade.symbol,
+    account_id: accountUuid,
+    instrument_id: instrumentUuid(trade.symbol),
     side: exitSide,
     quantity: quantity.toFixed(),
     price: exitPrice.toFixed(),
     commission: '0',
     fees: fees.toFixed(2),
     executed_at: trade.closedAt,
+    sequence: execCounter,
   });
 
   if (!swap.isZero()) {
-    swapAdjustments.push({
-      instrument_id: trade.symbol,
-      opened_at: trade.openedAt,
-      swap: swap.toFixed(2),
-    });
+    tradeSwaps.push({ entry_execution_id: entryId, swap: swap.toFixed(2) });
   }
 }
 
@@ -172,8 +454,12 @@ for (const trade of TRADES) {
 const sum = (arr) => arr.reduce((acc, v) => acc.plus(v), new Decimal(0));
 const netByTrade = TRADES.map((t) => new Decimal(t.netTarget));
 const total = sum(netByTrade);
-const marchTotal = sum(TRADES.filter((t) => t.day.startsWith('2026-03')).map((t) => new Decimal(t.netTarget)));
-const aprilTotal = sum(TRADES.filter((t) => t.day.startsWith('2026-04')).map((t) => new Decimal(t.netTarget)));
+const marchTotal = sum(
+  TRADES.filter((t) => t.day.startsWith('2026-03')).map((t) => new Decimal(t.netTarget)),
+);
+const aprilTotal = sum(
+  TRADES.filter((t) => t.day.startsWith('2026-04')).map((t) => new Decimal(t.netTarget)),
+);
 const winners = TRADES.filter((t) => new Decimal(t.netTarget).greaterThan(0));
 const losers = TRADES.filter((t) => new Decimal(t.netTarget).lessThan(0));
 
@@ -187,7 +473,8 @@ const checks = [
   ['losers', losers.length, 21],
 ];
 for (const [label, got, expected] of checks) {
-  if (String(got) !== String(expected)) throw new Error(`Vérification échouée (${label}) : attendu ${expected}, obtenu ${got}`);
+  if (String(got) !== String(expected))
+    throw new Error(`Vérification échouée (${label}) : attendu ${expected}, obtenu ${got}`);
 }
 
 const startingBalance = new Decimal('200000');
@@ -198,12 +485,27 @@ console.log('Rendement :', total.dividedBy(startingBalance).times(100).toFixed(4
 const grossWinsTotal = sum(winners.map((t) => new Decimal(t.netTarget)));
 const grossLossesTotal = sum(losers.map((t) => new Decimal(t.netTarget).abs()));
 const profitFactor = grossWinsTotal.dividedBy(grossLossesTotal);
-console.log('Gains bruts :', grossWinsTotal.toFixed(2), 'Pertes brutes :', grossLossesTotal.toFixed(2));
-console.log('Profit factor :', profitFactor.toFixed(6), '-> arrondi', profitFactor.toDecimalPlaces(2).toFixed(2));
+console.log(
+  'Gains bruts :',
+  grossWinsTotal.toFixed(2),
+  'Pertes brutes :',
+  grossLossesTotal.toFixed(2),
+);
+console.log(
+  'Profit factor :',
+  profitFactor.toFixed(6),
+  '-> arrondi',
+  profitFactor.toDecimalPlaces(2).toFixed(2),
+);
 const avgWin = grossWinsTotal.dividedBy(winners.length);
 const avgLoss = grossLossesTotal.dividedBy(losers.length);
 const avgRatio = avgWin.dividedBy(avgLoss);
-console.log('Ratio moyen :', avgRatio.toFixed(6), '-> arrondi', avgRatio.toDecimalPlaces(2).toFixed(2));
+console.log(
+  'Ratio moyen :',
+  avgRatio.toFixed(6),
+  '-> arrondi',
+  avgRatio.toDecimalPlaces(2).toFixed(2),
+);
 
 // Pire jour
 const byDay = new Map();
@@ -223,9 +525,9 @@ if (worstDay !== '2026-03-30') throw new Error(`Pire jour attendu 2026-03-30, ob
 
 const fixture = {
   description:
-    "Jeu golden synthétique Edgebook (ROADMAP M3-8) — compte Prop Challenge 200k, USD, Europe/Paris, bascule 00:00. Généré par build.mjs, ne pas éditer à la main.",
+    'Jeu golden synthétique Edgebook (ROADMAP M3-8) — compte Prop Challenge 200k, USD, Europe/Paris, bascule 00:00. Généré par build.mjs, ne pas éditer à la main. Identifiants en UUID v5 déterministes (revue M3 #14) : réutilisable tel quel comme seed M4.',
   account: {
-    id: 'acct-prop-challenge-200k',
+    id: accountUuid,
     name: 'Prop Challenge 200k',
     kind: 'prop_challenge',
     currency: 'USD',
@@ -235,17 +537,17 @@ const fixture = {
     grouping_method: 'fifo',
   },
   instruments: Object.entries(INSTRUMENTS).map(([symbol, i]) => ({
-    id: symbol,
+    id: instrumentUuid(symbol),
     symbol,
     asset_class: i.assetClass,
     contract_multiplier: i.contractMultiplier,
+    quote_ccy: i.quoteCcy,
   })),
   executions,
   cash_movements: [],
-  // Swap non porté par `executions` (DATA_MODEL : `swap` est une colonne de
-  // `trades`, pas d'`executions`) : appliqué par trade après regroupement, en
-  // retrouvant le trade par (instrument_id, opened_at) — voir golden.test.ts.
-  swap_adjustments: swapAdjustments,
+  // Swap porté par la ligne de trade (revue M3 #14, DATA_MODEL `trades.swap`) :
+  // voir `tradeSwaps` ci-dessus (ancré sur l'id de l'exécution d'entrée du trade).
+  trade_swaps: tradeSwaps,
 };
 
 const outPath = fileURLToPath(new URL('./fixture.json', import.meta.url));

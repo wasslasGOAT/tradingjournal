@@ -1,4 +1,5 @@
 import { Decimal } from '../money';
+import { filterClosedTrades } from './types';
 import type { TradeRecord } from './types';
 
 /**
@@ -33,7 +34,7 @@ export interface ProfitFactorResult {
 export function computeProfitFactor(trades: readonly TradeRecord[]): ProfitFactorResult {
   let grossWins = new Decimal(0);
   let grossLosses = new Decimal(0);
-  for (const trade of trades) {
+  for (const trade of filterClosedTrades(trades)) {
     if (trade.netPnl.greaterThan(0)) grossWins = grossWins.plus(trade.netPnl);
     else if (trade.netPnl.lessThan(0)) grossLosses = grossLosses.plus(trade.netPnl.abs());
   }

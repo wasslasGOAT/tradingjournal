@@ -43,7 +43,14 @@ export function StatTile({
   decimals,
 }: StatTileProps) {
   const decimalValue = toDecimal(value);
-  const formatted = formatStatTileValue({ kind, value: decimalValue, locale, currency, hideAmounts, decimals });
+  const formatted = formatStatTileValue({
+    kind,
+    value: decimalValue,
+    locale,
+    currency,
+    hideAmounts,
+    decimals,
+  });
   const colorClassName = resolveStatTileClassName(kind, decimalValue);
 
   return (

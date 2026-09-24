@@ -6,7 +6,7 @@ export { computeProfitFactor } from './profitFactor';
 export type { ProfitFactorReason, ProfitFactorResult } from './profitFactor';
 export { computeStreaks } from './streaks';
 export type { StreaksResult, StreakType } from './streaks';
-export { sortTradesChronologically } from './types';
+export { compareOrdinal, filterClosedTrades, sortTradesChronologically } from './types';
 export type { TradeRecord } from './types';
 export { computeWinLossCounts, computeWinRate } from './winRate';
 export type { WinLossCounts } from './winRate';

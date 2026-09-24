@@ -16,7 +16,11 @@ describe('resolveIconButtonColor', () => {
   });
 
   it('bascule sur textMuted quand désactivé, quelle que soit la variante', () => {
-    expect(resolveIconButtonColor('accent', 'dark', { disabled: true })).toBe(themes.dark.textMuted);
-    expect(resolveIconButtonColor('danger', 'light', { disabled: true })).toBe(themes.light.textMuted);
+    expect(resolveIconButtonColor('accent', 'dark', { disabled: true })).toBe(
+      themes.dark.textMuted,
+    );
+    expect(resolveIconButtonColor('danger', 'light', { disabled: true })).toBe(
+      themes.light.textMuted,
+    );
   });
 });

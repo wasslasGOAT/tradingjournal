@@ -10,8 +10,16 @@
  * valeur de repli (thème sombre) évite un flash non stylé avant le montage du
  * `ThemeProvider` (ex. tests sans provider).
  */
-const { dark, pnl, colorVarNames, pnlVarNames, radii, spacing, typography, animation } =
-  require('./src/tokens.data.cjs');
+const {
+  dark,
+  pnl,
+  colorVarNames,
+  pnlVarNames,
+  radii,
+  spacing,
+  typography,
+  animation,
+} = require('./src/tokens.data.cjs');
 
 function cssVar(varName, fallback) {
   return `var(${varName}, ${fallback})`;
@@ -27,6 +35,16 @@ for (const [intent, varName] of Object.entries(pnlVarNames)) {
 }
 
 module.exports = {
+  // M1-8 : l'app ne bascule jamais de classe `.dark` sur `<html>` — `ThemeProvider`
+  // pilote sombre/clair par variables CSS (`vars()`, ci-dessus), jamais par les
+  // variantes `dark:` de Tailwind/NativeWind. Sans ce réglage explicite, NativeWind
+  // web reste sur son défaut `darkMode: 'media'` : son observateur interne
+  // (`react-native-css-interop`) plante avec « Cannot manually set color scheme, as
+  // dark mode is type 'media' » dès qu'une feuille de style est (re)injectée après le
+  // montage initial (repro : ouvrir `/` en 1280 px déclenche le montage tardif de
+  // `Sidebar`/`SidebarItem`, absent du graphe de la tab bar mobile). `'class'` évite
+  // ce plantage sans effet visuel, puisqu'aucune classe `dark:` n'est utilisée ici.
+  darkMode: 'class',
   theme: {
     extend: {
       colors,

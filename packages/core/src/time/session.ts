@@ -33,7 +33,12 @@ interface SessionWindow {
 const SESSION_WINDOWS: readonly SessionWindow[] = [
   { timezone: 'Asia/Tokyo', session: 'asia', startSeconds: 9 * 3600, endSeconds: 18 * 3600 },
   { timezone: 'Europe/London', session: 'london', startSeconds: 8 * 3600, endSeconds: 17 * 3600 },
-  { timezone: 'America/New_York', session: 'new_york', startSeconds: 8 * 3600, endSeconds: 17 * 3600 },
+  {
+    timezone: 'America/New_York',
+    session: 'new_york',
+    startSeconds: 8 * 3600,
+    endSeconds: 17 * 3600,
+  },
 ];
 
 const LOCAL_TIME_PATTERN = /^(\d{2}):(\d{2}):(\d{2})$/;

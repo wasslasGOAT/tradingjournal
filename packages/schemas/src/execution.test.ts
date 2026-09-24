@@ -33,7 +33,9 @@ describe('executionFormSchema', () => {
   });
 
   it('accepte une commission ou des frais à 0 exactement', () => {
-    expect(executionFormSchema.safeParse({ ...valid, commission: '0.00', fees: '0' }).success).toBe(true);
+    expect(executionFormSchema.safeParse({ ...valid, commission: '0.00', fees: '0' }).success).toBe(
+      true,
+    );
   });
 
   it('rejette un side inconnu', () => {
@@ -41,7 +43,22 @@ describe('executionFormSchema', () => {
   });
 
   it('rejette une date non ISO', () => {
-    expect(executionFormSchema.safeParse({ ...valid, executedAt: '02/03/2026' }).success).toBe(false);
+    expect(executionFormSchema.safeParse({ ...valid, executedAt: '02/03/2026' }).success).toBe(
+      false,
+    );
+  });
+
+  it("accepte une quantité jusqu'à 16 chiffres avant la virgule (numeric(24,8), revue M3 #12)", () => {
+    expect(
+      executionFormSchema.safeParse({ ...valid, quantity: '9999999999999999.12345678' }).success,
+    ).toBe(true);
+  });
+
+  it("rejette un prix dépassant l'échelle numeric(20,8) (revue M3 #12)", () => {
+    expect(executionFormSchema.safeParse({ ...valid, price: '1000000000000.5' }).success).toBe(
+      false,
+    );
+    expect(executionFormSchema.safeParse({ ...valid, price: '1.123456789' }).success).toBe(false);
   });
 });
 
@@ -56,7 +73,11 @@ describe('executionSchema', () => {
   });
 
   it('rejette un accountId non UUID', () => {
-    const result = executionSchema.safeParse({ ...valid, accountId: 'not-a-uuid', instrumentId: '123e4567-e89b-42d3-a456-426614174001' });
+    const result = executionSchema.safeParse({
+      ...valid,
+      accountId: 'not-a-uuid',
+      instrumentId: '123e4567-e89b-42d3-a456-426614174001',
+    });
     expect(result.success).toBe(false);
   });
 });

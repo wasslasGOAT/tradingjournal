@@ -36,9 +36,9 @@ describe('addMoney', () => {
   });
 
   it('rejette deux devises différentes', () => {
-    expect(() => addMoney(money(new Decimal('100'), 'EUR'), money(new Decimal('100'), 'USD'))).toThrow(
-      CurrencyMismatchError,
-    );
+    expect(() =>
+      addMoney(money(new Decimal('100'), 'EUR'), money(new Decimal('100'), 'USD')),
+    ).toThrow(CurrencyMismatchError);
   });
 });
 
@@ -79,7 +79,10 @@ describe('sumMoneyByCurrency', () => {
   });
 
   it('trie le résultat par code devise (déterministe)', () => {
-    const result = sumMoneyByCurrency([money(new Decimal('1'), 'USD'), money(new Decimal('1'), 'EUR')]);
+    const result = sumMoneyByCurrency([
+      money(new Decimal('1'), 'USD'),
+      money(new Decimal('1'), 'EUR'),
+    ]);
     expect(result.map((m) => m.currency)).toEqual(['EUR', 'USD']);
   });
 });

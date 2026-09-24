@@ -1,4 +1,5 @@
 import type { Decimal } from '../money';
+import { filterClosedTrades } from '../stats';
 import type { TradeRecord } from '../stats';
 
 /** Classe (bin) de l'histogramme de distribution des R multiples, voir {@link computeRDistribution}. */
@@ -47,7 +48,7 @@ export function computeRDistribution(
   const bins = new Map<string, { rangeStart: Decimal; count: number; netPnl: Decimal }>();
   let unknownCount = 0;
 
-  for (const trade of trades) {
+  for (const trade of filterClosedTrades(trades)) {
     if (trade.rMultiple === null) {
       unknownCount += 1;
       continue;

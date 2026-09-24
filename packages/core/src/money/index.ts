@@ -1,3 +1,4 @@
+export { allocateProRata, InvalidAllocationWeightsError } from './allocate';
 export { Decimal } from './decimal';
 export {
   addMoney,
@@ -8,4 +9,4 @@ export {
   sumMoneyByCurrency,
 } from './money';
 export type { Money } from './money';
-export { AmountParseError, parseAmount, toAmountString } from './parseAmount';
+export { AmountParseError, parseAmount, toAmountString, toDbAmount } from './parseAmount';

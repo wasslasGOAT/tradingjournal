@@ -14,7 +14,10 @@ interface StateClassNames {
   readonly label: string;
 }
 
-const VARIANT_CLASS_NAMES: Record<ButtonVariant, { enabled: StateClassNames; disabled: StateClassNames }> = {
+const VARIANT_CLASS_NAMES: Record<
+  ButtonVariant,
+  { enabled: StateClassNames; disabled: StateClassNames }
+> = {
   primary: {
     enabled: { container: 'bg-accent', label: 'text-onAccent' },
     disabled: { container: 'bg-surfaceAlt', label: 'text-textMuted' },

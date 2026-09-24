@@ -1,10 +1,11 @@
 import { Decimal } from '../money';
+import { filterClosedTrades } from './types';
 import type { TradeRecord } from './types';
 
 /**
  * Répartition gagnants/perdants/nuls d'une collection de {@link TradeRecord}.
  *
- * **Convention P&L = 0 (à valider par l'utilisateur, ROADMAP M3)** : un trade
+ * **Convention P&L = 0 (validé le 2026-09-19)** : un trade
  * dont `netPnl` vaut exactement `0` est classé `breakeven` — il n'est **ni**
  * gagnant **ni** perdant. Il est compté dans `total` (et doit être compté
  * par l'appelant dans le nombre de trades affiché), mais **exclu** du
@@ -21,17 +22,22 @@ export interface WinLossCounts {
   readonly total: number;
 }
 
-/** Calcule {@link WinLossCounts} à partir de `netPnl` (voir convention P&L = 0 ci-dessus). */
+/**
+ * Calcule {@link WinLossCounts} à partir de `netPnl` (voir convention P&L = 0
+ * ci-dessus). **Trades `open` exclus** (validé le 2026-09-19, revue M3 #5,
+ * voir {@link filterClosedTrades}) : `total` ne compte que les trades `closed`.
+ */
 export function computeWinLossCounts(trades: readonly TradeRecord[]): WinLossCounts {
+  const closedTrades = filterClosedTrades(trades);
   let wins = 0;
   let losses = 0;
   let breakeven = 0;
-  for (const trade of trades) {
+  for (const trade of closedTrades) {
     if (trade.netPnl.greaterThan(0)) wins += 1;
     else if (trade.netPnl.lessThan(0)) losses += 1;
     else breakeven += 1;
   }
-  return { wins, losses, breakeven, total: trades.length };
+  return { wins, losses, breakeven, total: closedTrades.length };
 }
 
 /**

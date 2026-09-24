@@ -17,6 +17,7 @@ export type { ThemeMode, PnlColorScheme, PnlIntent, ColorTokens } from './tokens
 
 export { ThemeProvider, useThemeMode } from './theme/ThemeProvider';
 export { useThemeStore } from './theme/themeStore';
+export { useVisibilityStore } from './theme/visibilityStore';
 export { resolveThemeMode, buildThemeVars } from './theme/themeMode';
 export type { ThemePreference, SystemColorScheme } from './theme/themeMode';
 

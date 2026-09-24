@@ -44,7 +44,9 @@ export function Button({
   const isDisabled = disabled || loading;
   const mode = useThemeMode();
   const { style, onPressIn, onPressOut } = usePressScale();
-  const { container, label: labelClassName } = resolveButtonClassNames(variant, size, { disabled: isDisabled });
+  const { container, label: labelClassName } = resolveButtonClassNames(variant, size, {
+    disabled: isDisabled,
+  });
 
   const handlePressIn = () => {
     if (isDisabled) return;

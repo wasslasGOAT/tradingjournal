@@ -30,6 +30,17 @@ export interface MonthStats {
  * requête par mois, ARCHITECTURE §5.5 — cette fonction ne filtre pas par
  * date, elle agrège ce qu'on lui donne).
  *
+ * **Jours sans trade ignorés (revue M3 #6)** : un {@link DayAggregate} avec
+ * `tradesCount === 0` (un jour qui ne porte qu'un mouvement de trésorerie,
+ * voir `aggregateByTradingDay`) a un `netPnl` exactement `0` sans qu'aucun
+ * trade n'ait eu lieu — le compter comme jour `breakeven`, ou pire, le
+ * laisser devenir `bestDay`/`worstDay` par comparaison à `0` (un jour neutre
+ * peut sembler "meilleur" qu'un vrai jour perdant, ou "pire" qu'un vrai jour
+ * juste en dessous de `0`), fausserait ces statistiques. Ces jours sont donc
+ * exclus de `winningDays`/`losingDays`/`breakevenDays` et de
+ * `bestDay`/`worstDay`, mais leur `grossPnl`/`netPnl`/`fees` sont de toute
+ * façon nuls et n'affectent pas les totaux du mois.
+ *
  * @param days agrégats journaliers du mois (voir {@link aggregateByTradingDay})
  */
 export function computeMonthStats(days: readonly DayAggregate[]): MonthStats {
@@ -44,14 +55,14 @@ export function computeMonthStats(days: readonly DayAggregate[]): MonthStats {
   let worstDay: BestWorstDay | null = null;
 
   for (const day of days) {
-    if (day.netPnl.greaterThan(0)) winningDays += 1;
-    else if (day.netPnl.lessThan(0)) losingDays += 1;
-    else breakevenDays += 1;
-
     tradesCount += day.tradesCount;
     grossPnl = grossPnl.plus(day.grossPnl);
     netPnl = netPnl.plus(day.netPnl);
     fees = fees.plus(day.fees);
+    if (day.tradesCount === 0) continue; // revue M3 #6 : jour cash-only, ignoré des compteurs/meilleur/pire jour.
+    if (day.netPnl.greaterThan(0)) winningDays += 1;
+    else if (day.netPnl.lessThan(0)) losingDays += 1;
+    else breakevenDays += 1;
 
     if (bestDay === null || day.netPnl.greaterThan(bestDay.netPnl)) {
       bestDay = { tradingDay: day.tradingDay, netPnl: day.netPnl };
@@ -61,5 +72,15 @@ export function computeMonthStats(days: readonly DayAggregate[]): MonthStats {
     }
   }
 
-  return { tradesCount, winningDays, losingDays, breakevenDays, grossPnl, netPnl, fees, bestDay, worstDay };
+  return {
+    tradesCount,
+    winningDays,
+    losingDays,
+    breakevenDays,
+    grossPnl,
+    netPnl,
+    fees,
+    bestDay,
+    worstDay,
+  };
 }

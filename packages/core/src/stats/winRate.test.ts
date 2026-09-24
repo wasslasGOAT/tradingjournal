@@ -34,7 +34,9 @@ describe('computeWinRate', () => {
   });
 
   it('uniquement des trades breakeven : null (aucun trade décisif)', () => {
-    expect(computeWinRate([buildTrade({ netPnl: d('0') }), buildTrade({ netPnl: d('0') })])).toBeNull();
+    expect(
+      computeWinRate([buildTrade({ netPnl: d('0') }), buildTrade({ netPnl: d('0') })]),
+    ).toBeNull();
   });
 
   it('exclut les trades breakeven du dénominateur', () => {

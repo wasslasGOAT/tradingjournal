@@ -24,8 +24,8 @@ describe('formatAmount', () => {
     expect(formatAmount(d('180256.57'), 'USD', { locale: 'en' })).toBe('$180,256.57');
   });
 
-  it('formate un montant négatif en anglais', () => {
-    expect(formatAmount(d('-19743.43'), 'USD', { locale: 'en' })).toBe('-$19,743.43');
+  it('formate un montant négatif en anglais (signe U+2212, revue M3 #17)', () => {
+    expect(formatAmount(d('-19743.43'), 'USD', { locale: 'en' })).toBe('−$19,743.43');
   });
 
   it('formate un montant en français (espace fine insécable U+202F entre milliers, virgule décimale, espace insécable U+00A0 avant €)', () => {
@@ -82,12 +82,12 @@ describe('formatSignedAmount', () => {
 });
 
 describe('formatPercent', () => {
-  it('cas golden : -0,09871715 -> "-9.87%" (en)', () => {
-    expect(formatPercent(d('-0.09871715'), { locale: 'en' })).toBe('-9.87%');
+  it('cas golden : -0,09871715 -> "−9.87%" (en, signe U+2212, revue M3 #17)', () => {
+    expect(formatPercent(d('-0.09871715'), { locale: 'en' })).toBe('−9.87%');
   });
 
-  it('cas golden en français : "-9,87 %" (espace insécable avant %)', () => {
-    expect(formatPercent(d('-0.09871715'), { locale: 'fr' })).toBe('-9,87 %');
+  it('cas golden en français : "−9,87 %" (espace insécable avant %, signe U+2212)', () => {
+    expect(formatPercent(d('-0.09871715'), { locale: 'fr' })).toBe('−9,87 %');
   });
 
   it('accepte un nombre de décimales personnalisé', () => {
@@ -95,7 +95,9 @@ describe('formatPercent', () => {
   });
 
   it('masque le pourcentage quand hideAmounts est actif', () => {
-    expect(formatPercent(d('0.5'), { locale: 'en', hideAmounts: true })).toBe(HIDDEN_VALUE_PLACEHOLDER);
+    expect(formatPercent(d('0.5'), { locale: 'en', hideAmounts: true })).toBe(
+      HIDDEN_VALUE_PLACEHOLDER,
+    );
   });
 });
 
@@ -128,8 +130,12 @@ describe('formatRMultiple', () => {
   });
 
   it('masque même le "—" quand hideAmounts est actif', () => {
-    expect(formatRMultiple(null, { locale: 'en', hideAmounts: true })).toBe(HIDDEN_VALUE_PLACEHOLDER);
-    expect(formatRMultiple(d('2.92'), { locale: 'en', hideAmounts: true })).toBe(HIDDEN_VALUE_PLACEHOLDER);
+    expect(formatRMultiple(null, { locale: 'en', hideAmounts: true })).toBe(
+      HIDDEN_VALUE_PLACEHOLDER,
+    );
+    expect(formatRMultiple(d('2.92'), { locale: 'en', hideAmounts: true })).toBe(
+      HIDDEN_VALUE_PLACEHOLDER,
+    );
   });
 });
 

@@ -1,9 +1,16 @@
 import { z } from 'zod';
 
-import { amountString, currencyCode } from './common';
+import { amountString, currencyCode, isPositiveAmountString, VALIDATION_KEYS } from './common';
 
 /** Type de compte (DATA_MODEL `accounts.kind`, ROADMAP M2). */
-export const ACCOUNT_KINDS = ['personal', 'demo', 'backtest', 'prop_challenge', 'prop_funded', 'paper'] as const;
+export const ACCOUNT_KINDS = [
+  'personal',
+  'demo',
+  'backtest',
+  'prop_challenge',
+  'prop_funded',
+  'paper',
+] as const;
 export const accountKind = z.enum(ACCOUNT_KINDS);
 
 /** Méthode de regroupement des exécutions en trades (DATA_MODEL `accounts.grouping_method`, ADR-004). */
@@ -19,7 +26,10 @@ export const groupingMethod = z.enum(GROUPING_METHODS);
  */
 export const dayRolloverTime = z
   .string()
-  .regex(/^([01]\d|2[0-3]):([0-5]\d)(:[0-5]\d)?$/, 'Heure de bascule invalide : attendu "HH:mm" ou "HH:mm:ss".');
+  .regex(
+    /^([01]\d|2[0-3]):([0-5]\d)(:[0-5]\d)?$/,
+    VALIDATION_KEYS.ACCOUNT_DAY_ROLLOVER_TIME_INVALID,
+  );
 
 /**
  * Fuseau IANA (DATA_MODEL `accounts.timezone`), ex. `"Europe/Paris"`. Validé
@@ -29,7 +39,7 @@ export const dayRolloverTime = z
  */
 export const timezoneName = z
   .string()
-  .regex(/^([A-Za-z_]+\/[A-Za-z_/-]+|UTC)$/, 'Fuseau invalide : attendu un identifiant IANA (ex. "Europe/Paris") ou "UTC".');
+  .regex(/^([A-Za-z_]+\/[A-Za-z_/-]+|UTC)$/, VALIDATION_KEYS.ACCOUNT_TIMEZONE_INVALID);
 
 /**
  * Formulaire de création/édition d'un compte (DATA_MODEL `accounts`, ROADMAP
@@ -38,13 +48,22 @@ export const timezoneName = z
  * `created_at`, `updated_at`).
  */
 export const accountFormSchema = z.object({
-  name: z.string().trim().min(1, 'Le nom du compte est requis.').max(100),
+  name: z.string().trim().min(1, VALIDATION_KEYS.ACCOUNT_NAME_REQUIRED).max(100),
   kind: accountKind,
   broker: z.string().trim().max(100).optional(),
   platform: z.string().trim().max(100).optional(),
   externalAccountId: z.string().trim().max(100).optional(),
   currency: currencyCode,
-  startingBalance: amountString,
+  /**
+   * Solde initial, doit être strictement positif (revue M3 #12) : un compte
+   * de trading sans capital n'a pas de sens métier, et `0` casse
+   * `packages/core/trading` `computeReturnRate` (rendement indéfini, division
+   * par zéro) ainsi que le pourcentage de drawdown (référence de pic nulle).
+   */
+  startingBalance: amountString.refine(
+    isPositiveAmountString,
+    VALIDATION_KEYS.ACCOUNT_STARTING_BALANCE_POSITIVE,
+  ),
   /** Date de début (jour civil, pas d'heure) — DATA_MODEL `accounts.starting_date`. */
   startingDate: z.iso.date(),
   timezone: timezoneName,

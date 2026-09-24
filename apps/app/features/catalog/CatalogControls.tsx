@@ -1,7 +1,16 @@
 import { Button, themes, useThemeMode, useThemeStore } from '@repo/ui';
+import type { ThemePreference } from '@repo/ui';
 import { Eye, EyeOff } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
+
+/** Cycle de démonstration (ordre stable) : système -> sombre -> clair -> système. */
+const THEME_PREFERENCE_CYCLE: readonly ThemePreference[] = ['system', 'dark', 'light'];
+
+function nextThemePreference(current: ThemePreference): ThemePreference {
+  const index = THEME_PREFERENCE_CYCLE.indexOf(current);
+  return THEME_PREFERENCE_CYCLE[(index + 1) % THEME_PREFERENCE_CYCLE.length] ?? 'system';
+}
 
 /**
  * Contrôles de démonstration du catalogue (M1-3) : thème, couleurs P&L,
@@ -22,7 +31,12 @@ export function CatalogControls({ hideAmounts, onToggleHideAmounts }: CatalogCon
   const pnlColorScheme = useThemeStore((state) => state.pnlColorScheme);
   const setPnlColorScheme = useThemeStore((state) => state.setPnlColorScheme);
 
-  const themeLabel = mode === 'dark' ? t('catalog.controls.theme.dark') : t('catalog.controls.theme.light');
+  const themeLabel =
+    preference === 'system'
+      ? t('catalog.controls.theme.system')
+      : preference === 'dark'
+        ? t('catalog.controls.theme.dark')
+        : t('catalog.controls.theme.light');
   const pnlLabel =
     pnlColorScheme === 'blueGray'
       ? t('catalog.controls.pnlColors.blueGray')
@@ -39,7 +53,7 @@ export function CatalogControls({ hideAmounts, onToggleHideAmounts }: CatalogCon
         variant="secondary"
         size="sm"
         accessibilityLabel={t('catalog.controls.theme.label')}
-        onPress={() => setPreference(mode === 'dark' ? 'light' : 'dark')}
+        onPress={() => setPreference(nextThemePreference(preference))}
       />
       <Button
         testID="catalog-control-pnl-colors"

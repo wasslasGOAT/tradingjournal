@@ -1,4 +1,5 @@
 import { Decimal } from '../money';
+import { filterClosedTrades } from '../stats';
 import type { TradeRecord } from '../stats';
 
 /**
@@ -51,7 +52,7 @@ export interface DayAggregate {
  * clôture du jour précédent.
  *
  * @param startingBalance solde initial du compte (`accounts.starting_balance`)
- * @param trades trades à agréger (tous comptes confondus si l'appelant le souhaite, mais `endBalance` n'a de sens que pour un seul compte)
+ * @param trades trades à agréger (trades `open` ignorés, voir {@link filterClosedTrades} ; tous comptes confondus si l'appelant le souhaite, mais `endBalance` n'a de sens que pour un seul compte)
  * @param cashMovements mouvements de trésorerie déjà résolus par jour (voir {@link ResolvedCashMovement}), défaut `[]`
  * @returns un {@link DayAggregate} par jour présent dans `trades` (ou dans `cashMovements`), trié par `tradingDay` croissant
  */
@@ -60,20 +61,24 @@ export function aggregateByTradingDay(
   trades: readonly TradeRecord[],
   cashMovements: readonly ResolvedCashMovement[] = [],
 ): DayAggregate[] {
+  const closedTrades = filterClosedTrades(trades);
   const days = new Set<string>();
-  for (const t of trades) days.add(t.tradingDay);
+  for (const t of closedTrades) days.add(t.tradingDay);
   for (const m of cashMovements) days.add(m.tradingDay);
   const sortedDays = [...days].sort();
 
   const tradesByDay = new Map<string, TradeRecord[]>();
-  for (const t of trades) {
+  for (const t of closedTrades) {
     const list = tradesByDay.get(t.tradingDay);
     if (list) list.push(t);
     else tradesByDay.set(t.tradingDay, [t]);
   }
   const cashByDay = new Map<string, Decimal>();
   for (const m of cashMovements) {
-    cashByDay.set(m.tradingDay, (cashByDay.get(m.tradingDay) ?? new Decimal(0)).plus(m.signedAmount));
+    cashByDay.set(
+      m.tradingDay,
+      (cashByDay.get(m.tradingDay) ?? new Decimal(0)).plus(m.signedAmount),
+    );
   }
 
   const result: DayAggregate[] = [];

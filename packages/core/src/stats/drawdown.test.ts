@@ -4,7 +4,11 @@ import { buildTrade, d } from './testHelpers';
 import { computeMaxDrawdown } from './drawdown';
 
 function trade(netPnl: string, closedAt: string): ReturnType<typeof buildTrade> {
-  return buildTrade({ netPnl: d(netPnl), closedAt: new Date(closedAt), openedAt: new Date(closedAt) });
+  return buildTrade({
+    netPnl: d(netPnl),
+    closedAt: new Date(closedAt),
+    openedAt: new Date(closedAt),
+  });
 }
 
 describe('computeMaxDrawdown', () => {
@@ -14,6 +18,20 @@ describe('computeMaxDrawdown', () => {
     expect(result.maxDrawdownPercent.toString()).toBe('0');
     expect(result.peakBalance.toString()).toBe('1000');
     expect(result.troughBalance.toString()).toBe('1000');
+  });
+
+  it('revue M3 #5 : un trade "open" (même avec commission) est ignoré', () => {
+    const openTrade = buildTrade({
+      netPnl: d('-9999'),
+      status: 'open',
+      closedAt: null,
+      commission: d('5'),
+    });
+    const result = computeMaxDrawdown(d('1000'), [
+      trade('-100', '2026-03-01T00:00:00Z'),
+      openTrade,
+    ]);
+    expect(result.troughBalance.toString()).toBe('900'); // pas 1000-100-9999
   });
 
   it('le plus haut inclut le solde initial : une série de pertes pures est mesurée depuis lui', () => {
@@ -54,7 +72,10 @@ describe('computeMaxDrawdown', () => {
   });
 
   it('trie les trades non ordonnés chronologiquement avant de calculer', () => {
-    const outOfOrder = [trade('-50', '2026-03-02T00:00:00Z'), trade('-100', '2026-03-01T00:00:00Z')];
+    const outOfOrder = [
+      trade('-50', '2026-03-02T00:00:00Z'),
+      trade('-100', '2026-03-01T00:00:00Z'),
+    ];
     const result = computeMaxDrawdown(d('1000'), outOfOrder);
     expect(result.troughBalance.toString()).toBe('850');
     expect(result.maxDrawdownAmount.toString()).toBe('150');

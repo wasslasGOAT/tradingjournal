@@ -13,7 +13,14 @@ import { AA_NORMAL_TEXT_MIN_RATIO, contrastRatio } from './contrast';
  * le seuil « texte large » (3:1) — marge de sécurité pour toute taille.
  */
 
-const TEXT_TOKEN_KEYS = ['textPrimary', 'textSecondary', 'textMuted', 'danger', 'warning', 'accent'] as const;
+const TEXT_TOKEN_KEYS = [
+  'textPrimary',
+  'textSecondary',
+  'textMuted',
+  'danger',
+  'warning',
+  'accent',
+] as const;
 const SURFACE_TOKEN_KEYS = ['background', 'surface', 'surfaceAlt'] as const;
 const THEME_MODES: ThemeMode[] = ['dark', 'light'];
 const PNL_SCHEMES = ['blueGray', 'greenRed'] as const;

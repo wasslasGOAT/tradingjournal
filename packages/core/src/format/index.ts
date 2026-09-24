@@ -46,6 +46,17 @@ export type SupportedLocale = 'fr' | 'en';
 /** Motif de remplacement neutre quand `hideAmounts` est actif (préférence `hide_amounts`, DATA_MODEL). */
 export const HIDDEN_VALUE_PLACEHOLDER = '•••••';
 
+/**
+ * Signe moins typographique U+2212 (revue M3 #17), utilisé pour **tout**
+ * montant ou pourcentage négatif affiché (`formatAmount`, `formatSignedAmount`,
+ * `formatPercent`, `formatRMultiple`) — jamais le trait d'union ASCII U+002D
+ * (`-`), qui n'est pas un signe mathématique et rend un tableau de chiffres
+ * moins lisible (largeur/alignement différents des chiffres dans la plupart
+ * des polices). `formatNumber` (nombre simple, ex. un nombre de trades) n'est
+ * volontairement pas concerné : ce n'est ni un montant ni un pourcentage.
+ */
+const MINUS_SIGN = '−';
+
 /** Options communes à tous les formateurs de valeur (montant, pourcentage, nombre, R multiple). */
 export interface FormatValueOptions {
   readonly locale: SupportedLocale;
@@ -131,7 +142,8 @@ function toGroupedNumber(value: Decimal, decimals: number, locale: SupportedLoca
   const [integerPart = '0', fractionPart = ''] = fixed.split('.');
   const { decimalSeparator, groupSeparator } = LOCALE_NUMBER_FORMAT[locale];
   const groupedInteger = groupDigits(integerPart, groupSeparator);
-  const text = decimals > 0 ? `${groupedInteger}${decimalSeparator}${fractionPart}` : groupedInteger;
+  const text =
+    decimals > 0 ? `${groupedInteger}${decimalSeparator}${fractionPart}` : groupedInteger;
   return { isNegative, text };
 }
 
@@ -167,7 +179,10 @@ export function formatAmount(
   const { locale, hideAmounts, decimals = resolveCurrencyDecimals(currency) } = options;
   const { isNegative, text } = toGroupedNumber(amount, decimals, locale);
   const body = formatAmountBody(text, currency, locale);
-  return maskIfHidden(`${isNegative ? '-' : ''}${body}`, hideAmounts);
+  // Signe moins U+2212 (revue M3 #17), pas le trait d'union ASCII U+002D :
+  // typographiquement correct pour un montant, et cohérent avec
+  // `formatSignedAmount`/`formatPercent`/`formatRMultiple` ci-dessous.
+  return maskIfHidden(`${isNegative ? MINUS_SIGN : ''}${body}`, hideAmounts);
 }
 
 /**
@@ -184,7 +199,7 @@ export function formatSignedAmount(
   const { locale, hideAmounts, decimals = resolveCurrencyDecimals(currency) } = options;
   const { isNegative, text } = toGroupedNumber(amount, decimals, locale);
   const body = formatAmountBody(text, currency, locale);
-  return maskIfHidden(`${isNegative ? '−' : '+'}${body}`, hideAmounts);
+  return maskIfHidden(`${isNegative ? MINUS_SIGN : '+'}${body}`, hideAmounts);
 }
 
 /** Assemble le symbole/code devise et la partie numérique déjà groupée (sans signe, ajouté par l'appelant). */
@@ -213,7 +228,7 @@ export function formatPercent(
   const percentValue = value.times(100);
   const { isNegative, text } = toGroupedNumber(percentValue, decimals, locale);
   const spacer = locale === 'fr' ? ' ' : '';
-  const formatted = `${isNegative ? '-' : ''}${text}${spacer}%`;
+  const formatted = `${isNegative ? MINUS_SIGN : ''}${text}${spacer}%`;
   return maskIfHidden(formatted, hideAmounts);
 }
 
@@ -231,7 +246,7 @@ export function formatRMultiple(
     return maskIfHidden('—', hideAmounts);
   }
   const { isNegative, text } = toGroupedNumber(value, decimals, locale);
-  const formatted = `${isNegative ? '−' : '+'}${text}R`;
+  const formatted = `${isNegative ? MINUS_SIGN : '+'}${text}R`;
   return maskIfHidden(formatted, hideAmounts);
 }
 

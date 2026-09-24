@@ -33,6 +33,34 @@ export interface ExecutionInput {
   readonly fees: Decimal;
   /** Horodatage UTC de l'exécution. */
   readonly executedAt: Date;
+  /**
+   * Ordre d'origine optionnel (ex. index dans le fichier d'import ou numéro
+   * de séquence du broker), utilisé pour départager deux exécutions au même
+   * `executedAt` **avant** l'id (voir {@link groupExecutionsIntoTrades}).
+   * `undefined` si l'appelant ne connaît pas d'ordre de source fiable.
+   *
+   * Doit être fourni par toute source qui produit des horodatages identiques
+   * (formulaire, import CSV, synchro) ; persistance en base prévue en M4
+   * (ADR à venir — non traité pendant cette passe).
+   */
+  readonly sequence?: number;
+}
+
+/**
+ * Informations d'un instrument nécessaires au regroupement, DATA_MODEL
+ * `instruments.contract_multiplier` / `instruments.quote_ccy` (ADR-004,
+ * ADR-019 — voir {@link groupExecutionsIntoTrades} pour la limite MVP sur la
+ * devise de cotation).
+ */
+export interface InstrumentContractInfo {
+  /** Multiplicateur de contrat, doit être strictement positif. */
+  readonly contractMultiplier: Decimal;
+  /**
+   * Devise de cotation de l'instrument (ex. `USD` pour `EURUSD`, `XAUUSD`,
+   * `NAS100`). `GroupedTrade.grossPnl` est exprimé dans cette devise (voir
+   * limite MVP documentée sur {@link GroupedTrade.grossPnl}).
+   */
+  readonly quoteCurrency: string;
 }
 
 /**
@@ -74,12 +102,30 @@ export interface GroupedTrade {
    */
   readonly avgExit: Decimal | null;
   /**
-   * P&L brut **réalisé à ce jour** (unité : devise du compte), multiplicateur
-   * de contrat de l'instrument appliqué, commissions/frais **exclus**
-   * (ADR-004, ARCHITECTURE §5.2 : « P&L net = brut − commissions − frais −
-   * swap »). `0` pour un trade `open` sans sortie partielle. Pour un trade
-   * `closed`, correspond à la formule `(avgExit - avgEntry) * quantity *
-   * contractMultiplier * (direction === 'long' ? 1 : -1)`.
+   * P&L brut (unité : **devise de cotation de l'instrument**, voir
+   * {@link InstrumentContractInfo.quoteCurrency} — pour le MVP,
+   * {@link groupExecutionsIntoTrades} exige qu'elle soit identique à la
+   * devise du compte, aucune conversion n'étant effectuée ; ADR-019 en sera
+   * informé pour une éventuelle conversion post-MVP), multiplicateur de
+   * contrat de l'instrument appliqué, commissions/frais **exclus** (ADR-004,
+   * ARCHITECTURE §5.2 : « P&L net = brut − commissions − frais − swap »).
+   * `0` pour un trade `open` sans sortie partielle.
+   *
+   * Pour un trade `closed`, calculé **exactement** sur les notionnels
+   * (jamais par re-multiplication d'un prix moyen arrondi, qui peut
+   * introduire un résidu d'arrondi non nul là où le résultat économique est
+   * exactement `0`) : `(Σ notionnel de sortie − Σ notionnel d'entrée) ×
+   * (direction === 'long' ? 1 : -1) × contractMultiplier`, où chaque
+   * notionnel est `Σ (quantité × prix)` des exécutions correspondantes —
+   * identité vraie quelle que soit `method` (FIFO ou moyenne pondérée)
+   * puisque, une fois le trade clôturé, toute la quantité entrée a été
+   * appariée à de la quantité sortie.
+   *
+   * Pour un trade encore `open` ayant déjà connu une ou plusieurs sorties
+   * partielles, `grossPnl` est le P&L **réalisé à ce jour** sur la quantité
+   * déjà sortie, calculé au fil des appariements (méthode-dépendant : en
+   * `average`, contre le coût total du lot mélangé au moment de chaque
+   * sortie, voir `groupExecutions.ts`).
    */
   readonly grossPnl: Decimal;
   /** Somme des commissions des exécutions regroupées dans ce trade, `>= 0`. */
@@ -112,14 +158,49 @@ export class InvalidExecutionError extends Error {
 
 /**
  * Erreur typée levée quand {@link groupExecutionsIntoTrades} reçoit une
- * exécution dont l'instrument est absent de la table de multiplicateurs de
- * contrat fournie.
+ * exécution dont l'instrument est absent de la table d'instruments fournie.
  */
 export class UnknownInstrumentError extends Error {
   constructor(readonly instrumentId: string) {
     super(
-      `Instrument inconnu (${instrumentId}) : aucun multiplicateur de contrat fourni (DATA_MODEL "instruments.contract_multiplier").`,
+      `Instrument inconnu (${instrumentId}) : aucune information fournie (DATA_MODEL "instruments.contract_multiplier"/"instruments.quote_ccy").`,
     );
     this.name = 'UnknownInstrumentError';
+  }
+}
+
+/**
+ * Erreur typée levée quand le multiplicateur de contrat fourni pour un
+ * instrument n'est pas strictement positif.
+ */
+export class InvalidContractMultiplierError extends Error {
+  constructor(
+    readonly instrumentId: string,
+    readonly receivedValue: string,
+  ) {
+    super(
+      `Multiplicateur de contrat invalide pour l'instrument ${instrumentId} : attendu une valeur strictement positive, reçu ${receivedValue}.`,
+    );
+    this.name = 'InvalidContractMultiplierError';
+  }
+}
+
+/**
+ * Erreur typée levée quand la devise de cotation d'un instrument diffère de
+ * la devise du compte — limite du MVP (voir {@link GroupedTrade.grossPnl}) :
+ * `packages/core` ne convertit aucune devise (ADR-019 couvre aujourd'hui
+ * uniquement l'agrégation multi-comptes ; l'architecte doit y ajouter cette
+ * limite du regroupement d'exécutions).
+ */
+export class InstrumentCurrencyMismatchError extends Error {
+  constructor(
+    readonly instrumentId: string,
+    readonly quoteCurrency: string,
+    readonly accountCurrency: string,
+  ) {
+    super(
+      `Instrument ${instrumentId} coté en ${quoteCurrency}, incompatible avec la devise du compte (${accountCurrency}) : aucune conversion pendant le MVP (ADR-019).`,
+    );
+    this.name = 'InstrumentCurrencyMismatchError';
   }
 }

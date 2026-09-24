@@ -1,9 +1,15 @@
 import { z } from 'zod';
 
-import { amountString, isNonNegativeAmountString, uuid } from './common';
+import { amountString, isNonNegativeAmountString, uuid, VALIDATION_KEYS } from './common';
 
 /** Type de mouvement de trésorerie (DATA_MODEL `cash_movements.type`, `packages/core/trading` `CashMovementType`). */
-export const CASH_MOVEMENT_TYPES = ['deposit', 'withdrawal', 'payout', 'fee', 'adjustment'] as const;
+export const CASH_MOVEMENT_TYPES = [
+  'deposit',
+  'withdrawal',
+  'payout',
+  'fee',
+  'adjustment',
+] as const;
 export const cashMovementType = z.enum(CASH_MOVEMENT_TYPES);
 
 /**
@@ -23,7 +29,7 @@ export const cashMovementFormSchema = z
     note: z.string().trim().max(500).optional(),
   })
   .refine((v) => v.type === 'adjustment' || isNonNegativeAmountString(v.amount), {
-    message: 'Le montant doit être une magnitude positive ou nulle pour ce type de mouvement.',
+    message: VALIDATION_KEYS.CASH_MOVEMENT_AMOUNT_SIGN,
     path: ['amount'],
   });
 

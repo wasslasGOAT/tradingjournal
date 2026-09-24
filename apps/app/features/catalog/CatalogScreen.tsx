@@ -19,7 +19,12 @@ import { Text, View } from 'react-native';
 import { CatalogControls } from './CatalogControls';
 import { CatalogHeader } from './CatalogHeader';
 import { CatalogSection } from './CatalogSection';
-import { SAMPLE_CURRENCY, SAMPLE_DAY_CELLS, SAMPLE_PROGRESS, SAMPLE_STAT_TILES } from './sampleData';
+import {
+  SAMPLE_CURRENCY,
+  SAMPLE_DAY_CELLS,
+  SAMPLE_PROGRESS,
+  SAMPLE_STAT_TILES,
+} from './sampleData';
 
 const DAY_CELL_LABEL_KEYS = ['profit', 'loss', 'journalOnly', 'empty', 'today'] as const;
 
@@ -38,7 +43,10 @@ export function CatalogScreen() {
   return (
     <Screen testID="catalog-screen" scroll contentClassName="gap-lg">
       <CatalogHeader />
-      <CatalogControls hideAmounts={hideAmounts} onToggleHideAmounts={() => setHideAmounts((value) => !value)} />
+      <CatalogControls
+        hideAmounts={hideAmounts}
+        onToggleHideAmounts={() => setHideAmounts((value) => !value)}
+      />
 
       <CatalogSection testID="catalog-section-stat-tiles" title={t('catalog.sections.statTiles')}>
         <View className="flex-row flex-wrap gap-sm">
@@ -81,15 +89,30 @@ export function CatalogScreen() {
 
       <CatalogSection testID="catalog-section-buttons" title={t('catalog.sections.buttons')}>
         <View className="flex-row flex-wrap gap-sm">
-          <Button testID="catalog-button-primary" label={t('catalog.buttons.primary')} variant="primary" onPress={() => {}} />
+          <Button
+            testID="catalog-button-primary"
+            label={t('catalog.buttons.primary')}
+            variant="primary"
+            onPress={() => {}}
+          />
           <Button
             testID="catalog-button-secondary"
             label={t('catalog.buttons.secondary')}
             variant="secondary"
             onPress={() => {}}
           />
-          <Button testID="catalog-button-ghost" label={t('catalog.buttons.ghost')} variant="ghost" onPress={() => {}} />
-          <Button testID="catalog-button-danger" label={t('catalog.buttons.danger')} variant="danger" onPress={() => {}} />
+          <Button
+            testID="catalog-button-ghost"
+            label={t('catalog.buttons.ghost')}
+            variant="ghost"
+            onPress={() => {}}
+          />
+          <Button
+            testID="catalog-button-danger"
+            label={t('catalog.buttons.danger')}
+            variant="danger"
+            onPress={() => {}}
+          />
           <Button
             testID="catalog-button-loading"
             label={t('catalog.buttons.loading')}
@@ -154,12 +177,20 @@ export function CatalogScreen() {
       <CatalogSection testID="catalog-section-cards" title={t('catalog.sections.cards')}>
         <View className="gap-sm">
           <Card testID="catalog-card">
-            <Text className="font-sans-semibold text-base text-textPrimary">{t('catalog.cards.cardTitle')}</Text>
-            <Text className="font-sans text-sm text-textSecondary">{t('catalog.cards.cardBody')}</Text>
+            <Text className="font-sans-semibold text-base text-textPrimary">
+              {t('catalog.cards.cardTitle')}
+            </Text>
+            <Text className="font-sans text-sm text-textSecondary">
+              {t('catalog.cards.cardBody')}
+            </Text>
           </Card>
           <GlowCard testID="catalog-glow-card">
-            <Text className="font-sans-semibold text-base text-textPrimary">{t('catalog.cards.glowCardTitle')}</Text>
-            <Text className="font-sans text-sm text-textSecondary">{t('catalog.cards.glowCardBody')}</Text>
+            <Text className="font-sans-semibold text-base text-textPrimary">
+              {t('catalog.cards.glowCardTitle')}
+            </Text>
+            <Text className="font-sans text-sm text-textSecondary">
+              {t('catalog.cards.glowCardBody')}
+            </Text>
           </GlowCard>
         </View>
       </CatalogSection>

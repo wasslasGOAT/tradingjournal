@@ -28,8 +28,9 @@ export class InvalidCashMovementError extends Error {
 
 /**
  * Signe appliqué au solde du compte pour chaque type de mouvement
- * (convention Edgebook, à valider par l'utilisateur — DATA_MODEL ne fixe
- * pas le signe explicitement) :
+ * (convention Edgebook ; DATA_MODEL ne fixe pas le signe explicitement —
+ * reste à faire acter formellement par l'agent `architect`, ex. un ADR
+ * dédié, revue M3) :
  * - `deposit` (+) : le trader alimente le compte, le solde augmente.
  * - `withdrawal` (−) : le trader retire des fonds, le solde diminue.
  * - `payout` (−) : versement des gains vers le trader (hors compte de
@@ -83,22 +84,29 @@ export function computeBalance(
 }
 
 /**
- * Rendement d'un compte entre son solde initial et un solde donné, en
- * fraction (pas en pourcentage — multiplier par 100 à l'affichage,
- * `packages/core/format`).
+ * Rendement d'un compte, en fraction (pas en pourcentage — multiplier par
+ * 100 à l'affichage, `packages/core/format`).
  *
- * Formule : `(balance − startingBalance) / startingBalance`. Ex. solde
- * initial `200000`, solde `180256.57` -> `-0.0987171...` (affiché `-9.87 %`).
+ * **Formule (validée le 2026-09-19, revue M3 #7)** : `Σ netPnl des trades
+ * clôturés / startingBalance` — **pas** `(balance − startingBalance) /
+ * startingBalance` : cette dernière formule comptait un dépôt comme du gain
+ * de performance (et un retrait comme une perte), alors qu'un rendement doit
+ * mesurer la performance du *trading*, pas les mouvements de trésorerie
+ * (même distinction que `packages/core/aggregates/equity` `tradingEquity` vs
+ * `balance`, revue M3 #8). C'est cette formule qui donne le `-9.87 %` du
+ * golden ROADMAP (aucun mouvement de trésorerie dans le fixture, donc les
+ * deux formules coïncidaient jusqu'ici — un dépôt les ferait diverger).
  *
  * @param startingBalance solde initial du compte, doit être strictement positif
- * @param balance solde à comparer (voir {@link computeBalance})
+ * @param netPnls P&L net de chaque trade clos à inclure (voir {@link computeBalance})
  * @throws {Error} si `startingBalance <= 0` (rendement non défini)
  */
-export function computeReturnRate(startingBalance: Decimal, balance: Decimal): Decimal {
+export function computeReturnRate(startingBalance: Decimal, netPnls: readonly Decimal[]): Decimal {
   if (!startingBalance.greaterThan(0)) {
     throw new Error(
       `Rendement non défini : le solde initial doit être strictement positif (reçu ${startingBalance.toString()}).`,
     );
   }
-  return balance.minus(startingBalance).dividedBy(startingBalance);
+  const totalNetPnl = netPnls.reduce((acc, pnl) => acc.plus(pnl), new Decimal(0));
+  return totalNetPnl.dividedBy(startingBalance);
 }

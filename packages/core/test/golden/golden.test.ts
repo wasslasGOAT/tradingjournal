@@ -30,7 +30,7 @@ import {
   parseAmount,
   tradingDayOf,
 } from '../../src/index';
-import type { ExecutionInput, TradeRecord } from '../../src/index';
+import type { ExecutionInput, InstrumentContractInfo, TradeRecord } from '../../src/index';
 
 interface FixtureExecution {
   readonly id: string;
@@ -42,6 +42,7 @@ interface FixtureExecution {
   readonly commission: string;
   readonly fees: string;
   readonly executed_at: string;
+  readonly sequence: number;
 }
 
 interface Fixture {
@@ -53,10 +54,18 @@ interface Fixture {
     readonly day_rollover_time: string;
     readonly grouping_method: 'fifo' | 'average';
   };
-  readonly instruments: ReadonlyArray<{ readonly id: string; readonly contract_multiplier: string }>;
+  readonly instruments: ReadonlyArray<{
+    readonly id: string;
+    readonly symbol: string;
+    readonly contract_multiplier: string;
+    readonly quote_ccy: string;
+  }>;
   readonly executions: readonly FixtureExecution[];
   readonly cash_movements: readonly unknown[];
-  readonly swap_adjustments: ReadonlyArray<{ readonly instrument_id: string; readonly opened_at: string; readonly swap: string }>;
+  readonly trade_swaps: ReadonlyArray<{
+    readonly entry_execution_id: string;
+    readonly swap: string;
+  }>;
 }
 
 const fixturePath = fileURLToPath(new URL('./fixture.json', import.meta.url));
@@ -64,9 +73,15 @@ const fixture = JSON.parse(readFileSync(fixturePath, 'utf-8')) as Fixture;
 
 const startingBalance = parseAmount(fixture.account.starting_balance);
 
-const contractMultipliers = new Map(
-  fixture.instruments.map((i) => [i.id, parseAmount(i.contract_multiplier)]),
+const instruments = new Map<string, InstrumentContractInfo>(
+  fixture.instruments.map((i) => [
+    i.id,
+    { contractMultiplier: parseAmount(i.contract_multiplier), quoteCurrency: i.quote_ccy },
+  ]),
 );
+
+/** `instrument_id` (UUID) -> `symbol` normalisé (DATA_MODEL `instruments.symbol`), voir `TradeRecord.symbol`. */
+const symbolByInstrumentId = new Map(fixture.instruments.map((i) => [i.id, i.symbol]));
 
 const executions: ExecutionInput[] = fixture.executions.map((e) => ({
   id: e.id,
@@ -78,33 +93,47 @@ const executions: ExecutionInput[] = fixture.executions.map((e) => ({
   commission: parseAmount(e.commission),
   fees: parseAmount(e.fees),
   executedAt: new Date(e.executed_at),
+  sequence: e.sequence,
 }));
 
 const groupedTrades = groupExecutionsIntoTrades(
   executions,
-  contractMultipliers,
+  instruments,
   fixture.account.grouping_method,
+  fixture.account.currency,
 );
 
-/** Swap par (instrument, ouverture) — voir `build.mjs` (swap non porté par `executions`, DATA_MODEL : colonne de `trades`). */
-const swapByKey = new Map(
-  fixture.swap_adjustments.map((s) => [`${s.instrument_id}|${new Date(s.opened_at).toISOString()}`, parseAmount(s.swap)]),
+/**
+ * Swap par trade (voir `build.mjs` — DATA_MODEL : `swap` est une colonne de
+ * `trades`, pas d'`executions`), ancré sur l'id de l'**exécution d'entrée**
+ * de chaque trade (`executionIds[0]`, stable indépendamment du fuseau/de
+ * l'horodatage — contrairement à un appariement `(instrument, opened_at)`).
+ */
+const swapByEntryExecutionId = new Map(
+  fixture.trade_swaps.map((s) => [s.entry_execution_id, parseAmount(s.swap)]),
 );
 
 const trades: TradeRecord[] = groupedTrades.map((g, index) => {
-  const swap = swapByKey.get(`${g.instrumentId}|${g.openedAt.toISOString()}`) ?? new Decimal(0);
+  const entryExecutionId = g.executionIds[0];
+  const swap =
+    (entryExecutionId !== undefined ? swapByEntryExecutionId.get(entryExecutionId) : undefined) ??
+    new Decimal(0);
   const netPnl = computeNetPnl(g.grossPnl, g.commission, g.fees, swap);
   const referenceInstant = g.closedAt ?? g.openedAt;
   return {
     id: `trade-${index}`,
     accountId: g.accountId,
     currency: fixture.account.currency,
-    symbol: g.instrumentId,
+    symbol: symbolByInstrumentId.get(g.instrumentId) ?? g.instrumentId,
     direction: g.direction,
     status: g.status,
     openedAt: g.openedAt,
     closedAt: g.closedAt,
-    tradingDay: tradingDayOf(referenceInstant, fixture.account.timezone, fixture.account.day_rollover_time),
+    tradingDay: tradingDayOf(
+      referenceInstant,
+      fixture.account.timezone,
+      fixture.account.day_rollover_time,
+    ),
     grossPnl: g.grossPnl,
     netPnl,
     rMultiple: null,
@@ -161,9 +190,9 @@ describe('fixture golden — chiffres de référence ROADMAP M3', () => {
     const balance = computeBalance(startingBalance, netPnls, []);
     expect(balance.toFixed(2)).toBe('180256.57');
 
-    const returnRate = computeReturnRate(startingBalance, balance);
+    const returnRate = computeReturnRate(startingBalance, netPnls);
     // U+00A0 (espace insécable) avant "%" en FR, voir `packages/core/format`.
-    expect(formatPercent(returnRate, { locale: 'fr', decimals: 2 })).toBe('-9,87 %');
+    expect(formatPercent(returnRate, { locale: 'fr', decimals: 2 })).toBe('−9,87 %');
   });
 
   it('mars 2026 : 24 trades, P&L -17527.71', () => {
@@ -178,7 +207,9 @@ describe('fixture golden — chiffres de référence ROADMAP M3', () => {
   it('4 gagnants / 21 perdants sur 25 trades -> win rate 16 %', () => {
     const counts = computeWinLossCounts(trades);
     expect(counts).toEqual({ wins: 4, losses: 21, breakeven: 0, total: 25 });
-    expect(formatPercent(computeWinRate(trades) as Decimal, { locale: 'fr', decimals: 0 })).toBe('16 %');
+    expect(formatPercent(computeWinRate(trades) as Decimal, { locale: 'fr', decimals: 0 })).toBe(
+      '16 %',
+    );
   });
 
   it('profit factor arrondi 0.56, ratio moyen arrondi 2.92', () => {
@@ -213,7 +244,11 @@ describe('fixture golden — chiffres de référence ROADMAP M3', () => {
   });
 
   it('marge restante « perte max 10 % du solde initial » = 256.57 (règle ROADMAP M8, calculée ici depuis le solde initial, pas depuis un pic intermédiaire)', () => {
-    const finalBalance = computeBalance(startingBalance, trades.map((t) => t.netPnl), []);
+    const finalBalance = computeBalance(
+      startingBalance,
+      trades.map((t) => t.netPnl),
+      [],
+    );
     const totalLoss = startingBalance.minus(finalBalance); // perte totale (positive) depuis le solde initial
     const maxLossAllowed = startingBalance.times('0.10');
     const remainingMargin = maxLossAllowed.minus(totalLoss);
@@ -225,10 +260,14 @@ describe('fixture golden — chiffres de référence ROADMAP M3', () => {
     const curve = equityCurveByDay(startingBalance, days);
     const lastPoint = curve[curve.length - 1];
     expect(lastPoint?.balance.toFixed(2)).toBe('180256.57');
+    // Aucun mouvement de trésorerie dans ce fixture (revue M3 #8) : les deux séries coïncident.
+    expect(lastPoint?.tradingEquity.toFixed(2)).toBe('180256.57');
   });
 
   it('totaux hebdomadaires : la somme des semaines de mars retombe sur le P&L du mois', () => {
-    const days = aggregateByTradingDay(startingBalance, trades).filter((d) => d.tradingDay.startsWith('2026-03'));
+    const days = aggregateByTradingDay(startingBalance, trades).filter((d) =>
+      d.tradingDay.startsWith('2026-03'),
+    );
     const weeks = aggregateByWeek(days, 1);
     const weeklyTotal = weeks.reduce((acc, w) => acc.plus(w.netPnl), new Decimal(0));
     expect(weeklyTotal.toFixed(2)).toBe('-17527.71');

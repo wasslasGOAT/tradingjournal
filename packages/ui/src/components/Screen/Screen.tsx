@@ -17,11 +17,31 @@ export interface ScreenProps {
   readonly className?: string;
   /** Classes NativeWind additionnelles sur le conteneur de contenu (zone défilable ou non). */
   readonly contentClassName?: string;
+  /**
+   * Bords de zone sûre appliqués en padding (M1-8) : `{ top: false }` quand un
+   * en-tête déjà posé au-dessus du contenu (`(app)/_layout.tsx`) gère lui-même
+   * l'encoche ; `{ bottom: false }` sous une tab bar, qui gère déjà son propre
+   * bas d'écran. Défaut `{ top: true, bottom: true }` (comportement historique,
+   * pour un écran plein écran sans chrome autour, ex. Hello/Catalogue).
+   */
+  readonly edges?: { readonly top?: boolean; readonly bottom?: boolean };
 }
 
-export function Screen({ testID, children, scroll = false, className, contentClassName }: ScreenProps) {
+export function Screen({
+  testID,
+  children,
+  scroll = false,
+  className,
+  contentClassName,
+  edges,
+}: ScreenProps) {
   const insets = useSafeAreaInsets();
-  const edgeStyle = { paddingTop: insets.top, paddingBottom: insets.bottom };
+  const applyTop = edges?.top ?? true;
+  const applyBottom = edges?.bottom ?? true;
+  const edgeStyle = {
+    paddingTop: applyTop ? insets.top : 0,
+    paddingBottom: applyBottom ? insets.bottom : 0,
+  };
 
   if (scroll) {
     return (

@@ -27,6 +27,23 @@ describe('aggregateBySymbol', () => {
     expect(result[0]).toMatchObject({ tradesCount: 2, wins: 1, losses: 1 });
     expect(result[0]?.netPnl.toString()).toBe('15');
   });
+
+  it('revue M3 #5 : un trade "open" (même avec commission) est exclu', () => {
+    const trades = [
+      buildTrade({ symbol: 'EURUSD', netPnl: d('20') }),
+      buildTrade({
+        symbol: 'EURUSD',
+        netPnl: d('-999'),
+        status: 'open',
+        closedAt: null,
+        commission: d('5'),
+      }),
+    ];
+    const result = aggregateBySymbol(trades);
+    expect(result).toHaveLength(1);
+    expect(result[0]?.tradesCount).toBe(1);
+    expect(result[0]?.netPnl.toString()).toBe('20');
+  });
 });
 
 describe('aggregateBySetup', () => {
@@ -68,13 +85,40 @@ describe('aggregateBySession', () => {
 });
 
 describe('aggregateByWeekday', () => {
-  it('regroupe par jour de semaine du tradingDay, trié 0..6', () => {
+  it('regroupe par jour de semaine local (UTC ici), trié 0..6', () => {
     const trades = [
-      buildTrade({ tradingDay: '2026-03-30', netPnl: d('1') }), // lundi (1)
-      buildTrade({ tradingDay: '2026-03-01', netPnl: d('1') }), // dimanche (0)
+      buildTrade({ openedAt: new Date('2026-03-30T10:00:00Z'), netPnl: d('1') }), // lundi (1)
+      buildTrade({ openedAt: new Date('2026-03-01T10:00:00Z'), netPnl: d('1') }), // dimanche (0)
     ];
-    const result = aggregateByWeekday(trades);
+    const result = aggregateByWeekday(trades, 'UTC');
     expect(result.map((r) => r.key)).toEqual([0, 1]);
+  });
+
+  it('revue M3 #9 : jour de semaine et heure dérivés du même instant/fuseau (franchit minuit UTC)', () => {
+    // 2026-03-02T03:00:00Z (lundi 03:00 UTC) = 2026-03-01T22:00:00 America/New_York (EST, UTC-5)
+    // -> jour civil LOCAL différent du jour UTC (dimanche, pas lundi) : la heatmap/les
+    // agrégats doivent résoudre weekday ET hour depuis ce même instant local (dimanche 22h),
+    // jamais mélanger un jour dérivé d'une autre base (ex. tradingDay UTC ou bascule différente).
+    const trade = buildTrade({ openedAt: new Date('2026-03-02T03:00:00Z'), netPnl: d('1') });
+    const weekdayResult = aggregateByWeekday([trade], 'America/New_York');
+    const hourResult = aggregateByHourOfDay([trade], 'America/New_York');
+    expect(weekdayResult.map((r) => r.key)).toEqual([0]); // dimanche
+    expect(hourResult.map((r) => r.key)).toEqual([22]);
+  });
+
+  it('revue M3 #5 : un trade "open" est ignoré', () => {
+    const trades = [
+      buildTrade({ openedAt: new Date('2026-03-30T10:00:00Z'), netPnl: d('1') }),
+      buildTrade({
+        openedAt: new Date('2026-03-01T10:00:00Z'),
+        netPnl: d('1'),
+        status: 'open',
+        closedAt: null,
+        commission: d('5'),
+      }),
+    ];
+    const result = aggregateByWeekday(trades, 'UTC');
+    expect(result.map((r) => r.key)).toEqual([1]);
   });
 });
 

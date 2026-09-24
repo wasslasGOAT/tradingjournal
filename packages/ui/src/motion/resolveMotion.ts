@@ -27,7 +27,10 @@ import type { DurationToken, EasingToken, SpringToken, WithSpringConfig } from '
 // Tailwind) ; ces jetons précis sont vérifiés contre les données réelles par
 // `resolveMotion.test.ts` plutôt que reconstruits à chaque accès.
 const DURATION_TOKENS = animation.duration as Record<DurationToken, number>;
-const EASING_TOKENS = animation.easing as Record<EasingToken, readonly [number, number, number, number]>;
+const EASING_TOKENS = animation.easing as Record<
+  EasingToken,
+  readonly [number, number, number, number]
+>;
 const SPRING_TOKENS = animation.spring as Record<
   SpringToken,
   { damping: number; stiffness: number; mass: number }
@@ -47,6 +50,9 @@ export function resolveEasingPoints(token: EasingToken): readonly [number, numbe
  * Config `withSpring` pour `token`, ou `null` si `reduceMotion` — l'appelant
  * pose alors la valeur cible directement (voir note de tête de fichier).
  */
-export function resolveSpringConfig(token: SpringToken, reduceMotion: boolean): WithSpringConfig | null {
+export function resolveSpringConfig(
+  token: SpringToken,
+  reduceMotion: boolean,
+): WithSpringConfig | null {
   return reduceMotion ? null : SPRING_TOKENS[token];
 }

@@ -1,21 +1,23 @@
 import { Decimal } from '../money';
+import { filterClosedTrades } from './types';
 import type { TradeRecord } from './types';
 
 /**
  * Espérance mathématique (gain net moyen par trade).
  *
- * Formule : `Σ netPnl / count(trades)` — **tous** les trades comptent
- * (gagnants, perdants et `breakeven`), contrairement au win rate et au
- * profit factor : l'espérance mesure le résultat moyen réel par trade, un
- * `0` y a donc sa place à part entière (il tire la moyenne, comme n'importe
- * quel montant).
+ * Formule : `Σ netPnl / count(trades)` sur les trades `closed` — **tous**
+ * les trades clos comptent (gagnants, perdants et `breakeven`), contrairement
+ * au win rate et au profit factor : l'espérance mesure le résultat moyen réel
+ * par trade, un `0` y a donc sa place à part entière (il tire la moyenne,
+ * comme n'importe quel montant). Trades `open` exclus (voir {@link filterClosedTrades}).
  *
- * @returns `null` si `trades` est vide (moyenne indéfinie)
+ * @returns `null` si aucun trade `closed` (moyenne indéfinie)
  */
 export function computeExpectancy(trades: readonly TradeRecord[]): Decimal | null {
-  if (trades.length === 0) return null;
-  const total = trades.reduce((acc, t) => acc.plus(t.netPnl), new Decimal(0));
-  return total.dividedBy(trades.length);
+  const closedTrades = filterClosedTrades(trades);
+  if (closedTrades.length === 0) return null;
+  const total = closedTrades.reduce((acc, t) => acc.plus(t.netPnl), new Decimal(0));
+  return total.dividedBy(closedTrades.length);
 }
 
 export interface AverageWinLoss {
@@ -37,7 +39,7 @@ export function computeAverageWinLoss(trades: readonly TradeRecord[]): AverageWi
   let winCount = 0;
   let lossSum = new Decimal(0);
   let lossCount = 0;
-  for (const trade of trades) {
+  for (const trade of filterClosedTrades(trades)) {
     if (trade.netPnl.greaterThan(0)) {
       winSum = winSum.plus(trade.netPnl);
       winCount += 1;

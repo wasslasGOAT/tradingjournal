@@ -1,3 +1,5 @@
+import { formatInTimeZone } from 'date-fns-tz';
+
 import { Decimal } from '../money';
 import type { DayAggregate } from './day';
 import type { WeekStartsOn } from './types';
@@ -43,6 +45,25 @@ export function tradingDayWeekday(day: string): number {
 }
 
 /**
+ * Jour de semaine local (`0` dimanche .. `6` samedi) d'un instant UTC, résolu
+ * dans `timezone` — **revue M3 #9** : la heatmap et les agrégats par jour de
+ * semaine/heure doivent dériver `weekday` et `hour` du **même instant**
+ * (`openedAt`) dans le **même** fuseau, plutôt que de mélanger `weekday`
+ * (dérivé de `tradingDay`, qui dépend de `day_rollover_time`) et `hour`
+ * (dérivé directement de `openedAt`) : les deux peuvent diverger d'un jour
+ * civil dès que la bascule n'est pas minuit (ex. rollover 17:00 New York),
+ * ce qui placerait une même exécution sur un couple (jour, heure)
+ * incohérent. Même technique que {@link tradingDayWeekday}/`packages/core/time`
+ * `tradingDayOf` (`formatInTimeZone` directement sur l'instant UTC, correct
+ * pendant les changements d'heure).
+ */
+export function localWeekdayOf(instant: Date, timezone: string): number {
+  const dayString = formatInTimeZone(instant, timezone, 'yyyy-MM-dd');
+  const [year = 0, month = 1, day = 1] = dayString.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+}
+
+/**
  * Premier jour (`YYYY-MM-DD`) de la semaine calendaire contenant `day`, selon
  * `weekStartsOn` (`0` dimanche, `1` lundi — préférence `week_starts_on`,
  * DATA_MODEL `preferences`).
@@ -75,7 +96,7 @@ export function aggregateByWeek(
   }
 
   return [...byWeek.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
     .map(([weekStart, weekDays]) => {
       const weekEndDate = toUtcMidnight(weekStart);
       weekEndDate.setUTCDate(weekEndDate.getUTCDate() + 6);
@@ -103,7 +124,8 @@ export function aggregateByWeek(
         weekStart,
         weekEnd: toDayString(weekEndDate),
         ...totals,
-        activeDays: weekDays.length,
+        // Un jour sans trade (mouvement de trésorerie seul) n'est pas un jour actif.
+        activeDays: weekDays.filter((day) => day.tradesCount > 0).length,
       };
     });
 }

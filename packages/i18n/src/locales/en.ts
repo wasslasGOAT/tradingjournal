@@ -41,10 +41,11 @@ export const en = {
     // see `apps/app/app/(dev)/catalog.tsx`.
     catalog: {
       title: 'Component catalog',
-      subtitle: 'Preview of the design system primitives, with sample data — for visual review only.',
+      subtitle:
+        'Preview of the design system primitives, with sample data — for visual review only.',
       back: 'Back',
       controls: {
-        theme: { label: 'Theme', dark: 'Dark', light: 'Light' },
+        theme: { label: 'Theme', dark: 'Dark', light: 'Light', system: 'System' },
         pnlColors: { label: 'P&L colors', blueGray: 'Blue / gray', greenRed: 'Green / red' },
         hideAmounts: { label: 'Hide amounts' },
         language: { label: 'Language' },
@@ -92,6 +93,106 @@ export const en = {
         glowCardTitle: 'GlowCard',
         glowCardBody: 'Highlighted, accent-tinted glow.',
       },
+    },
+    // App shell (M1-8, ARCHITECTURE §6.1): mobile tab bar / web sidebar, header
+    // (account, period, hide amounts), global quick-add button.
+    nav: {
+      dashboard: 'Dashboard',
+      calendar: 'Calendar',
+      trades: 'Trades',
+      journal: 'Journal',
+      more: 'More',
+      analytics: 'Analytics',
+      rules: 'Rules',
+      settings: 'Settings',
+    },
+    header: {
+      accounts: {
+        triggerAccessibility: 'Switch account',
+        all: 'All accounts',
+        sample: {
+          main: 'Main account',
+          prop: 'Prop 50K account',
+        },
+      },
+      period: {
+        triggerAccessibility: 'Switch period',
+        day: 'Day',
+        week: 'Week',
+        month: 'Month',
+        year: 'Year',
+      },
+      hideAmounts: {
+        show: 'Show amounts',
+        hide: 'Hide amounts',
+      },
+      quickAdd: {
+        accessibilityLabel: 'Add a trade',
+        comingSoon: 'Adding a trade will be available soon.',
+      },
+    },
+    dashboard: {
+      balance: 'Account balance',
+      pnlToday: "Today's P&L",
+      pnlMonth: "This month's P&L",
+      returnRate: 'Return',
+      shortcuts: {
+        addTrade: 'Add a trade',
+        viewCalendar: 'View calendar',
+        openJournal: 'Open journal',
+      },
+      equity: {
+        title: 'Equity curve',
+        placeholder: 'Chart coming soon.',
+      },
+    },
+    calendar: {
+      title: 'Calendar',
+      weekTotal: 'Total',
+      monthStats: {
+        netPnl: 'Net P&L',
+        winningDays: 'Winning days',
+        losingDays: 'Losing days',
+        tradesCount: 'Trades',
+      },
+      dayState: {
+        profit: 'Winning day',
+        loss: 'Losing day',
+        flat: 'Flat day',
+        journalOnly: 'Journal only',
+        today: 'Today',
+        empty: 'No trades',
+      },
+      dayAccessibility: '{{day}}, {{state}}',
+    },
+    trades: {
+      empty: {
+        title: 'No trades yet',
+        description: 'Add your first trade to start tracking your performance.',
+        action: 'Add a trade',
+      },
+    },
+    journal: {
+      empty: {
+        title: 'No journal entries yet',
+        description: 'Write your first entry to track your discipline and mindset.',
+        action: 'Write an entry',
+      },
+    },
+    more: {
+      sections: {
+        analytics: { label: 'Analytics', description: 'Detailed reports and statistics.' },
+        rules: { label: 'Rules', description: 'Personal rules and checklists.' },
+        settings: { label: 'Settings', description: 'Preferences, account, theme.' },
+        catalog: {
+          label: 'Component catalog',
+          description: 'Design system preview — development only.',
+        },
+      },
+    },
+    comingSoon: {
+      title: 'Coming soon',
+      description: 'This screen is under construction.',
     },
   },
 } as const;

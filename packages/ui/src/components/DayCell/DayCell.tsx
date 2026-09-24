@@ -94,7 +94,9 @@ export function DayCell({
           {formatSignedAmount(pnlDecimal, currency, { locale, hideAmounts })}
         </Text>
       ) : null}
-      {contentState === 'journalOnly' ? <NotebookPen size={14} color={themes[mode].textMuted} /> : null}
+      {contentState === 'journalOnly' ? (
+        <NotebookPen size={14} color={themes[mode].textMuted} />
+      ) : null}
     </AnimatedPressable>
   );
 }

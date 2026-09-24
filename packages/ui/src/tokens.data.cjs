@@ -39,6 +39,17 @@ const dark = {
   onAccent: '#0B0D12',
   danger: '#F45B69',
   warning: '#F5A623',
+  // M1-4 (`Toast`) : statut système « succès », indépendant du réglage `pnl_colors`
+  // (bleu/gris vs vert/rouge, ARCHITECTURE §6.2) — un toast de succès reste vert même en
+  // schéma bleu/gris, ce n'est pas un P&L. Même valeur que `pnl.dark.greenRed.profit`
+  // ci-dessous (déjà vérifiée ≥ 4,5:1 sur `surface`/`surfaceAlt`), promue en token à part.
+  success: '#37C97E',
+  // M1-4 (`Sheet`) : voile d'assombrissement derrière un panneau/une modale —
+  // volontairement identique en clair/sombre (convention « scrim », comme Material
+  // Design : toujours proche du noir quel que soit le thème, jamais dérivé de
+  // `background`/`surface` qui eux changent de thème). Opacité posée par l'appelant
+  // (animée), pas ici — ce token ne porte que la teinte.
+  scrim: '#000000',
 };
 
 /** Thème clair — même vocabulaire de tokens, prévu par ADR-012. */
@@ -59,6 +70,10 @@ const light = {
   // v2 : assombris pour atteindre 4,5:1 sur carte alt (danger 2,9:1 → , warning 3,2:1 →).
   danger: '#B62635',
   warning: '#875907',
+  // Voir le commentaire sur `dark.success` — même valeur que `pnl.light.greenRed.profit`.
+  success: '#1E7046',
+  // Voir le commentaire sur `dark.scrim` : même teinte que le thème sombre (convention « scrim »).
+  scrim: '#000000',
 };
 
 /**
@@ -95,6 +110,8 @@ const colorVarNames = {
   onAccent: '--color-on-accent',
   danger: '--color-danger',
   warning: '--color-warning',
+  success: '--color-success',
+  scrim: '--color-scrim',
 };
 
 /** Nom de variable CSS NativeWind pour chaque intention P&L (indépendant du schéma actif). */
@@ -144,6 +161,10 @@ const typography = {
     semibold: '600',
   },
   fontSize: {
+    // M1-4 (correctif calendrier) : cellules très étroites (grille 8 colonnes en
+    // 320-430 px, `DayCell`/`WeekTotalCell`) où même `xs` (12px) pousse les
+    // montants à la troncature — un cran en dessous, réservé à ce contexte dense.
+    '2xs': ['10px', { lineHeight: '14px' }],
     xs: ['12px', { lineHeight: '16px' }],
     sm: ['14px', { lineHeight: '20px' }],
     base: ['16px', { lineHeight: '24px' }],

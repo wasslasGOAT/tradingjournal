@@ -4,6 +4,7 @@ import { NotebookPen } from 'lucide-react-native';
 import { Pressable, Text } from 'react-native';
 import Animated from 'react-native-reanimated';
 
+import { formatCompactSignedAmount } from '../../format/compactAmount';
 import { haptics } from '../../haptics';
 import { usePressScale } from '../../motion';
 import { useThemeMode } from '../../theme/ThemeProvider';
@@ -25,6 +26,13 @@ export interface DayCellProps {
   readonly currency?: string;
   readonly locale: SupportedLocale;
   readonly hideAmounts?: boolean;
+  /**
+   * `'compact'` (M1-4, correctif calendrier) : montant sans symbole de devise,
+   * en notation compacte (`formatCompactSignedAmount`, ex. `+1,3k`), police
+   * `2xs` — pour les grilles très étroites (calendrier, 8 colonnes dès 320 px).
+   * `'full'` (défaut) : `formatSignedAmount`, montant complet avec devise.
+   */
+  readonly amountVariant?: 'full' | 'compact';
   readonly onPress?: () => void;
   readonly accessibilityLabel: string;
 }
@@ -54,6 +62,7 @@ export function DayCell({
   currency,
   locale,
   hideAmounts,
+  amountVariant = 'full',
   onPress,
   accessibilityLabel,
 }: DayCellProps) {
@@ -87,11 +96,15 @@ export function DayCell({
       <Text className="font-sans text-xs text-textMuted">{dayLabel}</Text>
       {contentState === 'trades' && intent !== null && pnlDecimal !== null && currency ? (
         <Text
-          className={`font-sans-semibold text-xs ${PNL_TEXT_CLASS_NAME[intent]}`}
+          className={`font-sans-semibold ${amountVariant === 'compact' ? 'text-2xs' : 'text-xs'} ${PNL_TEXT_CLASS_NAME[intent]}`}
           style={tabularNumsStyle}
           numberOfLines={1}
+          adjustsFontSizeToFit={amountVariant === 'compact'}
+          minimumFontScale={0.85}
         >
-          {formatSignedAmount(pnlDecimal, currency, { locale, hideAmounts })}
+          {amountVariant === 'compact'
+            ? formatCompactSignedAmount(pnlDecimal, { locale, hideAmounts })
+            : formatSignedAmount(pnlDecimal, currency, { locale, hideAmounts })}
         </Text>
       ) : null}
       {contentState === 'journalOnly' ? (

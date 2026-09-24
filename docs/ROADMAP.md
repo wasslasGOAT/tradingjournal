@@ -18,7 +18,7 @@ Agents du MVP : `architect`, `core-engine`, `database`, `app-ui`, `qa-tests`, `c
 - Exigences UX d'ADR-017 respectées sur les écrans livrés (squelettes, pas de spinner plein écran, mises à jour optimistes, haptique mobile, listes FlashList, transitions reanimated).
 - `pnpm lint && pnpm typecheck && pnpm test` au vert.
 
-Parallélisation possible : M3 (core) peut démarrer en même temps que M1 et M2, après M0.
+Parallélisation possible : M3 (core) peut démarrer en même temps que M1 et M2, après M0 (fait : M3 terminée pendant M1).
 
 ---
 
@@ -59,21 +59,23 @@ Critères de fin :
 Réf. : §6, ADR-012, ADR-017, ADR-011, ADR-021
 Agents : `app-ui`, `release` (CI), `code-reviewer` — lancer avec `/phase M1`
 
-- [ ] **Reliquat M0 (en premier)** : sur le téléphone Android (build de dev), lecture de `app_meta` et bascule FR/EN vérifiées
-- [ ] Tokens (couleurs sombre/clair, accent bleu légèrement décalé de `#5D99F9` — ADR-012, couleurs P&L bleu/gris et vert/rouge, typo, rayons, espacements, **durées et courbes d'animation**) branchés sur NativeWind ; police Inter 400/500/600, chiffres tabulaires pour les montants (ADR-021)
-- [ ] `packages/ui/src` inclus dans le `content` de Tailwind (classes des primitives générées)
-- [ ] Primitives : `Screen`, `Card`, `GlowCard`, `StatTile`, `Button`, `IconButton`, `Segmented`, `Select`, `DateRangePicker`, `Sheet`, `Skeleton`, `ShimmerBar`, `ProgressBar`, `DayCell`, `EmptyState`, `Toast`
-- [ ] Animations reanimated (entrées de cartes, sheet, segmented, press states), respect de « réduire les animations »
-- [ ] Interface `Haptics` (`.native` expo-haptics / `.web` vide) utilisée par les primitives interactives
-- [ ] Wrapper de liste virtualisée (FlashList) avec états vide / chargement / fin de liste
-- [ ] Interface `Chart` + adaptateurs `.web` (recharts) / `.native` (victory-native, Skia) : ligne/aire, barres, histogramme ; heatmap sans bibliothèque (ADR-021 ; dépendances natives limitées à Expo Go)
-- [ ] i18n FR/EN ; affichage des montants/dates/nombres en **consommant `packages/core/format`** (livré par M3, propriétaire `core-engine`)
-- [ ] Layout connecté (ADR-011) : tab bar mobile Dashboard · Calendrier · Trades · Journal · Plus + bouton d'ajout rapide global, sidebar web ≥ 1024 px, header avec sélecteur de compte + période (données factices), transitions entre onglets
-- [ ] Bascule de thème et de couleurs P&L sans rechargement ; masquage des montants (icône œil)
-- [ ] Page « catalogue » interne (dev only) affichant tous les composants et leurs états
-- [ ] Contraste AA des textes secondaires (`textMuted` / `textSecondary`, petites tailles), §6.2 — retour utilisateur M0 : peu visibles sur téléphone
+- [ ] **Reliquat M0 (en premier)** : sur le téléphone Android (build de dev ou Expo Go), lecture de `app_meta` et bascule FR/EN vérifiées
+- [x] Tokens v2 (thèmes sombre/clair par variables CSS, accent bleu décalé de `#5D99F9` — ADR-012, couleurs P&L bleu/gris et vert/rouge par thème, typo, rayons, espacements, **durées et courbes d'animation**) branchés sur NativeWind ; police Inter 400/500/600, chiffres tabulaires pour les montants (ADR-021) — vérifié par l'utilisateur sur iPhone (2026-09-18)
+- [x] `packages/ui/src` inclus dans le `content` de Tailwind (classes des primitives générées)
+- [ ] Primitives : **livrées** `Screen`, `Card`, `GlowCard`, `StatTile`, `Button`, `IconButton`, `Skeleton`, `ShimmerBar`, `ProgressBar`, `DayCell`, `EmptyState` ; **restent (M1-4)** `Segmented`, `Select`, `DateRangePicker`, `Sheet`, `Toast`
+- [x] Animations reanimated (entrées de cartes, press states), respect de « réduire les animations » — à compléter pour `Sheet` et `Segmented` avec M1-4
+- [x] Interface `Haptics` (`.native` expo-haptics / `.web` vide) utilisée par les primitives interactives
+- [ ] **M1-5** Wrapper de liste virtualisée (FlashList) avec états vide / chargement / fin de liste
+- [ ] **M1-6** Interface `Chart` + adaptateurs `.web` (recharts) / `.native` (victory-native, Skia) : ligne/aire, barres, histogramme ; heatmap sans bibliothèque (ADR-021 ; dépendances natives limitées à Expo Go)
+- [ ] **M1-7** i18n FR/EN ; affichage des montants/dates/nombres en **consommant `packages/core/format`** (livré par M3, propriétaire `core-engine`)
+- [x] Layout connecté (ADR-011) : shell à onglets Dashboard · Calendrier · Trades · Journal · Plus + bouton d'ajout rapide global, sidebar web ≥ 1024 px, header avec sélecteur de compte + période (données factices), transitions entre onglets
+- [ ] **M1-9** Bascule de thème et de couleurs P&L sans rechargement + masquage des montants (icône œil) : **persistance** des bascules ; **catalogue exclu du bundle de production**
+- [x] Page « catalogue » interne (dev only) affichant les composants et leurs états (`apps/app/app/(dev)/catalog.tsx`) — à compléter au fil des primitives restantes
+- [x] Contraste AA des textes secondaires (`textMuted` / `textSecondary`, petites tailles), §6.2 — retour utilisateur M0 traité, relu sur iPhone (2026-09-18)
+- [ ] **Correctif** (remonté le 2026-09-24) : montants tronqués dans les cellules du calendrier (`DayCell`) — adapter taille et troncature aux montants longs et aux grandes tailles de police, vérifié sur les 3 plateformes
+- [ ] **Q1** Tests des primitives et du shell (rendu, états, « réduire les animations »)
 - [ ] Job Playwright dans la CI (`ci.yml`, propriétaire `release`) — résout la dérive M0
-- [ ] Build EAS Android **preview** (build release) pour la mesure de fluidité (ADR-021, quota gratuit)
+- [ ] Build EAS Android **dev** (vérification sur l'appareil) puis **preview** (build release) pour la mesure de fluidité (ADR-021, quota gratuit)
 
 **Critères de fin** : le catalogue s'affiche sur iOS, Android et web, en sombre et en clair ; changement de thème instantané ; avec « réduire les animations » activé, aucune animation de déplacement ne joue ; fluidité :
 - **Android** : sur l'APK preview (build release), « Profil de rendu HWUI → barres » (options développeur) activé, 10 ouvertures/fermetures de `Sheet` et 10 bascules de `Segmented` : barres sous la ligne verte ;
@@ -104,23 +106,30 @@ Agents : `database`, `app-ui`, `qa-tests`, `security-auditor` — lancer avec `/
 
 ---
 
-## Phase M3 — Moteur de trading (core) · `En cours`
-Réf. : §5.2, §5.4, DATA_MODEL
+## Phase M3 — Moteur de trading (core) · `Terminée` (2026-09-24)
+Réf. : §5.2, §5.4, DATA_MODEL · Conventions : DATA_MODEL § « Conventions de calcul (M3) »
 Agents : `core-engine`, `code-reviewer` — lancer avec `/phase M3` (parallélisable avec M1/M2)
 
-- [ ] Types `Money`, `Decimal`, `TradingDay` ; calcul du jour de trading (fuseau + bascule)
-- [ ] Regroupement exécutions → trades (FIFO, moyenne), positions partielles, long/short
-- [ ] P&L brut/net, multiplicateur de contrat, R multiple ; solde = solde initial + Σ P&L net + mouvements de trésorerie
-- [ ] Stats : win rate, profit factor, espérance, gain/perte moyens, ratio moyen, drawdown (montant, %), séries
-- [ ] Agrégats : par jour de trading (cellules du calendrier, totaux hebdo, stats du mois), série d'equity, par dimension (symbole, setup, tag, session, heure, jour de semaine), distribution des R
-- [ ] Agrégation multi-comptes selon ADR-019 (total par devise, API prête pour une conversion ultérieure)
-- [ ] Formatage localisé monnaie/date/nombre (`packages/core/format`), FR/EN — consommé par M1
-- [ ] Schémas zod des formulaires dans `packages/schemas` : trade, exécution, compte, mouvement de trésorerie (journal → M6 ; règle, checklist → M8)
-- [ ] Conventions statistiques documentées par `core-engine` (code + DATA_MODEL) : trade à P&L 0 exclu ou non du win rate, drawdown % mesuré depuis le plus haut **incluant le solde initial** ; tout changement ultérieur est soumis à l'utilisateur
-- [ ] **Jeu golden synthétique** (validé le 2026-09-18) : 25 trades (24 en mars 2026 + 1 le 1er avril) respectant exactement tous les chiffres de référence ci-dessous ; compte en `Europe/Paris`, bascule 00:00 ; fixture JSON dans `packages/core`, **réutilisé tel quel par le seed en M4**
-- [ ] **Tests golden** sur ce jeu ; couverture ≥ 90 % sur `packages/core`
+- [x] Types `Money`, `Decimal`, `TradingDay` ; calcul du jour de trading (fuseau + bascule)
+- [x] Regroupement exécutions → trades (FIFO, moyenne), positions partielles, long/short, inversion de position
+- [x] P&L brut/net, multiplicateur de contrat, R multiple ; solde = solde initial + Σ P&L net + mouvements de trésorerie
+- [x] Stats : win rate, profit factor, espérance, gain/perte moyens, ratio moyen, drawdown (montant, %), séries
+- [x] Agrégats : par jour de trading (cellules du calendrier, totaux hebdo, stats du mois), série d'equity (`tradingEquity` + `balance`), par dimension (symbole, setup, tag, session, heure, jour de semaine), distribution des R
+- [x] Agrégation multi-comptes selon ADR-019 (total par devise, API prête pour une conversion ultérieure)
+- [x] Formatage localisé monnaie/date/nombre (`packages/core/format`), FR/EN — consommé par M1
+- [x] Schémas zod des formulaires dans `packages/schemas` : trade, exécution, compte, mouvement de trésorerie (journal → M6 ; règle, checklist → M8) ; messages = clés i18n (`VALIDATION_KEYS`)
+- [x] Conventions statistiques documentées (code + DATA_MODEL § « Conventions de calcul (M3) », points 1 à 8) : trade à 0 neutre, drawdown depuis un pic **incluant le solde initial** et mesuré sur l'equity de trading ; tout changement ultérieur passe par un ADR
+- [x] **Jeu golden synthétique** (validé le 2026-09-18) : 25 trades (24 en mars 2026 + 1 le 1er avril) respectant exactement les chiffres de référence ; compte `Europe/Paris`, bascule 00:00 ; fixture JSON dans `packages/core/test/golden/`, **réutilisé tel quel par le seed en M4**
+- [x] Second fixture « cas limites » : sorties partielles, inversion de position, trade ouvert, break-even, dépôt/retrait, bascule 17:00, exécutions simultanées
+- [x] **Tests golden** sur ces jeux ; couverture ≥ 90 % sur `packages/core`
 
 **Critères de fin** : `pnpm --filter @repo/core test` et `pnpm --filter @repo/core test:coverage` (≥ 90 %) sont verts ; au centime près : solde initial 200 000, P&L −19 743,43 → rendement −9,87 %, win rate 16 %, ratio moyen 2,92, profit factor 0,56 ; mars 2026 = 24 trades, −17 527,71, 3 jours gagnants / 7 perdants ; 1er avril = −2 215,72 ; pire jour = 30 mars 2026.
+- [x] Vérifié le 2026-09-24 : `@repo/core` 278 tests verts (521 sur tout le dépôt), couverture **98,24 %** (seuil 90 % bloquant) ; `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm format:check` et `pnpm test:rls` (12) verts.
+- [x] Chiffres golden retrouvés : 200 000 → −19 743,43 → **180 256,57** (−9,87 %) ; mars 24 trades −17 527,71, 3 jours gagnants / 7 perdants ; 1er avril −2 215,72 ; win rate 16 %, PF 0,56, ratio moyen 2,92 ; pire jour 30/03/2026 ; marge restante « perte max 10 % » 256,57 (critère M8 déjà couvert).
+
+**Bilan (2026-09-24)** : `packages/core` (money, time, trading, stats, aggregates, format) et `packages/schemas` livrés en fonctions pures testées. Deux boucles `code-reviewer` puis une passe finale : tous les points bloquants et importants corrigés, revérifiés par sondes indépendantes (break-even exact en FIFO **et** en moyenne, inversion refusée par le formulaire y compris sur la dernière exécution, vente antérieure à l'achat refusée, part de poids nul sans reste, jours actifs ne comptant que les jours avec trade). Conventions de calcul consignées dans DATA_MODEL ; ADR-005 (écriture en base) et ADR-019 (P&L dans la devise du compte) complétés. Aucun ADR nouveau : ces conventions relèvent du modèle de données, mais **toute évolution ultérieure exige un ADR**.
+
+**Dette reportée en M4** : colonne `sequence` sur `executions`, scission d'exécution lors d'une inversion, seed issu du fixture golden (voir M4).
 
 ---
 
@@ -131,7 +140,9 @@ Dépend de : M1, M2, M3
 
 - [ ] Tables `instruments` (catalogue de base en lecture publique + instruments créés par l'utilisateur), `executions`, `trades`, `tags`, `trade_tags`, `trade_notes`, `attachments` + bucket Storage + RLS (tables et Storage)
 - [ ] Fonction Postgres transactionnelle d'écriture d'un trade (valeurs calculées par `packages/core`, aucun calcul SQL) — ADR-016
-- [ ] Seed : utilisateur démo, comptes `Prop Challenge 200k` (USD, type `prop_challenge`) et `Compte perso actions` (EUR), jeu de mars 2026 + 1er avril généré à partir du fixture golden de `packages/core` (M3)
+- [ ] **Dette M3 — ADR à créer** : colonne d'**ordre de saisie** (`sequence`) sur `executions` (deux exécutions au même horodatage gardent leur ordre de saisie, sinon le sens du trade dépend de l'UUID), fournie par le formulaire, l'import CSV et la synchro — impact schéma, donc ADR au moment de l'implémentation
+- [ ] **Dette M3** : lors d'une **inversion de position**, l'exécution qui appartient à deux trades est **scindée en deux lignes** à l'écriture (`executions.trade_id` reste une clé étrangère simple)
+- [ ] Seed : utilisateur démo, comptes `Prop Challenge 200k` (USD, type `prop_challenge`) et `Compte perso actions` (EUR), jeu de mars 2026 + 1er avril **généré à partir du fixture golden de `packages/core`** (M3) — UUID v5 déterministes, swap porté par la ligne de trade
 - [ ] Formulaire de saisie (react-hook-form + zod) : mode simple (entrée/sortie → 2 exécutions) et mode avancé (exécutions partielles) ; aperçu P&L/R en direct via `packages/core` ; bouton d'ajout rapide accessible depuis tous les onglets
 - [ ] Trade log FlashList : filtres (compte, période, symbole, tag, setup, résultat), tri, pagination par curseur
 - [ ] Détail en sheet : édition, suppression, tags/setups, notes, captures (upload Storage)

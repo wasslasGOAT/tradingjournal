@@ -6,11 +6,12 @@ import {
   parseAmount,
 } from '@repo/core';
 import { resolveLocale } from '@repo/i18n';
-import { Card, DayCell, Screen, StatTile, useVisibilityStore } from '@repo/ui';
+import { DayCell, Screen, StatTile, useVisibilityStore } from '@repo/ui';
 import { useTranslation } from 'react-i18next';
-import { Text, View } from 'react-native';
+import { Text, View, useWindowDimensions } from 'react-native';
 
 import { buildCalendarGrid } from './buildCalendarGrid';
+import { isNarrowCalendarLayout } from './calendarLayout';
 import { resolveCalendarDayStateKey } from './resolveCalendarDayStateKey';
 import {
   SAMPLE_CALENDAR_CURRENCY,
@@ -36,6 +37,11 @@ export function CalendarScreen() {
   const { t, i18n } = useTranslation('common');
   const locale = resolveLocale(i18n.language);
   const hideAmounts = useVisibilityStore((state) => state.hideAmounts);
+  const { width } = useWindowDimensions();
+  // M1-4 (correctif largeur) : sous 360 px, la colonne « Total » ne tient plus à côté
+  // de 7 colonnes de jour carrées — elle se replie en ligne pleine largeur sous la
+  // semaine (`WeekTotalCell` en `variant="row"`, voir `calendarLayout.ts`).
+  const narrow = isNarrowCalendarLayout(width);
 
   const weeks = buildCalendarGrid(
     SAMPLE_CALENDAR_MONTH.year,
@@ -59,7 +65,10 @@ export function CalendarScreen() {
         <Text className="font-sans text-sm text-textSecondary">{monthLabel}</Text>
       </View>
 
-      <Card testID="calendar-grid">
+      <View
+        testID="calendar-grid"
+        className="w-full max-w-xl self-center gap-sm rounded-lg border border-border bg-surface p-xs"
+      >
         <View className="flex-row gap-xs">
           {weekdayLabels.map((label, index) => (
             <Text
@@ -70,12 +79,14 @@ export function CalendarScreen() {
               {label}
             </Text>
           ))}
-          <Text className="w-11 text-center font-sans text-xs text-textMuted" numberOfLines={1}>
-            {t('calendar.weekTotal')}
-          </Text>
+          {narrow ? null : (
+            <Text className="w-12 text-center font-sans text-xs text-textMuted" numberOfLines={1}>
+              {t('calendar.weekTotal')}
+            </Text>
+          )}
         </View>
 
-        <View className="mt-sm gap-xs">
+        <View className="gap-xs">
           {weeks.map((week, weekIndex) => {
             const weekTotal = week
               .filter((cell) => cell.inCurrentMonth)
@@ -85,57 +96,81 @@ export function CalendarScreen() {
               }, new Decimal(0));
 
             return (
-              <View key={`week-${weekIndex}`} className="flex-row gap-xs">
-                {week.map((cell) => {
-                  const day = dayByTradingDay.get(cell.tradingDay);
-                  const isToday = cell.tradingDay === SAMPLE_TODAY;
-                  const stateKey = resolveCalendarDayStateKey(
-                    day?.pnl ?? null,
-                    day?.hasJournalEntry ?? false,
-                    isToday,
-                  );
-                  const dayNumberLabel = formatDayNumber(cell.tradingDay, { locale });
+              <View key={`week-${weekIndex}`} className="gap-xs">
+                <View className="flex-row gap-xs">
+                  {week.map((cell) => {
+                    const day = dayByTradingDay.get(cell.tradingDay);
+                    const isToday = cell.tradingDay === SAMPLE_TODAY;
+                    const stateKey = resolveCalendarDayStateKey(
+                      day?.pnl ?? null,
+                      day?.hasJournalEntry ?? false,
+                      isToday,
+                    );
+                    const dayNumberLabel = formatDayNumber(cell.tradingDay, { locale });
 
-                  const dayCell = (
-                    <DayCell
-                      testID={`calendar-day-${cell.tradingDay}`}
-                      dayLabel={dayNumberLabel}
-                      pnl={day?.pnl ?? null}
-                      hasJournalEntry={day?.hasJournalEntry ?? false}
-                      isToday={isToday}
+                    const dayCell = (
+                      <DayCell
+                        testID={`calendar-day-${cell.tradingDay}`}
+                        dayLabel={dayNumberLabel}
+                        pnl={day?.pnl ?? null}
+                        hasJournalEntry={day?.hasJournalEntry ?? false}
+                        isToday={isToday}
+                        currency={SAMPLE_CALENDAR_CURRENCY}
+                        locale={locale}
+                        hideAmounts={hideAmounts}
+                        amountVariant="compact"
+                        accessibilityLabel={t('calendar.dayAccessibility', {
+                          day: dayNumberLabel,
+                          state: t(`calendar.dayState.${stateKey}`),
+                        })}
+                      />
+                    );
+
+                    // `aspectRatio: 1` (M1-4, correctif largeur) : cellule carrée quelle que
+                    // soit la largeur de colonne obtenue (`flex-1`) — sauf plancher
+                    // d'accessibilité `min-h-11` (44 pt, posé par `DayCell` lui-même, prioritaire
+                    // sur le carré exact aux toutes petites largeurs).
+                    return cell.inCurrentMonth ? (
+                      <View key={cell.tradingDay} className="flex-1" style={{ aspectRatio: 1 }}>
+                        {dayCell}
+                      </View>
+                    ) : (
+                      <View
+                        key={cell.tradingDay}
+                        className="flex-1 opacity-40"
+                        style={{ aspectRatio: 1 }}
+                      >
+                        {dayCell}
+                      </View>
+                    );
+                  })}
+                  {narrow ? null : (
+                    <WeekTotalCell
+                      testID={`calendar-week-total-${weekIndex}`}
+                      total={weekTotal}
                       currency={SAMPLE_CALENDAR_CURRENCY}
                       locale={locale}
                       hideAmounts={hideAmounts}
-                      accessibilityLabel={t('calendar.dayAccessibility', {
-                        day: dayNumberLabel,
-                        state: t(`calendar.dayState.${stateKey}`),
-                      })}
+                      label={t('calendar.weekTotal')}
                     />
-                  );
-
-                  return cell.inCurrentMonth ? (
-                    <View key={cell.tradingDay} className="flex-1">
-                      {dayCell}
-                    </View>
-                  ) : (
-                    <View key={cell.tradingDay} className="flex-1 opacity-40">
-                      {dayCell}
-                    </View>
-                  );
-                })}
-                <WeekTotalCell
-                  testID={`calendar-week-total-${weekIndex}`}
-                  total={weekTotal}
-                  currency={SAMPLE_CALENDAR_CURRENCY}
-                  locale={locale}
-                  hideAmounts={hideAmounts}
-                  label={t('calendar.weekTotal')}
-                />
+                  )}
+                </View>
+                {narrow ? (
+                  <WeekTotalCell
+                    testID={`calendar-week-total-${weekIndex}`}
+                    total={weekTotal}
+                    currency={SAMPLE_CALENDAR_CURRENCY}
+                    locale={locale}
+                    hideAmounts={hideAmounts}
+                    label={t('calendar.weekTotal')}
+                    variant="row"
+                  />
+                ) : null}
               </View>
             );
           })}
         </View>
-      </Card>
+      </View>
 
       <View className="flex-row flex-wrap gap-sm">
         <StatTile

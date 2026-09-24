@@ -40,6 +40,9 @@ export const fr = {
       description: "Cet écran n'existe pas.",
       backHome: "Retour à l'accueil",
     },
+    // Libellés génériques réutilisés par plusieurs primitives (M1-4, `packages/ui`) —
+    // boutons de fermeture de `Sheet`/`Select`/`DateRangePicker`.
+    close: 'Fermer',
     // Catalogue de composants (M1-3, `apps/app/features/catalog`) : accessible en
     // développement uniquement — voir `apps/app/app/(dev)/catalog.tsx`.
     catalog: {
@@ -60,6 +63,11 @@ export const fr = {
         emptyState: 'État vide',
         calendar: 'DayCell',
         cards: 'Card / GlowCard',
+        segmented: 'Segmented',
+        select: 'Select',
+        dateRangePicker: 'DateRangePicker',
+        sheet: 'Sheet',
+        toast: 'Toast',
       },
       statTiles: {
         netPnl: 'P&L net',
@@ -96,6 +104,34 @@ export const fr = {
         glowCardTitle: 'GlowCard',
         glowCardBody: 'Mise en avant, lueur teintée accent.',
       },
+      segmented: {
+        label: 'Vue',
+        amount: '$',
+        percent: '%',
+        rMultiple: 'R',
+      },
+      select: {
+        label: 'Exemple de select',
+        optionA: 'Option A',
+        optionB: 'Option B',
+        optionC: 'Option C',
+      },
+      dateRangePicker: {
+        label: 'Exemple de période',
+      },
+      sheet: {
+        trigger: 'Ouvrir la sheet',
+        title: 'Exemple de sheet',
+        body: 'Glisse vers le bas, touche à l’extérieur, ou appuie sur Échap (web) pour fermer.',
+      },
+      toast: {
+        success: 'Succès',
+        error: 'Erreur',
+        info: 'Info',
+        successMessage: 'Trade enregistré.',
+        errorMessage: "Échec de l'enregistrement.",
+        infoMessage: 'Synchronisation en cours…',
+      },
     },
     // Coquille applicative (M1-8, ARCHITECTURE §6.1) : tab bar mobile / sidebar
     // web, header (compte, période, masquage), bouton d'ajout rapide.
@@ -120,10 +156,15 @@ export const fr = {
       },
       period: {
         triggerAccessibility: 'Changer de période',
-        day: 'Jour',
-        week: 'Semaine',
-        month: 'Mois',
-        year: 'Année',
+        today: "Aujourd'hui",
+        last7Days: '7 derniers jours',
+        currentMonth: 'Mois en cours',
+        previousMonth: 'Mois précédent',
+        custom: 'Personnalisé',
+        apply: 'Appliquer',
+        cancel: 'Annuler',
+        previousMonthNav: 'Afficher le mois précédent',
+        nextMonthNav: 'Afficher le mois suivant',
       },
       hideAmounts: {
         show: 'Afficher les montants',

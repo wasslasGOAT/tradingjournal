@@ -1,8 +1,6 @@
-import { EmptyState, Screen } from '@repo/ui';
+import { EmptyState, Screen, useToast } from '@repo/ui';
 import { NotebookPen } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
-
-import { useComingSoonStore } from '@/features/shell/comingSoonStore';
 
 /**
  * Écran Journal (M1-8) : état vide soigné en attendant la vraie saisie
@@ -10,7 +8,7 @@ import { useComingSoonStore } from '@/features/shell/comingSoonStore';
  */
 export function JournalScreen() {
   const { t } = useTranslation('common');
-  const showComingSoon = useComingSoonStore((state) => state.show);
+  const { show } = useToast();
 
   return (
     <Screen testID="screen-journal" edges={{ top: false, bottom: false }}>
@@ -21,7 +19,7 @@ export function JournalScreen() {
         description={t('journal.empty.description')}
         action={{
           label: t('journal.empty.action'),
-          onPress: () => showComingSoon(t('header.quickAdd.comingSoon')),
+          onPress: () => show(t('header.quickAdd.comingSoon')),
         }}
       />
     </Screen>

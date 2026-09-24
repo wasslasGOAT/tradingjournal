@@ -2,6 +2,8 @@ import type { ReactNode } from 'react';
 import { ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useScreenBottomInset } from './ScreenBottomInsetContext';
+
 /**
  * Conteneur d'écran de base (M1-3, ARCHITECTURE §6.2) : fond `background`,
  * zone sûre (`useSafeAreaInsets`, même convention que `features/hello/HelloScreen`)
@@ -36,11 +38,16 @@ export function Screen({
   edges,
 }: ScreenProps) {
   const insets = useSafeAreaInsets();
+  // M1-4 : quand `edges.bottom` est `false` (écran sous une tab bar), le bas
+  // n'est pas forcément `0` — la coquille de navigation mobile peut poser une
+  // réserve (`ScreenBottomInsetProvider`) pour une tab bar flottante qui
+  // recouvre le contenu (voir `ScreenBottomInsetContext`).
+  const screenBottomInset = useScreenBottomInset();
   const applyTop = edges?.top ?? true;
   const applyBottom = edges?.bottom ?? true;
   const edgeStyle = {
     paddingTop: applyTop ? insets.top : 0,
-    paddingBottom: applyBottom ? insets.bottom : 0,
+    paddingBottom: applyBottom ? insets.bottom : screenBottomInset,
   };
 
   if (scroll) {

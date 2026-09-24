@@ -24,6 +24,15 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
+  // M1-4 : le bundle web *dev* (non minifié) a grandi avec les nouvelles primitives
+  // (`Segmented`/`Sheet`/`Select`/`DateRangePicker`/`Toast`) — `page.goto('/')` seul
+  // (parse + exécution du bundle, avant même la première assertion) approchait déjà
+  // le défaut Playwright (30 s) avant M1-4 (~24 s en local, plusieurs workers en
+  // parallèle sur la même machine) ; au-delà avec ce lot. Relevé une fois ici plutôt
+  // que par test — un chargement plus lent que 30 s en dev (bundle non minifié,
+  // machine partagée avec le serveur Expo du téléphone) n'est pas en soi le signe
+  // d'une régression fonctionnelle (vérifié : tests verts avec plus de marge).
+  timeout: 60_000,
   reporter: [['html', { open: 'never', outputFolder: 'playwright-report' }], ['list']],
   outputDir: 'test-results',
   use: {

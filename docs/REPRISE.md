@@ -1,32 +1,33 @@
 # Point de reprise
 
-> À lire en premier pour reprendre le travail. Mis à jour le **2026-09-18**, au lancement des phases M1 et M3.
+> À lire en premier pour reprendre le travail. Mis à jour le **2026-09-24**, à la clôture de la phase M3.
 > Le détail fait foi dans `ROADMAP.md` (cases à cocher) et `DECISIONS.md` (ADR).
 
-## ⚠️ Arrêt du 2026-09-18 au soir — travail en cours sur la branche `wip/m1-m3`
+## État au 2026-09-24 — travail en cours sur la branche `wip/m1-m3`
 
-Le travail M1/M3 n'est **pas sur `main`** : il est sur la branche **`wip/m1-m3`** (poussée sur GitHub). `main` reste au dernier état vert (clôture M0). Pour reprendre : `git checkout wip/m1-m3`.
+Le travail M1/M3 n'est **pas sur `main`** : il est sur la branche **`wip/m1-m3`**. `main` reste au dernier état vert (clôture M0). Pour reprendre : `git checkout wip/m1-m3`.
 
-**M3 (moteur de calcul) — terminé, reste la revue et la clôture :**
-- Livré : `packages/core` `format` (sans `number`), `money` (Money, total par devise), `time/session`, `trading` (regroupement FIFO/moyenne, inversion de position, P&L, R, solde), `stats`, `aggregates` ; `packages/schemas` (compte, exécution, trade, mouvement de trésorerie).
-- Jeu golden synthétique `packages/core/test/golden/` (25 trades, Europe/Paris) : **tous les chiffres de référence retrouvés au centime** ; 220 tests, couverture 99 % (seuil 90 % bloquant).
-- Conventions **validées par l'utilisateur** : trade à 0 = neutre (hors win rate et PF, casse une série) ; drawdown depuis un pic incluant le solde initial. À consigner dans les docs à la clôture.
-- À faire : revue `code-reviewer` (interrompue, à relancer), puis clôture `architect`.
-- Point pour M4 : lors d'une inversion de position, une même exécution appartient à deux trades → la scinder en deux lignes lors de l'écriture en base.
+**M3 (moteur de calcul) — `Terminée` le 2026-09-24.**
+- Livré : `packages/core` (`format`, `money`, `time`, `trading`, `stats`, `aggregates`) et `packages/schemas` (compte, exécution, trade, mouvement de trésorerie, messages = clés i18n).
+- Vérifié : `@repo/core` 278 tests verts (521 sur tout le dépôt), couverture **98,24 %** (seuil 90 % bloquant) ; `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm format:check`, `pnpm test:rls` (12) verts ; chiffres golden au centime (200 000 → −19 743,43 → 180 256,57, −9,87 %, mars 24 trades −17 527,71, pire jour 30/03).
+- Conventions de calcul consignées dans `DATA_MODEL.md` § « Conventions de calcul (M3) » ; ADR-005 et ADR-019 complétés. **Toute évolution de ces conventions exige un ADR.**
+- Dette reportée en M4 (inscrite dans ROADMAP) : colonne `sequence` sur `executions` (ADR à créer), scission d'une exécution lors d'une inversion de position, seed généré depuis le fixture golden.
 
-**M1 (design system) — en cours :**
-- Fait et vérifié : dépendances UI installées (toutes compatibles Expo Go), tokens v2 (thèmes sombre/clair par variables CSS, P&L par thème, Inter, accent décalé, **contrastes AA testés**). Vérifié par l'utilisateur sur iPhone : texte gris lisible, bascule en mode clair OK.
-- **Interrompu en cours de route** (agent `app-ui` arrêté) : M1-2 (haptique, motion) et M1-3 (primitives `packages/ui/src/components/**`) + **catalogue** (`apps/app/app/(dev)/`, `features/catalog/`, bouton « Voir le catalogue » sur Hello — demandé par l'utilisateur pour voir l'app avancer). État : tests et typecheck verts, **1 erreur de lint** (`apps/app`, variable `preference` inutilisée). À relire et terminer avant tout le reste.
-- Reste ensuite : M1-4 (Segmented, Select, Sheet, DateRangePicker, Toast), M1-5 (liste FlashList), M1-6 (Chart), M1-7 (i18n), M1-8 (onglets + header), M1-9 (bascules persistées, catalogue exclu de la prod), build EAS Android de dev (B1) et preview (B2), Playwright en CI, tests Q1, revue, clôture.
-- Vérifications utilisateur restantes : Android (Expo Go `exp://<IP du PC>:8081`), bascule FR/EN sur téléphone.
+**M1 (design system, shell) — `En cours`.**
+- Livré : tokens v2 (thèmes sombre/clair, P&L par thème, Inter, contrastes AA vérifiés sur iPhone), haptique et animations reanimated, primitives `Screen`, `Card`, `GlowCard`, `StatTile`, `Button`, `IconButton`, `Skeleton`, `ShimmerBar`, `ProgressBar`, `DayCell`, `EmptyState`, catalogue interne (`apps/app/app/(dev)/catalog.tsx`), shell à onglets + sidebar web + header.
+- Reste : M1-4 (`Segmented`, `Select`, `Sheet`, `DateRangePicker`, `Toast`), M1-5 (FlashList), M1-6 (`Chart`), M1-7 (i18n FR/EN + `packages/core/format`), M1-9 (persistance des bascules, catalogue exclu du bundle de production), correctif « montants tronqués dans les cellules du calendrier », tests Q1, Playwright en CI, builds EAS Android (dev puis preview), revue et clôture.
+- Vérifications utilisateur restantes : Android (lecture d'`app_meta`, bascule FR/EN), fluidité sur l'APK preview.
 
-**Incident réglé** : `packages/ui/node_modules/@repo/core` était une copie physique au lieu d'une jonction (pnpm bloqué, `ERR_PNPM_PACKAGE_MANAGER_SYMLINK_FAILED`) → supprimée + `pnpm install`. Si ça réapparaît : même remède.
+**Lancer l'app sur téléphone** : `pnpm dev:app`, puis Expo Go sur `exp://<IP du PC>:8081`. **L'IP change** (DHCP, changement de réseau) : la relire dans la sortie d'Expo à chaque session, ne pas réutiliser celle d'hier ; PC et téléphone sur le même Wi-Fi.
+
+**Incident connu** : `packages/ui/node_modules/@repo/core` peut redevenir une copie physique au lieu d'une jonction (pnpm bloqué, `ERR_PNPM_PACKAGE_MANAGER_SYMLINK_FAILED`) → supprimer le dossier puis `pnpm install`.
 
 ## Où on en est
 
 - **Périmètre** : on construit d'abord le **MVP** (phases M0 → M9, ARCHITECTURE §0). Pas de serveur, pas de broker, pas d'import CSV, pas de coach IA (ADR-015/016).
 - **Phase M0 (fondations)** : `Terminée` le 2026-09-18 (CI verte, build Android de dev EAS, vérifiée sur iPhone ; reste à vérifier sur Android et la bascule FR/EN sur téléphone, en début de M1). Dérives encore ouvertes : voir ROADMAP, Phase M0.
-- **Phases M1 (design system, shell) et M3 (moteur de calcul) : `En cours`** depuis le 2026-09-18, en parallèle. M1 commence par le reliquat M0 (Android + FR/EN sur téléphone) ; M3 livre `packages/core/format` (consommé par M1) et le fixture golden synthétique (réutilisé par le seed en M4).
+- **Phase M3 (moteur de calcul)** : `Terminée` le 2026-09-24 (voir ci-dessus). Elle livre `packages/core/format` (consommé par M1) et le fixture golden (réutilisé par le seed en M4).
+- **Phase M1 (design system, shell)** : `En cours` depuis le 2026-09-18 ; reliquat M0 (Android + FR/EN sur téléphone) toujours ouvert.
 - **Décisions du 2026-09-18** : ADR-011 (onglets + ajout rapide global) et ADR-019 (total par devise) `Acceptées` ; ADR-021 (victory-native/recharts, Inter, uniquement des libs incluses dans Expo Go) ; accent bleu décalé de la référence (ADR-012).
 - **Ensuite** : M2 (auth, onboarding, comptes).
 - **CI** : `gh` (GitHub CLI) est installé et authentifié sur ce PC ; la session peut lire les runs elle-même (`gh run list`, `gh run view`).
@@ -35,7 +36,7 @@ Le travail M1/M3 n'est **pas sur `main`** : il est sur la branche **`wip/m1-m3`*
 
 | Ressource | Valeur |
 |---|---|
-| Dépôt GitHub (privé) | `wasslasGOAT/tradingjournal`, branche `main` |
+| Dépôt GitHub (privé) | `wasslasGOAT/tradingjournal` — `main` (état M0), travail en cours sur `wip/m1-m3` |
 | Supabase (base de dev, UE) | projet `vgqgalksrbprdslhegde`, lié via `npx supabase link` |
 | Expo / EAS | projet `@wassimaha/edgebook` (id `dd23ce8e-9296-4435-b7a9-d94b4ae3147b`) |
 | Migrations appliquées | `20260917172440_app_meta`, `20260918090000_harden_rls_guard` |

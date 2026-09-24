@@ -20,6 +20,7 @@ const TEXT_TOKEN_KEYS = [
   'danger',
   'warning',
   'accent',
+  'success',
 ] as const;
 const SURFACE_TOKEN_KEYS = ['background', 'surface', 'surfaceAlt'] as const;
 const THEME_MODES: ThemeMode[] = ['dark', 'light'];

@@ -1,8 +1,6 @@
-import { EmptyState, Screen } from '@repo/ui';
+import { EmptyState, Screen, useToast } from '@repo/ui';
 import { ListOrdered } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
-
-import { useComingSoonStore } from '@/features/shell/comingSoonStore';
 
 /**
  * Écran Trades (M1-8) : état vide soigné en attendant la saisie/import de
@@ -11,7 +9,7 @@ import { useComingSoonStore } from '@/features/shell/comingSoonStore';
  */
 export function TradesScreen() {
   const { t } = useTranslation('common');
-  const showComingSoon = useComingSoonStore((state) => state.show);
+  const { show } = useToast();
 
   return (
     <Screen testID="screen-trades" edges={{ top: false, bottom: false }}>
@@ -22,7 +20,7 @@ export function TradesScreen() {
         description={t('trades.empty.description')}
         action={{
           label: t('trades.empty.action'),
-          onPress: () => showComingSoon(t('header.quickAdd.comingSoon')),
+          onPress: () => show(t('header.quickAdd.comingSoon')),
         }}
       />
     </Screen>

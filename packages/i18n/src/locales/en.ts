@@ -37,6 +37,9 @@ export const en = {
       description: "This screen doesn't exist.",
       backHome: 'Back to home',
     },
+    // Generic labels reused across primitives (M1-4, `packages/ui`) — `Sheet`/`Select`/
+    // `DateRangePicker` close buttons.
+    close: 'Close',
     // Component catalog (M1-3, `apps/app/features/catalog`) : development-only —
     // see `apps/app/app/(dev)/catalog.tsx`.
     catalog: {
@@ -57,6 +60,11 @@ export const en = {
         emptyState: 'Empty state',
         calendar: 'DayCell',
         cards: 'Card / GlowCard',
+        segmented: 'Segmented',
+        select: 'Select',
+        dateRangePicker: 'DateRangePicker',
+        sheet: 'Sheet',
+        toast: 'Toast',
       },
       statTiles: {
         netPnl: 'Net P&L',
@@ -93,6 +101,34 @@ export const en = {
         glowCardTitle: 'GlowCard',
         glowCardBody: 'Highlighted, accent-tinted glow.',
       },
+      segmented: {
+        label: 'View',
+        amount: '$',
+        percent: '%',
+        rMultiple: 'R',
+      },
+      select: {
+        label: 'Example select',
+        optionA: 'Option A',
+        optionB: 'Option B',
+        optionC: 'Option C',
+      },
+      dateRangePicker: {
+        label: 'Example period',
+      },
+      sheet: {
+        trigger: 'Open sheet',
+        title: 'Sheet example',
+        body: 'Slide down, tap outside, or press Escape (web) to close.',
+      },
+      toast: {
+        success: 'Success',
+        error: 'Error',
+        info: 'Info',
+        successMessage: 'Trade saved.',
+        errorMessage: 'Failed to save.',
+        infoMessage: 'Syncing…',
+      },
     },
     // App shell (M1-8, ARCHITECTURE §6.1): mobile tab bar / web sidebar, header
     // (account, period, hide amounts), global quick-add button.
@@ -117,10 +153,15 @@ export const en = {
       },
       period: {
         triggerAccessibility: 'Switch period',
-        day: 'Day',
-        week: 'Week',
-        month: 'Month',
-        year: 'Year',
+        today: 'Today',
+        last7Days: 'Last 7 days',
+        currentMonth: 'Current month',
+        previousMonth: 'Previous month',
+        custom: 'Custom',
+        apply: 'Apply',
+        cancel: 'Cancel',
+        previousMonthNav: 'Show previous month',
+        nextMonthNav: 'Show next month',
       },
       hideAmounts: {
         show: 'Show amounts',

@@ -1,20 +1,34 @@
+import type {
+  DateRangePickerLabels,
+  DateRangeShortcut,
+  SegmentedOption,
+  TradingDayRange,
+} from '@repo/ui';
 import {
   Button,
   Card,
+  DateRangePicker,
   DayCell,
   EmptyState,
   GlowCard,
   ProgressBar,
   Screen,
+  Segmented,
+  Select,
+  Sheet,
   ShimmerBar,
   Skeleton,
   StatTile,
+  resolveDateRangeShortcut,
+  useToast,
 } from '@repo/ui';
 import { resolveLocale } from '@repo/i18n';
 import { Inbox } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
+
+import { formatDateRangeLabel } from '@/features/shell/formatDateRangeLabel';
 
 import { CatalogControls } from './CatalogControls';
 import { CatalogHeader } from './CatalogHeader';
@@ -24,9 +38,12 @@ import {
   SAMPLE_DAY_CELLS,
   SAMPLE_PROGRESS,
   SAMPLE_STAT_TILES,
+  SAMPLE_TODAY,
 } from './sampleData';
 
 const DAY_CELL_LABEL_KEYS = ['profit', 'loss', 'journalOnly', 'empty', 'today'] as const;
+
+type CatalogViewMode = 'amount' | 'percent' | 'rMultiple';
 
 /**
  * Catalogue de composants (M1-3) : vérification visuelle des primitives de
@@ -38,7 +55,40 @@ const DAY_CELL_LABEL_KEYS = ['profit', 'loss', 'journalOnly', 'empty', 'today'] 
 export function CatalogScreen() {
   const { t, i18n } = useTranslation('common');
   const [hideAmounts, setHideAmounts] = useState(false);
+  const [viewMode, setViewMode] = useState<CatalogViewMode>('amount');
+  const [selectedOption, setSelectedOption] = useState('optionA');
+  const [dateRange, setDateRange] = useState<TradingDayRange>(() =>
+    resolveDateRangeShortcut('currentMonth', SAMPLE_TODAY),
+  );
+  const [dateRangeShortcut, setDateRangeShortcut] = useState<DateRangeShortcut>('currentMonth');
+  const [sheetVisible, setSheetVisible] = useState(false);
   const locale = resolveLocale(i18n.language);
+  const { show } = useToast();
+
+  const segmentedOptions: readonly SegmentedOption<CatalogViewMode>[] = [
+    { value: 'amount', label: t('catalog.segmented.amount') },
+    { value: 'percent', label: t('catalog.segmented.percent') },
+    { value: 'rMultiple', label: t('catalog.segmented.rMultiple') },
+  ];
+
+  const selectOptions = [
+    { value: 'optionA', label: t('catalog.select.optionA') },
+    { value: 'optionB', label: t('catalog.select.optionB') },
+    { value: 'optionC', label: t('catalog.select.optionC') },
+  ];
+
+  const dateRangePickerLabels: DateRangePickerLabels = {
+    today: t('header.period.today'),
+    last7Days: t('header.period.last7Days'),
+    currentMonth: t('header.period.currentMonth'),
+    previousMonth: t('header.period.previousMonth'),
+    custom: t('header.period.custom'),
+    apply: t('header.period.apply'),
+    cancel: t('header.period.cancel'),
+    close: t('common.close'),
+    previousMonthNav: t('header.period.previousMonthNav'),
+    nextMonthNav: t('header.period.nextMonthNav'),
+  };
 
   return (
     <Screen testID="catalog-screen" scroll contentClassName="gap-lg">
@@ -168,9 +218,93 @@ export function CatalogScreen() {
               currency={SAMPLE_CURRENCY}
               locale={locale}
               hideAmounts={hideAmounts}
+              amountVariant="compact"
               accessibilityLabel={t(`catalog.dayCell.${DAY_CELL_LABEL_KEYS[index] ?? 'empty'}`)}
             />
           ))}
+        </View>
+      </CatalogSection>
+
+      <CatalogSection testID="catalog-section-segmented" title={t('catalog.sections.segmented')}>
+        <Segmented
+          testID="catalog-segmented"
+          options={segmentedOptions}
+          value={viewMode}
+          onChange={setViewMode}
+          accessibilityLabel={t('catalog.segmented.label')}
+        />
+      </CatalogSection>
+
+      <CatalogSection testID="catalog-section-select" title={t('catalog.sections.select')}>
+        <Select
+          testID="catalog-select"
+          options={selectOptions}
+          value={selectedOption}
+          onChange={setSelectedOption}
+          label={t('catalog.select.label')}
+          closeAccessibilityLabel={t('common.close')}
+        />
+      </CatalogSection>
+
+      <CatalogSection
+        testID="catalog-section-date-range-picker"
+        title={t('catalog.sections.dateRangePicker')}
+      >
+        <DateRangePicker
+          testID="catalog-date-range-picker"
+          value={dateRange}
+          shortcut={dateRangeShortcut}
+          today={SAMPLE_TODAY}
+          locale={locale}
+          onChange={(range, shortcut) => {
+            setDateRange(range);
+            setDateRangeShortcut(shortcut);
+          }}
+          triggerLabel={formatDateRangeLabel(dateRange, locale)}
+          label={t('catalog.dateRangePicker.label')}
+          labels={dateRangePickerLabels}
+        />
+      </CatalogSection>
+
+      <CatalogSection testID="catalog-section-sheet" title={t('catalog.sections.sheet')}>
+        <Button
+          testID="catalog-sheet-trigger"
+          label={t('catalog.sheet.trigger')}
+          variant="secondary"
+          onPress={() => setSheetVisible(true)}
+        />
+        <Sheet
+          testID="catalog-sheet"
+          visible={sheetVisible}
+          onClose={() => setSheetVisible(false)}
+          title={t('catalog.sheet.title')}
+          accessibilityLabel={t('catalog.sheet.title')}
+          closeAccessibilityLabel={t('common.close')}
+        >
+          <Text className="font-sans text-sm text-textSecondary">{t('catalog.sheet.body')}</Text>
+        </Sheet>
+      </CatalogSection>
+
+      <CatalogSection testID="catalog-section-toast" title={t('catalog.sections.toast')}>
+        <View className="flex-row flex-wrap gap-sm">
+          <Button
+            testID="catalog-toast-success"
+            label={t('catalog.toast.success')}
+            variant="secondary"
+            onPress={() => show(t('catalog.toast.successMessage'), 'success')}
+          />
+          <Button
+            testID="catalog-toast-error"
+            label={t('catalog.toast.error')}
+            variant="secondary"
+            onPress={() => show(t('catalog.toast.errorMessage'), 'error')}
+          />
+          <Button
+            testID="catalog-toast-info"
+            label={t('catalog.toast.info')}
+            variant="secondary"
+            onPress={() => show(t('catalog.toast.infoMessage'), 'info')}
+          />
         </View>
       </CatalogSection>
 

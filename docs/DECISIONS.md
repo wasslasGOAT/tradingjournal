@@ -53,6 +53,10 @@ Décision : `numeric` en base, `decimal.js` en TS, chaînes dans l'API.
 Précisions (M0, 2026-09-18) :
 - Constructeur `Decimal` configuré une seule fois dans `packages/core/src/money` : `precision: 40` (le défaut 20 arrondit silencieusement des sommes de `numeric(20,8)`), arrondi `ROUND_HALF_EVEN` (arrondi bancaire, sans biais sur les agrégats et moyennes).
 - Import direct de `decimal.js` interdit hors `packages/core/src/money` (règle ESLint) : tout le code importe `Decimal` depuis `money`.
+Précisions (M3, 2026-09-24) :
+- **Écriture en base** : tout montant passe par `toDbAmount(montant, scale)` (`ROUND_HALF_EVEN`) — `scale = 8`, `numeric(20,8)` pour les montants, `numeric(24,8)` pour les quantités. Aucun arrondi implicite ailleurs ; l'affichage arrondit sans jamais modifier la valeur stockée.
+- **Répartition** d'une commission ou de frais entre plusieurs trades : `allocateProRata(total, poids, scale)` — la somme des parts est strictement égale au total, la **dernière part de poids non nul** absorbe l'écart d'arrondi, un poids nul reçoit exactement 0.
+- Détail et conventions statistiques associées : `DATA_MODEL.md` § « Conventions de calcul (M3) ».
 Réversibilité : coûteuse.
 
 ## ADR-006 — Agrégats journaliers matérialisés
@@ -173,6 +177,7 @@ Options :
 - **C. Taux saisis par l'utilisateur** dans les préférences. + Contrôle utilisateur. − Friction, erreurs de saisie.
 Recommandation : **A** pour le MVP ; conversion réelle réintroduite avec le serveur (job de taux journaliers).
 Décision (utilisateur, 2026-09-18) : **option A** — « Tous les comptes » affiche un total par devise, sans conversion. L'API de `packages/core` (agrégation multi-comptes) renvoie une collection par devise et reste prête pour une conversion ultérieure (paramètre de taux optionnel ajoutable sans casser les appelants).
+Conséquence (M3, 2026-09-24) : sans table de taux, le P&L d'un trade n'est calculable que dans une seule devise. `grossPnl` suppose donc que l'**instrument est coté dans la devise du compte** et lève `InstrumentCurrencyMismatchError` sinon (erreur typée, jamais un chiffre faux). Un compte en EUR ne peut pas, pendant le MVP, journaliser un instrument coté en USD : la conversion arrivera avec les taux (post-MVP).
 Réversibilité : facile.
 
 ## ADR-020 — Base Supabase cloud de dev pour le développement local

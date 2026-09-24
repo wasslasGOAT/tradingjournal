@@ -97,6 +97,10 @@ erDiagram
 | `attachments` | `user_id`, `owner_type` (`trade`/`journal`), `owner_id`, `storage_path`, `mime` |
 | `imports` | `user_id`, `account_id`, `connector_id`, `storage_path?`, `mapping jsonb`, `status`, `rows_total`, `rows_imported`, `rows_skipped`, `errors jsonb` |
 
+Notes :
+- `trades.session` est dérivée de **`opened_at`** (instant d'ouverture), comme le jour de semaine et l'heure des agrégats (« Conventions de calcul (M3) », point 5).
+- `executions` manque une colonne d'**ordre de saisie** (`sequence`) : voir « Conventions de calcul (M3) », point 9 (dette M4).
+
 ### Agrégats (écrits par le worker uniquement) — post-MVP
 | Table | Colonnes principales |
 |---|---|
@@ -130,6 +134,25 @@ Fonctions système (migration M0) :
 - `public.set_updated_at()` : trigger `updated_at` (convention ci-dessus), non appelable via l'API.
 
 Post-MVP : `jobs` (pg-boss, schéma dédié), `audit_log` (`user_id`, `action`, `meta`, `at`), `notifications` (`user_id`, `type`, `payload`, `read_at`), `push_tokens` (`user_id`, `token`, `platform`).
+
+## Conventions de calcul (M3)
+
+> Implémentées en fonctions pures dans `packages/core` et verrouillées par le fixture golden (`packages/core/test/golden/`). Elles font foi pour l'app, le seed et, plus tard, le worker. **Toute modification de ces conventions passe par un ADR** (ROADMAP M3).
+
+1. **Trade à P&L net = 0** : neutre. Exclu du win rate et du profit factor ; compté dans le nombre de trades et dans l'espérance ; **casse** une série (gagnante ou perdante) sans en ouvrir une nouvelle. (Validé par l'utilisateur le 2026-09-18.)
+2. **Drawdown** : mesuré sur l'**equity de trading** (`solde initial + Σ P&L net`), sans les mouvements de trésorerie ; le pic de départ **inclut le solde initial** (un compte qui n'a jamais été au-dessus de son solde initial est en drawdown). Montant et pourcentage.
+3. **Rendement** : `Σ P&L net des trades clôturés / solde initial`. Un dépôt n'est jamais un gain, un retrait jamais une perte.
+4. **Courbe d'equity par jour** : deux séries explicites — `tradingEquity` (hors trésorerie, sert au drawdown et au rendement) et `balance` (solde réel, trésorerie incluse). `DayAggregate.endBalance` reste le **solde réel** du jour.
+5. **Heatmap et agrégats par heure ou par jour de semaine** : jour et heure dérivés du **même instant** (`openedAt`), dans le fuseau du compte — jamais un jour issu du `trading_day` combiné à une heure issue d'`openedAt`. Même instant pour `trades.session`.
+6. **Périmètre des stats** : seules les positions **clôturées** entrent dans les statistiques et les agrégats ; une position ouverte n'a ni P&L réalisé ni jour de trading de clôture.
+7. **Signes des mouvements de trésorerie** : `deposit` positif ; `withdrawal`, `payout`, `fee` négatifs ; `adjustment` pris tel quel (signe fourni par l'utilisateur).
+8. **Écriture en base** : tout montant passe par `toDbAmount(montant, scale)` (`ROUND_HALF_EVEN`) avant insertion — `scale = 8` pour les montants (`numeric(20,8)`) et les quantités (`numeric(24,8)`). La répartition d'une commission (ou de frais) entre plusieurs trades utilise `allocateProRata` : somme des parts strictement égale au total, la **dernière part de poids non nul** absorbe l'écart d'arrondi ; un poids nul reçoit exactement 0. Voir ADR-005.
+9. **Dette M4 — ordre de saisie et inversion** (à traiter avec les tables `executions`/`trades`, ADR à créer) :
+   - `executions` doit porter une colonne d'**ordre de saisie** (`sequence`) : deux exécutions au même horodatage doivent conserver leur ordre de saisie, sinon le sens du trade dépend de l'ordre des UUID. Valeur fournie par le formulaire, l'import CSV et la synchro. Impact schéma → ADR.
+   - Lors d'une **inversion de position**, une même exécution appartient à deux trades : elle est **scindée en deux lignes** à l'écriture (`executions.trade_id` reste une clé étrangère simple).
+10. **Messages de validation** (`packages/schemas`) : ce sont des **clés i18n** (`VALIDATION_KEYS`), jamais du texte en dur ; l'UI les traduit (ADR-013, M2/M4).
+
+Limite MVP : `grossPnl` suppose que l'instrument est **coté dans la devise du compte** ; sinon `InstrumentCurrencyMismatchError` (ADR-019).
 
 ## Données de démo (seed)
 - Utilisateur démo + 2 comptes : `Prop Challenge 200k` (USD, `prop_challenge` ; rule set type FTMO ajouté en P3 — pendant le MVP, règle perso de perte max 10 % en M8) et `Compte perso actions` (EUR).

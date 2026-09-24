@@ -9,14 +9,13 @@ import {
   tabularNumsStyle,
   themes,
   useThemeMode,
+  useToast,
   useVisibilityStore,
 } from '@repo/ui';
 import { useRouter } from 'expo-router';
 import { CalendarDays, NotebookPen, Plus } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
-
-import { useComingSoonStore } from '@/features/shell/comingSoonStore';
 
 import { SAMPLE_DASHBOARD, SAMPLE_DASHBOARD_CURRENCY } from './sampleData';
 
@@ -33,7 +32,7 @@ export function DashboardScreen() {
   const mode = useThemeMode();
   const locale = resolveLocale(i18n.language);
   const hideAmounts = useVisibilityStore((state) => state.hideAmounts);
-  const showComingSoon = useComingSoonStore((state) => state.show);
+  const { show } = useToast();
   const shortcutIconColor = themes[mode].textPrimary;
 
   const balance = formatAmount(parseAmount(SAMPLE_DASHBOARD.balance), SAMPLE_DASHBOARD_CURRENCY, {
@@ -96,7 +95,7 @@ export function DashboardScreen() {
           variant="secondary"
           size="sm"
           icon={<Plus size={16} color={shortcutIconColor} />}
-          onPress={() => showComingSoon(t('header.quickAdd.comingSoon'))}
+          onPress={() => show(t('header.quickAdd.comingSoon'))}
         />
         <Button
           testID="dashboard-shortcut-view-calendar"

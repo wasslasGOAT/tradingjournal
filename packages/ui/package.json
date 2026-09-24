@@ -27,7 +27,8 @@
     "react-native-svg": "*",
     "recharts": "*",
     "victory-native": "*",
-    "zustand": "*"
+    "zustand": "*",
+    "expo-blur": "*"
   },
   "peerDependenciesMeta": {
     "@expo-google-fonts/inter": {
@@ -55,6 +56,9 @@
       "optional": true
     },
     "victory-native": {
+      "optional": true
+    },
+    "expo-blur": {
       "optional": true
     }
   },

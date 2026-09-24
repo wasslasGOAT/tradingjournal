@@ -15,7 +15,9 @@ type ColorTokenKey =
   | 'accentMuted'
   | 'onAccent'
   | 'danger'
-  | 'warning';
+  | 'warning'
+  | 'success'
+  | 'scrim';
 type ThemeColors = Record<ColorTokenKey, string>;
 type PnlIntents = { profit: string; loss: string; flat: string };
 type PnlSchemes = { blueGray: PnlIntents; greenRed: PnlIntents };

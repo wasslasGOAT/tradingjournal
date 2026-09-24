@@ -5,6 +5,11 @@
     // `types` explicite : les types React Native/React sont résolus depuis
     // `apps/app` via le hoisting pnpm, cf. `pnpm-workspace.yaml` `nodeLinker: hoisted`).
     "jsx": "react-jsx",
+    // M1-4 (`Sheet`) : quelques globals web (`document`, `KeyboardEvent`, focus DOM),
+    // toujours derrière `Platform.OS === 'web'` — remplace `lib` (pas d'ajout) plutôt que
+    // d'hériter silencieusement du DOM partout ; même besoin que `apps/app` (`expo/tsconfig.base`
+    // inclut déjà `DOM`), types seulement, aucun effet runtime.
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
     // M1-2 : `haptics`/`motion` et les composants (`Button`, `IconButton`…) sont
     // scindés en `Xxx.native.ts(x)`/`Xxx.web.ts(x)` (CLAUDE.md), importés via
     // `./Xxx` sans fichier de repli. Même réglage et même justification que

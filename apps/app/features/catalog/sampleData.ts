@@ -1,3 +1,6 @@
+import { toTradingDay } from '@repo/core';
+import type { TradingDay } from '@repo/core';
+
 /**
  * Données factices du catalogue de composants (M1-3, T… — `apps/app/app/(dev)/catalog.tsx`).
  * Chaînes décimales volontaires (comme les colonnes `numeric` Postgres lues en
@@ -6,6 +9,9 @@
  */
 
 export const SAMPLE_CURRENCY = 'USD';
+
+/** Jour de référence pour la démo `DateRangePicker` (M1-4) — fixe, pour un aperçu stable indépendant de la date réelle. */
+export const SAMPLE_TODAY: TradingDay = toTradingDay('2026-09-19');
 
 export const SAMPLE_STAT_TILES = {
   netPnlPositive: '1284.50',

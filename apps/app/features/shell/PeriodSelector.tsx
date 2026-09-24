@@ -1,62 +1,48 @@
-import { Button, Card, themes, useThemeMode } from '@repo/ui';
-import { ChevronDown } from 'lucide-react-native';
-import { useState } from 'react';
+import { DateRangePicker } from '@repo/ui';
+import type { DateRangePickerLabels } from '@repo/ui';
+import { resolveLocale } from '@repo/i18n';
 import { useTranslation } from 'react-i18next';
-import { View } from 'react-native';
 
-import { DropdownOption } from './DropdownOption';
-import type { FilterPeriod } from './filterStore';
-import { FILTER_PERIODS, useFilterStore } from './filterStore';
-
-const PERIOD_LABEL_KEY: Record<FilterPeriod, string> = {
-  day: 'header.period.day',
-  week: 'header.period.week',
-  month: 'header.period.month',
-  year: 'header.period.year',
-};
+import { formatDateRangeLabel } from './formatDateRangeLabel';
+import { resolveApproximateToday, useFilterStore } from './filterStore';
 
 /**
- * Sélecteur de période du header (M1-8, ARCHITECTURE §6.1) : Jour / Semaine /
- * Mois / Année. Liste simple en attendant `Sheet`/`Select` (M1-4) — voir
- * `AccountSelector`.
+ * Sélecteur de période du header (M1-4/M1-8, ARCHITECTURE §6.1) —
+ * `DateRangePicker` (`packages/ui`, M1-4) : remplace l'ancien réglage
+ * jour/semaine/mois/année par de vraies plages de dates (raccourcis +
+ * personnalisée).
  */
 export function PeriodSelector() {
-  const { t } = useTranslation('common');
-  const mode = useThemeMode();
-  const [open, setOpen] = useState(false);
-  const period = useFilterStore((state) => state.period);
-  const setPeriod = useFilterStore((state) => state.setPeriod);
+  const { t, i18n } = useTranslation('common');
+  const locale = resolveLocale(i18n.language);
+  const dateRange = useFilterStore((state) => state.dateRange);
+  const dateRangeShortcut = useFilterStore((state) => state.dateRangeShortcut);
+  const setDateRange = useFilterStore((state) => state.setDateRange);
+
+  const labels: DateRangePickerLabels = {
+    today: t('header.period.today'),
+    last7Days: t('header.period.last7Days'),
+    currentMonth: t('header.period.currentMonth'),
+    previousMonth: t('header.period.previousMonth'),
+    custom: t('header.period.custom'),
+    apply: t('header.period.apply'),
+    cancel: t('header.period.cancel'),
+    close: t('common.close'),
+    previousMonthNav: t('header.period.previousMonthNav'),
+    nextMonthNav: t('header.period.nextMonthNav'),
+  };
 
   return (
-    <View testID="header-period" className="relative">
-      <Button
-        testID="header-period-trigger"
-        label={t(PERIOD_LABEL_KEY[period])}
-        variant="secondary"
-        size="sm"
-        icon={<ChevronDown size={14} color={themes[mode].textPrimary} />}
-        accessibilityLabel={t('header.period.triggerAccessibility')}
-        onPress={() => setOpen((value) => !value)}
-      />
-      {open ? (
-        <Card
-          testID="header-period-options"
-          className="absolute top-12 right-0 z-50 min-w-40 gap-xs p-xs"
-        >
-          {FILTER_PERIODS.map((value) => (
-            <DropdownOption
-              key={value}
-              testID={`header-period-option-${value}`}
-              label={t(PERIOD_LABEL_KEY[value])}
-              selected={period === value}
-              onPress={() => {
-                setPeriod(value);
-                setOpen(false);
-              }}
-            />
-          ))}
-        </Card>
-      ) : null}
-    </View>
+    <DateRangePicker
+      testID="header-period"
+      value={dateRange}
+      shortcut={dateRangeShortcut}
+      today={resolveApproximateToday()}
+      locale={locale}
+      onChange={setDateRange}
+      triggerLabel={formatDateRangeLabel(dateRange, locale)}
+      label={t('header.period.triggerAccessibility')}
+      labels={labels}
+    />
   );
 }

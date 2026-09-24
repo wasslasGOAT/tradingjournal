@@ -6,7 +6,7 @@ import '../global.css';
 import { Inter_400Regular } from '@expo-google-fonts/inter/400Regular';
 import { Inter_500Medium } from '@expo-google-fonts/inter/500Medium';
 import { Inter_600SemiBold } from '@expo-google-fonts/inter/600SemiBold';
-import { ThemeProvider, useThemeMode } from '@repo/ui';
+import { ThemeProvider, ToastProvider, useThemeMode } from '@repo/ui';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -35,6 +35,7 @@ function AppShell() {
     <View className="flex-1 bg-background">
       <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
       <Stack screenOptions={{ headerShown: false }} />
+      <ToastProvider />
     </View>
   );
 }

@@ -30,8 +30,10 @@ import { Text, View } from 'react-native';
 
 import { formatDateRangeLabel } from '@/features/shell/formatDateRangeLabel';
 
+import { CatalogChartsSection } from './CatalogChartsSection';
 import { CatalogControls } from './CatalogControls';
 import { CatalogHeader } from './CatalogHeader';
+import { CatalogListSection } from './CatalogListSection';
 import { CatalogSection } from './CatalogSection';
 import {
   SAMPLE_CURRENCY,
@@ -328,6 +330,9 @@ export function CatalogScreen() {
           </GlowCard>
         </View>
       </CatalogSection>
+
+      <CatalogChartsSection />
+      <CatalogListSection />
     </Screen>
   );
 }

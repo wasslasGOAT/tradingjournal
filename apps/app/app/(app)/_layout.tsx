@@ -21,9 +21,11 @@ const DESKTOP_BREAKPOINT = 1024;
  * tab bar flotte désormais au-dessus (`tabBarStyle.position: 'absolute'`,
  * contenu défilant dessous).
  */
-const FLOATING_TAB_BAR_HEIGHT = 49;
+const FLOATING_TAB_BAR_HEIGHT = 58;
 /** Marge de confort supplémentaire (token `spacing.sm`) au-dessus de la tab bar flottante. */
 const TAB_BAR_BOTTOM_INSET_BUFFER = parseInt(spacing.sm ?? '8px', 10);
+/** Marges latérales et basse de la barre flottante (retour utilisateur M1 : « ni flottante ni transparente »). */
+const FLOATING_TAB_BAR_MARGIN = parseInt(spacing.md ?? '16px', 10);
 
 const TAB_ITEMS = NAV_ITEMS.filter((item) => item.tab);
 const HIDDEN_ITEMS = NAV_ITEMS.filter((item) => !item.tab);
@@ -72,8 +74,24 @@ export default function AppLayout() {
               // `@repo/ui`) : transparent ici, sinon il s'afficherait en double.
               tabBarStyle: {
                 position: 'absolute',
+                // Barre détachée des bords : c'est ce décollement (plus les coins arrondis
+                // et l'ombre) qui rend le flou visible — collée en bas sur un fond noir,
+                // elle passait pour un simple bandeau opaque.
+                left: FLOATING_TAB_BAR_MARGIN,
+                right: FLOATING_TAB_BAR_MARGIN,
+                bottom: insets.bottom + FLOATING_TAB_BAR_MARGIN / 2,
+                height: FLOATING_TAB_BAR_HEIGHT,
+                paddingBottom: 0,
+                borderRadius: FLOATING_TAB_BAR_HEIGHT / 2,
+                // Découpe le fond flouté (`tabBarBackground`) aux coins arrondis.
+                overflow: 'hidden',
                 backgroundColor: 'transparent',
                 borderTopWidth: 0,
+                elevation: 8,
+                shadowColor: '#000',
+                shadowOpacity: 0.3,
+                shadowRadius: 16,
+                shadowOffset: { width: 0, height: 6 },
               },
               tabBarBackground: () => <TabBarBackground />,
             }}

@@ -1,8 +1,9 @@
-import { formatAmount, parseAmount } from '@repo/core';
+import { Decimal, formatAmount, formatDayNumber, parseAmount } from '@repo/core';
 import { resolveLocale } from '@repo/i18n';
 import {
   Button,
   Card,
+  Chart,
   GlowCard,
   Screen,
   StatTile,
@@ -12,12 +13,14 @@ import {
   useToast,
   useVisibilityStore,
 } from '@repo/ui';
+import type { ChartActivePoint } from '@repo/ui';
 import { useRouter } from 'expo-router';
 import { CalendarDays, NotebookPen, Plus } from 'lucide-react-native';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
-import { SAMPLE_DASHBOARD, SAMPLE_DASHBOARD_CURRENCY } from './sampleData';
+import { SAMPLE_DASHBOARD, SAMPLE_DASHBOARD_CURRENCY, SAMPLE_EQUITY_CURVE } from './sampleData';
 
 /**
  * Écran Dashboard (M1-8, ARCHITECTURE §6.1 : premier écran affiché). Solde en
@@ -39,6 +42,23 @@ export function DashboardScreen() {
     locale,
     hideAmounts,
   });
+
+  const equityPoints = useMemo(
+    () =>
+      SAMPLE_EQUITY_CURVE.map((point, index) => ({
+        x: index,
+        y: parseAmount(point.balance).toNumber(),
+      })),
+    [],
+  );
+  const formatEquityXLabel = (x: number) => {
+    const point = SAMPLE_EQUITY_CURVE[Math.round(x)];
+    return point ? formatDayNumber(point.day, { locale }) : '';
+  };
+  const formatEquityYLabel = (y: number) =>
+    formatAmount(new Decimal(y), SAMPLE_DASHBOARD_CURRENCY, { locale, hideAmounts, decimals: 0 });
+  const formatEquityTooltipValue = (point: ChartActivePoint) =>
+    `${t('dashboard.equity.tooltipLabel')} ${formatAmount(new Decimal(point.y), SAMPLE_DASHBOARD_CURRENCY, { locale, hideAmounts })}`;
 
   return (
     <Screen
@@ -119,10 +139,21 @@ export function DashboardScreen() {
         <Text className="font-sans-semibold text-base text-textPrimary">
           {t('dashboard.equity.title')}
         </Text>
-        <View className="mt-md min-h-32 items-center justify-center">
-          <Text className="font-sans text-sm text-textMuted">
-            {t('dashboard.equity.placeholder')}
-          </Text>
+        <View className="mt-md">
+          <Chart
+            testID="dashboard-equity-chart"
+            type="area"
+            accessibilityLabel={t('dashboard.equity.accessibilityLabel')}
+            series={[{ id: 'equity', points: equityPoints, intent: 'accent' }]}
+            height={180}
+            emptyState={{
+              title: t('dashboard.equity.empty.title'),
+              description: t('dashboard.equity.empty.description'),
+            }}
+            formatXLabel={formatEquityXLabel}
+            formatYLabel={formatEquityYLabel}
+            formatTooltipValue={formatEquityTooltipValue}
+          />
         </View>
       </Card>
     </Screen>

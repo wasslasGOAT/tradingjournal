@@ -68,6 +68,11 @@ export const fr = {
         dateRangePicker: 'DateRangePicker',
         sheet: 'Sheet',
         toast: 'Toast',
+        chartsLineArea: 'Chart — Ligne / Aire',
+        chartsBar: 'Chart — Barres',
+        chartsHistogram: 'Chart — Histogramme',
+        chartsHeatmap: 'Chart — Heatmap',
+        list: 'VirtualizedList',
       },
       statTiles: {
         netPnl: 'P&L net',
@@ -132,6 +137,38 @@ export const fr = {
         errorMessage: "Échec de l'enregistrement.",
         infoMessage: 'Synchronisation en cours…',
       },
+      charts: {
+        stateLoaded: 'Rempli',
+        stateLoading: 'Chargement',
+        stateEmpty: 'Vide',
+        equityAccessibilityLabel: "Exemple de courbe d'equity",
+        pnlByDayAccessibilityLabel: 'Exemple de P&L par jour de semaine',
+        rDistributionAccessibilityLabel: 'Exemple de distribution des R multiples',
+        heatmapAccessibilityLabel: 'Exemple de heatmap heure × jour de semaine',
+        empty: {
+          title: 'Aucune donnée',
+          description: 'Ce graphique n’a rien à afficher pour le moment.',
+        },
+        legend: { low: 'Faible', high: 'Élevé' },
+        weekday: {
+          mon: 'Lun',
+          tue: 'Mar',
+          wed: 'Mer',
+          thu: 'Jeu',
+          fri: 'Ven',
+          sat: 'Sam',
+          sun: 'Dim',
+        },
+      },
+      list: {
+        sectionTitle: 'Trades factices (1 000)',
+        empty: {
+          title: 'Aucun trade',
+          description: 'Les lignes factices apparaîtront ici.',
+        },
+        endOfList: 'Fin de la liste',
+        direction: { long: 'Achat', short: 'Vente' },
+      },
     },
     // Coquille applicative (M1-8, ARCHITECTURE §6.1) : tab bar mobile / sidebar
     // web, header (compte, période, masquage), bouton d'ajout rapide.
@@ -187,7 +224,12 @@ export const fr = {
       },
       equity: {
         title: "Courbe d'equity",
-        placeholder: 'Graphique bientôt disponible.',
+        accessibilityLabel: "Courbe d'equity de la période sélectionnée",
+        empty: {
+          title: 'Aucune donnée',
+          description: 'Ajoute des trades pour voir ta courbe d’equity ici.',
+        },
+        tooltipLabel: 'Solde',
       },
     },
     calendar: {

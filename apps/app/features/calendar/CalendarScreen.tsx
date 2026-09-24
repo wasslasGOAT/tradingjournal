@@ -67,7 +67,10 @@ export function CalendarScreen() {
 
       <View
         testID="calendar-grid"
-        className="w-full max-w-xl self-center gap-sm rounded-lg border border-border bg-surface p-xs"
+        // Pleine largeur : annule le padding latéral de `Screen` (`px-lg`) pour que la
+        // grille respire sur mobile (retour utilisateur M1 : « calendrier trop étroit »),
+        // sans carte ni bordure qui mangeraient encore de la place.
+        className="-mx-lg w-auto max-w-xl gap-sm self-stretch px-xs sm:mx-0 sm:self-center sm:px-0"
       >
         <View className="flex-row gap-xs">
           {weekdayLabels.map((label, index) => (

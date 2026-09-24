@@ -19,4 +19,12 @@ config.resolver.nodeModulesPaths = [
 // symlinkés depuis `packages/*` (comportement standard des workspaces) ; Metro résout
 // les liens symboliques nativement, `watchFolders` ci-dessus suffit à ce qu'il les voie.
 
+// Windows : au-delà de quelques processus de transformation, Metro dépasse la limite de
+// descripteurs de fichiers et échoue en `EMFILE: too many open files` (le bundle renvoyé
+// au téléphone devient une erreur, qui reste alors bloqué sur son ancienne version).
+// Plafonner les workers règle le problème sans coût notable sur un projet de cette taille.
+if (process.platform === 'win32') {
+  config.maxWorkers = Math.min(config.maxWorkers ?? 4, 4);
+}
+
 module.exports = withNativeWind(config, { input: './global.css' });

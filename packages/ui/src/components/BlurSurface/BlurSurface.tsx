@@ -29,23 +29,27 @@ export interface BlurSurfaceProps {
 export function BlurSurface({ testID, style, className, opacity }: BlurSurfaceProps) {
   const mode = useThemeMode();
   const colors = themes[mode];
-  // Le flou éclaircit déjà le fond : le calque reste plus léger qu'en repli opaque.
-  const resolvedOpacity = opacity ?? (mode === 'dark' ? 0.55 : 0.6);
+  // Voile volontairement léger : au-delà, l'effet « translucide » disparaît et la barre
+  // paraît opaque (retour utilisateur M1). Le flou fait l'essentiel du contraste ; ce
+  // calque ne sert qu'à garantir la lisibilité des libellés au-dessus d'une zone claire.
+  const resolvedOpacity = opacity ?? (mode === 'dark' ? 0.3 : 0.45);
 
   return (
     <BlurView
       testID={testID}
       pointerEvents="none"
-      intensity={Platform.OS === 'android' ? 40 : 60}
+      intensity={Platform.OS === 'android' ? 60 : 85}
       tint={mode === 'dark' ? 'dark' : 'light'}
       // Sans cette méthode, Android rend un simple calque semi-transparent.
-      experimentalBlurMethod="dimezisBlurView"
+      blurMethod="dimezisBlurView"
       style={[
         StyleSheet.absoluteFill,
         {
           backgroundColor: hexToRgba(colors.surface, resolvedOpacity),
-          borderTopWidth: StyleSheet.hairlineWidth,
-          borderTopColor: colors.border,
+          // Bordure complète (et non seulement haute) : la surface sert aussi de fond à des
+          // éléments flottants aux coins arrondis, comme la tab bar mobile.
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor: colors.border,
         },
         style,
       ]}

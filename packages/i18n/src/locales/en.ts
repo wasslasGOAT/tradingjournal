@@ -65,6 +65,11 @@ export const en = {
         dateRangePicker: 'DateRangePicker',
         sheet: 'Sheet',
         toast: 'Toast',
+        chartsLineArea: 'Chart — Line / Area',
+        chartsBar: 'Chart — Bar',
+        chartsHistogram: 'Chart — Histogram',
+        chartsHeatmap: 'Chart — Heatmap',
+        list: 'VirtualizedList',
       },
       statTiles: {
         netPnl: 'Net P&L',
@@ -129,6 +134,38 @@ export const en = {
         errorMessage: 'Failed to save.',
         infoMessage: 'Syncing…',
       },
+      charts: {
+        stateLoaded: 'Loaded',
+        stateLoading: 'Loading',
+        stateEmpty: 'Empty',
+        equityAccessibilityLabel: 'Equity curve example',
+        pnlByDayAccessibilityLabel: 'P&L by weekday example',
+        rDistributionAccessibilityLabel: 'R multiple distribution example',
+        heatmapAccessibilityLabel: 'Hour by weekday heatmap example',
+        empty: {
+          title: 'No data',
+          description: 'This chart has nothing to show yet.',
+        },
+        legend: { low: 'Low', high: 'High' },
+        weekday: {
+          mon: 'Mon',
+          tue: 'Tue',
+          wed: 'Wed',
+          thu: 'Thu',
+          fri: 'Fri',
+          sat: 'Sat',
+          sun: 'Sun',
+        },
+      },
+      list: {
+        sectionTitle: 'Sample trades (1,000)',
+        empty: {
+          title: 'No trades',
+          description: 'Sample rows will appear here.',
+        },
+        endOfList: 'End of list',
+        direction: { long: 'Long', short: 'Short' },
+      },
     },
     // App shell (M1-8, ARCHITECTURE §6.1): mobile tab bar / web sidebar, header
     // (account, period, hide amounts), global quick-add button.
@@ -184,7 +221,12 @@ export const en = {
       },
       equity: {
         title: 'Equity curve',
-        placeholder: 'Chart coming soon.',
+        accessibilityLabel: 'Equity curve for the selected period',
+        empty: {
+          title: 'No data yet',
+          description: 'Add trades to see your equity curve here.',
+        },
+        tooltipLabel: 'Balance',
       },
     },
     calendar: {

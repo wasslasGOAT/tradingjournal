@@ -13,7 +13,17 @@ Le travail M1/M3 n'est **pas sur `main`** : il est sur la branche **`wip/m1-m3`*
 - Conventions de calcul consignées dans `DATA_MODEL.md` § « Conventions de calcul (M3) » ; ADR-005 et ADR-019 complétés. **Toute évolution de ces conventions exige un ADR.**
 - Dette reportée en M4 (inscrite dans ROADMAP) : colonne `sequence` sur `executions` (ADR à créer), scission d'une exécution lors d'une inversion de position, seed généré depuis le fixture golden.
 
-**M1 (design system, shell) — `En cours`** — état au 2026-09-24 au soir, commit `d2b3d29` (608 tests, lint/typecheck/format verts).
+**M1 (design system, shell) — `En cours`** — état au 2026-09-24 au soir, commit `9a3ee26` (647 tests, lint/typecheck/format/check:secrets verts).
+
+**Mise à jour de fin de session (2026-09-24) — ce qui reste vraiment :**
+1. **Mesure de fluidité (ADR-017)** : protocole refait sur un **export de production** (projet Playwright `chromium-perf-prod`, `webServer` sur le port 4173) — **travail interrompu, seuils à confirmer**. Sur le bundle de développement, les deux tests échouaient (fps moyen 16,2 pour `Segmented`, 2,8 pour `Sheet`) : mesure non représentative, c'est pourquoi le protocole a changé. Les 14 autres tests e2e passent.
+2. **Build EAS Android** de dev puis preview (`expo-blur` et d'autres modules natifs ajoutés depuis le build de M0).
+3. **Vérifications utilisateur** : barre flottante, graphiques avec axes, persistance des réglages (fermer/rouvrir l'app), Android, bascule FR/EN.
+4. **Revue finale + clôture M1**, puis fusion de `wip/m1-m3` dans `main`.
+
+**Dette M1 assumée** (revue `code-reviewer`, à traiter plus tard) : cibles tactiles de la heatmap sous 44 pt, navigation clavier du `Select` web, libellés d'accessibilité du sélecteur de dates, axes natifs des graphiques multi-séries sans infobulle.
+
+**Catalogue** : activé par le **mode développement** (`apps/app/lib/flags.ts` + `metro.config.js`), surchargeable par `EXPO_PUBLIC_ENABLE_CATALOG`. Aucun fichier `.env` n'est versionné : le hook anti-secrets a bloqué une tentative en ce sens, la règle reste sans exception.
 - Livré : tokens v2 (thèmes sombre/clair, P&L par thème, Inter, contrastes AA vérifiés sur iPhone), haptique et animations reanimated, primitives de base, **M1-4** (`Segmented`, `Sheet`, `Select`, `DateRangePicker`, `Toast` + header branché), **M1-5** (liste FlashList + `TradeListRow`), **M1-6** (`Chart` : ligne/aire, barres, histogramme, heatmap ; courbe d'equity sur le dashboard), catalogue interne, shell à onglets + sidebar web + header.
 - **Retours utilisateur traités** : calendrier élargi en pleine largeur avec montants compacts ; **tab bar flottante** (détachée des bords, coins arrondis, ombre) et translucide via `expo-blur` (voile 0,3/0,45, `blurMethod: 'dimezisBlurView'` sur Android) ; axe vertical des graphiques cadré sur les données (`padDomain`) — sans quoi une courbe autour de 24 000 était écrasée en haut, donc invisible.
 - Reste : ajouter graphiques et listes au **catalogue** (agent coupé par une erreur réseau), M1-7 (i18n complet), M1-9 (persistance des bascules, catalogue exclu du bundle de production), tests Q1, Playwright en CI, builds EAS Android (dev puis preview — `expo-blur` a été ajouté depuis le dernier build), revue et clôture.

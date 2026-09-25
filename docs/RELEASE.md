@@ -1,12 +1,27 @@
-# Release — builds EAS, mises à jour OTA, soumission stores
+# Release — déploiement web, (EAS gelé), soumission stores
 
-> Réf. : ARCHITECTURE §11 (Environnements, CI/CD, publication), §12 (Observabilité, post-MVP) ; ADR-015/016/020 ;
+> Réf. : ARCHITECTURE §11 (Environnements, CI/CD, publication), §12 (Observabilité, post-MVP) ; ADR-015/016/020/023/025 ;
 > CLAUDE.md (agent `release`).
-> Pendant le MVP (ADR-015) : **pas de soumission aux stores**. Ce document couvre l'état M0
-> (T11 : configuration EAS, build de dev Android, Expo Go iOS) et sert de base aux phases
-> ultérieures (preview EAS Update, puis soumission Apple/Google en fin de MVP ou après).
+> Pendant le MVP (ADR-015) : **pas de soumission aux stores**. Depuis ADR-023 (2026-09-25), le MVP est une
+> **application web** (`apps/web`, PWA) déployée sur **Cloudflare Pages** (ADR-025, §0 ci-dessous).
+> Les sections 1 à 3 et 6 (EAS, Expo Go, OTA) concernent `apps/app`, **gelé** : conservées pour mémoire,
+> plus exécutées. Les apps iOS/Android viendront en P6 via Capacitor (procédure à écrire à ce moment-là).
 
-## 1. Ce qui est déjà en place (fait par `release`, sans compte)
+## 0. Déploiement web — Cloudflare Pages (ADR-025)
+
+État : **à mettre en place en M1-web (W-8)** ; le compte Cloudflare est à créer par l'utilisateur (non bloquant pour W-1 à W-7).
+
+- **Build** : `pnpm --filter @repo/web build` → sortie statique `apps/web/dist` (commande et dossier à confirmer en W-2). Version de Node lue depuis `.nvmrc`.
+- **Projet Pages** : relié au dépôt GitHub privé ; branche de production = `main` ; une **URL de préproduction fixe** (alias de branche ou projet dédié). Les URL d'aperçu par commit ne sont **pas** ajoutées aux redirections d'auth.
+- **Variables** (tableau de bord Pages, jamais dans le dépôt) : `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` du projet de dev — **uniquement la clé anon**, jamais `service_role`. Documentées dans `apps/web/.env.example`.
+- **En-têtes** : fichier `apps/web/public/_headers` (CSP, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`) ; CSP stricte exigée en M9 (ARCHITECTURE §9). Repli SPA : `_redirects` ou comportement SPA natif de Pages (à vérifier en W-8).
+- **PWA** : le service worker ne précharge que le shell ; `sw.js` servi sans cache long (`Cache-Control: no-cache`) pour que les mises à jour arrivent.
+- **Supabase** (tableau de bord, jamais `supabase config push`, ADR-020) : ajouter l'URL fixe de préproduction et `http://localhost:<port Vite>` en **liste exacte** dans les redirections d'auth.
+- **Accès** : privé tant qu'ADR-018 option B s'applique (URL non diffusée, utilisateurs invités).
+- **Vérification** : la CI exécute `check:secrets` sur `apps/web/dist` ; après déploiement, contrôler les en-têtes (`curl -I <url>`) et l'installabilité (Lighthouse).
+- Changer d'hébergeur est trivial (site statique) : rebrancher le build et recopier les en-têtes.
+
+## 1. Ce qui est déjà en place (fait par `release`, sans compte) — `apps/app`, gelé
 
 - `apps/app/eas.json` : `cli.appVersionSource: "remote"` (versions natives gérées par EAS,
   jamais committées), profils `development` (developmentClient, distribution `internal`,
@@ -23,7 +38,7 @@
   MVP (pas de compte, pas de secret EAS à y stocker) ; à ajouter quand le premier build EAS
   sera nécessaire en continu (post-M0).
 
-## 2. Ce que l'utilisateur doit faire (compte requis, aucune commande lancée par l'agent)
+## 2. Ce que l'utilisateur doit faire (compte requis, aucune commande lancée par l'agent) — `apps/app`, gelé
 
 Toutes les commandes ci-dessous sont à exécuter par l'utilisateur, depuis `apps/app`, une
 fois qu'un compte Expo (gratuit) existe.
@@ -82,7 +97,7 @@ Quand le compte Apple Developer sera actif (décision utilisateur, hors périmè
 `npx eas-cli build --profile development --platform ios` deviendra possible, et ce document
 sera mis à jour en conséquence.
 
-## 3. Mises à jour OTA (post-M0, une fois un canal utilisé en pratique)
+## 3. Mises à jour OTA — `apps/app`, gelé (sans objet depuis ADR-023)
 
 ```bash
 npx eas-cli update --branch preview --message "..."
@@ -96,7 +111,9 @@ faute de projet EAS.
 
 ## 4. Checklist stores (à revalider à la soumission — hors périmètre M0/MVP)
 
-Rappel ARCHITECTURE §11 : **pas de soumission aux stores pendant le MVP** (ADR-015). Cette
+Rappel ARCHITECTURE §11 : **pas de soumission aux stores pendant le MVP** (ADR-015). Les binaires
+seront produits par **Capacitor** en P6 (ADR-023) ; ajouter à la checklist le risque Apple 4.2
+(« site emballé ») : fonctions natives réelles requises (haptique, stockage sécurisé, partage, push). Cette
 checklist est conservée ici pour la phase où la soumission sera décidée par l'utilisateur ;
 elle doit être revérifiée à ce moment-là (les règles Apple/Google évoluent) :
 
@@ -130,7 +147,7 @@ db:types:local` (`--local`) régénère depuis la base Supabase locale (Docker) 
 si l'on veut reproduire exactement le résultat de cette vérification CI sans dépendre du
 projet cloud.
 
-## 6. Vérifications faites sans compte (T11)
+## 6. Vérifications faites sans compte (T11) — `apps/app`, gelé
 
 - `apps/app/eas.json` : JSON valide, formaté Prettier.
 - `npx expo config --type public` (depuis `apps/app`) : `owner`, `extra.eas.projectId` et

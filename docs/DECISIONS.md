@@ -17,7 +17,7 @@ Réversibilité : facile / moyenne / coûteuse.
 ---
 
 ## ADR-001 — Une seule base de code UI avec Expo pour web, iOS et Android
-Statut : Acceptée | Date : 2026-09-17
+Statut : Remplacée par ADR-023 (2026-09-25) | Date : 2026-09-17
 Contexte : l'app doit être disponible en ligne et dans les deux stores, avec une équipe réduite.
 Décision : Expo + Expo Router avec sortie web ; code spécifique à une plateforme via `.web.tsx` / `.native.tsx`.
 Conséquences : les graphiques et certains composants demandent des adaptateurs ; le SEO du web applicatif est limité (un site vitrine séparé pourra être ajouté).
@@ -95,6 +95,7 @@ Décision : tabs Dashboard, Calendrier, Journal, Coach, Plus.
 Réversibilité : facile.
 Note MVP (2026-09-17) : reste `Proposée` mais s'applique par défaut dans le MVP (ADR-015). Le Coach étant hors MVP, son onglet est remplacé par **Trades** : Dashboard · Calendrier · Trades · Journal · Plus (Analytics, Règles, Réglages).
 Validation (utilisateur, 2026-09-18) : onglets mobile **Dashboard · Calendrier · Trades · Journal · Plus** (Analytics, Règles, Réglages) + **bouton d'ajout rapide global** ; sidebar sur le web ≥ 1024 px. L'onglet Coach sera réintroduit post-MVP (P2) par un nouvel ADR.
+Note (2026-09-25, ADR-023) : la décision reste valable telle quelle ; seule l'implémentation change (`apps/web`, TanStack Router, barre d'onglets en CSS `backdrop-filter` au lieu d'`expo-blur`). « Mobile » = largeur < 1024 px dans le navigateur ou la PWA.
 
 ## ADR-012 — Identité visuelle et nom
 Statut : Acceptée pour la direction visuelle · Proposée pour le nom et le logo | Date : 2026-09-17 (mise à jour 2026-09-17)
@@ -102,6 +103,7 @@ Contexte : l'app s'inspire de TradeX mais ne doit pas en reprendre le nom, le lo
 Décision initiale : nom de travail « Edgebook », palette sombre avec accent bleu en attendant une identité définitive.
 Mise à jour (validée par l'utilisateur) : la **direction visuelle est acceptée** : thème sombre par défaut (clair disponible), accent bleu, profits en bleu avec option vert/rouge (`preferences.pnl_colors`). Niveau de finition visé : comparable à l'app de référence, sans en copier le nom, le logo, les textes ni les maquettes à l'identique (exigences mesurables : ADR-017). Le nom « Edgebook » et le logo restent **provisoires**.
 Précision (utilisateur, 2026-09-18) : l'accent bleu est **légèrement décalé** de `#5D99F9` (teinte de la référence) pour ne pas en copier l'identité ; valeur exacte fixée dans `packages/ui/tokens.ts` en M1, contraste AA vérifié.
+Précision (2026-09-25, ADR-023/024) : la source unique des tokens reste `packages/ui/src/tokens.data.cjs`, consommée par NativeWind (`apps/app`, gelé) et par le thème Tailwind v4 d'`apps/web` (sous-chemin d'export `@repo/ui/tokens-data`).
 Réversibilité : facile (`packages/config`, `packages/ui/tokens.ts`). **Nom et logo à décider par l'utilisateur.**
 
 ## ADR-013 — Langues : FR et EN dès la V1
@@ -118,7 +120,7 @@ Alternatives : une seule session sans agents (plus simple, moins de contrôle).
 Réversibilité : facile (supprimer ou fusionner des fichiers d'agents).
 
 ## ADR-015 — Construire d'abord un MVP à périmètre réduit
-Statut : Acceptée | Date : 2026-09-17
+Statut : Acceptée — plateformes du MVP remplacées par ADR-023 (2026-09-25) : web responsive + PWA ; iOS/Android via Capacitor en P6 | Date : 2026-09-17
 Contexte : le périmètre complet (imports, connecteurs, IA, prop firms, paiements, stores) retarde le moment où le produit est utilisable ; l'utilisateur veut d'abord un MVP très soigné visuellement.
 Décision : le MVP couvre, sur **web + iOS + Android en même temps** (vérifiés à chaque phase) : dashboard, calendrier (P&L + Psych), liste/détail des trades, saisie et édition **manuelles** des trades, tags/setups, journal + psychologie (pré/post-session, humeur, émotions, captures), analytics (equity, drawdown, par symbole/setup/session/heure/jour, distribution des R), règles perso + checklists, comptes multiples (perso, démo, backtest, prop saisi à la main), FR/EN, thèmes sombre/clair. Données de démo via le seed.
 **Hors MVP** : import CSV (premier chantier après le MVP), synchro/connecteurs brokers, modèles de règles prop firm (`rule_sets`), coach IA et score, abonnements/paywall, publication sur les stores. Les ADR-008, 009 et 010 restent valables mais ne s'appliquent qu'après le MVP.
@@ -143,7 +145,7 @@ Alternatives : Hono dès le MVP (coût d'infra et de contrat d'API sans besoin) 
 Réversibilité : facile (ajout d'un serveur et d'agrégats sans changer le schéma existant).
 
 ## ADR-017 — Exigences de fluidité et de finition UX
-Statut : Acceptée | Date : 2026-09-17
+Statut : Acceptée — moyens techniques et protocole de mesure remplacés par ADR-023 (2026-09-25) ; les exigences mesurables restent | Date : 2026-09-17
 Contexte : la qualité visuelle et la fluidité sont la priorité n° 1 du MVP (ADR-015) ; « pro, ergonomique, fluide » doit devenir vérifiable.
 Décision : exigences applicables à chaque écran du MVP, vérifiées en clôture de phase :
 - Animations et transitions avec **react-native-reanimated** (durées et courbes en tokens dans `packages/ui`), respect du réglage système « réduire les animations ».
@@ -160,6 +162,7 @@ Précision (M1, 2026-09-25) — **statut du critère de fluidité** :
 - **Seule assertion bloquante côté web** : l'interaction produit bien des images (détecte une régression fonctionnelle, ex. une `Sheet` qui ne s'ouvre plus).
 Conséquences : dépendances structurantes compatibles web + natif (reanimated, FlashList, expo-haptics derrière une interface) ; builds de développement EAS nécessaires ; protocole de mesure de performance documenté et exécuté en M9 (et contrôlé à chaque phase sur les écrans livrés).
 Alternatives : `Animated` de React Native (animations sur le thread JS, moins fluides) ; Moti (surcouche de reanimated, ajoutable plus tard).
+Révision (2026-09-25, ADR-023/024) — les exigences ci-dessus (squelettes, optimiste, virtualisation > 50 éléments, 60 fps, dashboard < 1,5 s, aucune donnée périmée, « réduire les animations ») **restent**. Les moyens deviennent : transitions CSS / `tw-animate-css` (+ `motion` si nécessaire) avec `prefers-reduced-motion` ; `@tanstack/react-virtual` au lieu de FlashList ; interface `Haptics` sans effet sur le web (implémentée par `@capacitor/haptics` en P6). **La mesure web fait désormais foi et est bloquante** : export de production (`vite preview`), CPU ×4, moyenne ≥ 55 fps, aucune image > 50 ms, et dashboard < 1,5 s sous throttling « mobile » de Lighthouse. La mesure HWUI sur APK EAS devient la mesure **Capacitor Android** en P6 (dette D1 transférée). Les précisions M1 ci-dessus portent sur `apps/app` (gelé).
 Réversibilité : facile.
 
 ## ADR-018 — Suppression de compte pendant le MVP
@@ -202,10 +205,11 @@ Conséquences :
 - Précision (utilisateur, 2026-09-25) — **confirmation d'e-mail** : **désactivée sur le projet de dev** (chaque inscription de test exigerait sinon une boîte mail réelle, et les parcours E2E d'inscription deviendraient instables) ; **activée sur le projet de production**, qui **reste à créer**. Activation et création du projet de production : bloquantes avant toute ouverture publique (ROADMAP M9).
 - `supabase config push` est **proscrit** vers tout projet cloud : `supabase/config.toml` porte des réglages locaux permissifs (confirmation d'e-mail désactivée, mot de passe min 6, redirections `http://localhost:8081/**`, `allowed_cidrs 0.0.0.0/0`). L'auth cloud se règle dans le tableau de bord ; aucune redirection d'auth avec joker `/**` sur un domaine public (liste exacte).
 Alternatives : Docker Desktop local (non installé sur ce poste, ajoutable plus tard) ; base partagée avec la préproduction (rejetée : isolation).
+- Précision (2026-09-25, ADR-023/025) : les redirections locales passent de `http://localhost:8081` au port du serveur Vite d'`apps/web` ; l'URL **fixe** de préproduction Cloudflare Pages s'ajoute en liste exacte dans le tableau de bord. Le test sur téléphone se fait dans le navigateur ou en PWA installée depuis cette URL (HTTPS requis par le service worker) ; plus d'Expo Go ni de build EAS pendant le MVP.
 Réversibilité : facile (ajouter Docker local plus tard ; mêmes migrations).
 
 ## ADR-021 — Bibliothèques UI du MVP
-Statut : Acceptée | Date : 2026-09-18
+Statut : Remplacée par ADR-023 (2026-09-25 ; bibliothèques web : ADR-024) — s'applique encore à `apps/app`, gelé | Date : 2026-09-18
 Contexte : M1 doit fixer graphiques, police et dépendances natives ; l'utilisateur vérifie sur iPhone via Expo Go (pas de compte Apple payant, donc pas de build de dev iOS) et sur Android via EAS.
 Décision :
 - **Graphiques** : `victory-native` (Skia) sur natif, `recharts` sur web, derrière l'interface `Chart` (`.native.tsx` / `.web.tsx`). **Heatmap** sans bibliothèque (grille de vues/`DayCell`).
@@ -224,4 +228,59 @@ Décision (utilisateur, 2026-09-25) :
 - **Valeurs par défaut de l'onboarding** : premier jour de semaine et devise d'affichage sont **déduits de la locale** (FR → lundi / EUR, EN → dimanche / USD, ADR-013), **pré-remplis et modifiables** sur le dernier écran de l'onboarding, puis stockés dans `preferences.week_starts_on` et `profiles.display_currency`. La dérivation est une **fonction pure de `packages/core`** (aucune règle de locale codée dans un écran).
 Conséquences : pas de fournisseur OAuth à configurer dans Supabase pendant le MVP ; la liste des redirections d'auth reste courte (magic link + réinitialisation) ; ajouter un fournisseur plus tard ne change pas le schéma (`auth.identities` est géré par Supabase). Le choix de la devise d'affichage n'est pas une conversion : « Tous les comptes » reste groupé par devise (ADR-019).
 Alternatives : Google dès le MVP (impose Sign in with Apple, donc le compte payant, pour un gain faible en test privé) ; demander explicitement le jour de semaine et la devise sans valeur par défaut (un écran d'onboarding de plus, friction inutile).
+Précision (2026-09-25, ADR-023) : la justification citait Expo Go ; la conclusion tient avec Capacitor (P6) — dès qu'un login social tiers est proposé dans l'app iOS, Sign in with Apple devient obligatoire.
 Réversibilité : facile (ajout d'un fournisseur social sans migration ; valeurs par défaut modifiables dans les Réglages).
+
+## ADR-023 — MVP d'abord en application web (React + Vite + shadcn/ui, PWA), mobile natif ensuite via Capacitor
+Statut : Acceptée (décision utilisateur, 2026-09-25) | Date : 2026-09-25
+Remplace : ADR-001 (entièrement), ADR-021 (entièrement). Remplace partiellement : ADR-015 (plateformes du MVP), ADR-017 (moyens techniques et protocole de mesure ; les exigences mesurables restent).
+Contexte : après M0–M3, la chaîne mobile freine plus qu'elle ne sert : Metro/Windows (`EMFILE` → bundle tronqué silencieux), IP Metro changeante, règle Expo Go (ADR-021), builds EAS lents ; fluidité web médiocre de react-native-web (Reanimated sur le thread JS : `Segmented` 40–48 fps ; `Modal` recréé à chaque `Sheet`, ADR-017). L'utilisateur veut voir l'app avancer à l'écran. Le MVP n'a pas de serveur (ADR-016) ni de besoin natif indispensable : un navigateur mobile suffit à l'utiliser.
+Options :
+- **A. Garder Expo, cibler seulement le web.** + Conserve le code M1 (shell, primitives, `Chart`), réversible à coût nul. − Garde tous les coûts web (Metro, NativeWind/Tailwind 3, Reanimated sur le thread JS, `Modal` de react-native-web) ; pas d'accès à l'écosystème web (shadcn/ui, Radix, Tailwind 4) ; rendu « RN porté ».
+- **B. Nouvelle app `apps/web` : React + Vite + TypeScript strict + Tailwind + shadcn/ui + recharts, responsive mobile-first, installable (PWA) ; stores iOS/Android plus tard en emballant ce même code avec Capacitor** *(choix utilisateur)*. + Boucle de dev instantanée (HMR Vite, sans téléphone ni Metro) ; composants accessibles et soignés (Radix via shadcn) ; animations CSS sur le compositeur ; un seul code web + stores. − Refaire en DOM le shell, les primitives et les écrans M1 ; WebView moins fluide qu'une UI native sur Android d'entrée de gamme ; risque de refus Apple 4.2 (« site emballé ») à compenser par de vraies fonctions natives ; limites PWA sur iOS.
+- **C. Next.js.** + Écosystème, SSR utile à un site vitrine. − SSR/server components poussent vers un serveur (contraire à ADR-016) ; Capacitor impose `output: 'export'`, qui retire l'essentiel de Next ; plus lourd que Vite pour une SPA authentifiée sans enjeu SEO. Un site vitrine pourra être séparé.
+- **D. Continuer Expo multi-plateforme.** + Cible stores native, rien de jeté. − C'est précisément ce qui freinait (outillage Windows, Expo Go, EAS, fluidité web) ; vérification 3 plateformes à chaque phase.
+Décision : **B**.
+- `apps/web` est l'application du MVP. Vérification de chaque phase : navigateur de bureau, navigateur mobile (iOS Safari, Android Chrome, largeur ≤ 430 px) et PWA installée.
+- **`apps/app` (Expo) est gelé** : conservé, plus développé, ni vérifié en clôture de phase, exclu des commandes par défaut et de la CI. Idem **`packages/ui`** (primitives React Native), sauf ses données de tokens (ADR-012) exposées au web.
+- Réutilisés tels quels : `packages/core`, `packages/schemas`, `packages/i18n`, `packages/db`, `packages/config`, `supabase/`. Invariants inchangés (calculs dans `packages/core`, Decimal, RLS, i18n, LLM qui ne calcule pas) ; ADR-016 reste en vigueur.
+- Capacitor : pas avant P6. Dès maintenant, toute dépendance doit fonctionner dans une WebView (pas d'API Node, pas de cookie tiers).
+- Couche données d'`apps/web` (clés de requête, lectures/écritures Supabase, mutations optimistes) écrite **sans dépendance au DOM** dans `apps/web/src/data/` (extractible en `packages/data`).
+Conséquences :
+- Shell (ADR-011), design system (tokens ADR-012 réutilisés), Dashboard, Calendrier, Réglages refaits dans `apps/web` (phase M1-web de la ROADMAP).
+- ADR-017 : moyens et protocole révisés (voir la révision dans ADR-017) ; la mesure web fait foi ; la mesure native devient celle de Capacitor Android en P6 (dette D1).
+- Session web : `localStorage` via supabase-js (ARCHITECTURE §9) + CSP stricte (M9). Le chiffrement SecureStore/AES-GCM d'`apps/app` n'est pas porté ; stockage sécurisé natif choisi en P6 (plugin Capacitor).
+- PWA : le service worker ne précharge que le shell statique, **jamais** les réponses Supabase (données dans TanStack Query persisté, clé propre à chaque utilisateur, M2-11).
+- ADR-022 (Sign in with Apple si login social sur iOS) et ADR-009 (RevenueCat : SDK Capacitor, Stripe sur le web) restent valables. Point Apple 4.2 à traiter en P6.
+- Deep links `edgebook://` remplacés par une liste blanche de routes web pendant le MVP ; le scheme revient avec Capacitor.
+- Maestro, EAS et `expo-updates` sortent du MVP.
+Alternatives : A, C, D (voir Options).
+Réversibilité : **moyenne**. Retour à une app Expo native : (1) `packages/core`, `schemas`, `i18n`, `db` et `supabase/` sont indépendants de la plateforme ; (2) `apps/app` et `packages/ui` restent dans le dépôt, à dégeler en les réintégrant aux commandes et à la CI (rattraper l'API de core) ; (3) la couche `apps/web/src/data/` sans DOM s'extrait en `packages/data` et se branche sur Expo ; (4) tokens à source unique (`tokens.data.cjs`). Seules les vues sont à réécrire.
+
+## ADR-024 — Stack UI de l'application web
+Statut : Acceptée (décision utilisateur, 2026-09-25) | Date : 2026-09-25
+Contexte : ADR-023 crée `apps/web` ; il faut fixer les bibliothèques (remplace, pour le web, ADR-021).
+Décision :
+- **Routeur** : TanStack Router, routage par fichiers (plugin Vite). Paramètres d'URL typés (compte, période dans l'URL, ARCHITECTURE §6.1), `beforeLoad` pour les gardes d'auth, préchargement via TanStack Query.
+- **Styles** : Tailwind CSS v4 (`@tailwindcss/vite`), `@theme` généré depuis `packages/ui/src/tokens.data.cjs` (sous-chemin `@repo/ui/tokens-data`) ; thèmes sombre/clair et couleurs P&L par variables CSS.
+- **Composants** : shadcn/ui (Radix) copiés dans `apps/web/src/components/ui` ; icônes `lucide-react`. Le barrel `@repo/ui` (React Native) est interdit dans `apps/web` (règle ESLint).
+- **Graphiques** : composant chart de shadcn (sur recharts) derrière un composant `Chart` qui reprend les types de `packages/ui/src/chart/types.ts` ; heatmap en grille CSS.
+- **i18n** : react-i18next sur `@repo/i18n` ; locale initiale = `navigator.languages` → `resolveLocale` (pas de lib de détection). ADR-013 inchangé.
+- **Police** : `@fontsource-variable/inter`, `font-variant-numeric: tabular-nums` pour les montants.
+- **Listes** : `@tanstack/react-virtual` au-delà de 50 éléments.
+- **Animations** : transitions CSS / `tw-animate-css`, `motion` seulement si une transition l'exige ; `prefers-reduced-motion` respecté.
+- **PWA** : `vite-plugin-pwa`, précache du shell uniquement.
+- **Formulaires, état** : react-hook-form + zod, Zustand (inchangés).
+- **Tests E2E** : Playwright sur `apps/web` (`vite` pour les parcours, `vite preview` pour la fluidité) ; specs d'`apps/app` gelées ; Maestro hors MVP.
+- **React** : même version majeure.mineure qu'`apps/app` (19.2.x) tant qu'il reste dans le workspace (`nodeLinker: hoisted`, éviter deux copies de React).
+Conséquences : Tailwind 3 (NativeWind, `apps/app`) et 4 cohabitent dans le workspace hoisté — à vérifier à l'installation (W-2). Toute nouvelle dépendance doit fonctionner dans le navigateur et dans une WebView Capacitor.
+Alternatives : React Router 7 (plus simple, paramètres d'URL non typés) ; Tailwind 3 (shadcn cible v4) ; lib de détection de langue (redondante avec `resolveLocale`) ; ECharts (poids).
+Réversibilité : facile (chaque choix est local à `apps/web`).
+
+## ADR-025 — Hébergement de l'application web
+Statut : Acceptée (décision utilisateur, 2026-09-25) | Date : 2026-09-25
+Contexte : la PWA doit être servie en HTTPS pour être installée sur téléphone (service worker) ; il faut une préproduction à URL fixe (redirections d'auth en liste exacte, ADR-020) et des en-têtes CSP (ARCHITECTURE §9).
+Décision : **Cloudflare Pages** — site statique (`apps/web/dist`), en-têtes (CSP) via `_headers`, repli SPA, une URL de préproduction **fixe**. Compte à créer par l'utilisateur plus tard : non bloquant pour W-1 à W-7 (développement local), requis pour W-8.
+Conséquences : aucun serveur (ADR-016) ; les URL d'aperçu par branche ne sont pas ajoutées aux redirections d'auth (seule l'URL fixe l'est) ; accès privé tant qu'ADR-018 option B s'applique (URL non diffusée, inscription réservée aux invités).
+Alternatives : **Vercel** (considéré ; offre gratuite limitée à un usage non commercial) ; Netlify (équivalent, quotas gratuits plus serrés).
+Réversibilité : **facile** — site statique sans code propre à l'hébergeur ; changer d'hébergeur = rebrancher le build et recopier les en-têtes.

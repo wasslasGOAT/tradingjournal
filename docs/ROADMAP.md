@@ -8,17 +8,18 @@ Statuts : `À faire` · `En cours` · `Terminée` · `Reportée`
 
 ---
 
-## MVP (ADR-015, ADR-016, ADR-017)
+## MVP (ADR-015, ADR-016, ADR-017, ADR-023)
 
 Périmètre : ARCHITECTURE §0. L'app parle uniquement à Supabase ; tous les calculs passent par `packages/core`.
+**Changement de cap du 2026-09-25 (ADR-023/024/025)** : le MVP est d'abord une **application web** (`apps/web` : React + Vite + shadcn/ui, PWA) ; iOS/Android via Capacitor en P6. `apps/app` (Expo) et `packages/ui` sont **gelés**. Les phases M0, M1 (Expo) et M3 restent acquises ; la phase **M1-web** refait le shell et les premiers écrans dans `apps/web` avant la suite de M2.
 Agents du MVP : `architect`, `core-engine`, `database`, `app-ui`, `qa-tests`, `code-reviewer`, `security-auditor`, `release`.
 
 **Critères transversaux, vérifiés à la clôture de chaque phase M1–M9** :
-- Écrans livrés vérifiés sur **web, iOS et Android**, en thème sombre et clair, en FR et EN.
-- Exigences UX d'ADR-017 respectées sur les écrans livrés (squelettes, pas de spinner plein écran, mises à jour optimistes, haptique mobile, listes FlashList, transitions reanimated).
+- Écrans livrés vérifiés sur **navigateur de bureau, navigateur mobile (iOS Safari, Android Chrome, largeur ≤ 430 px) et PWA installée**, en thème sombre et clair, en FR et EN (ADR-023).
+- Exigences UX d'ADR-017 respectées sur les écrans livrés (squelettes, pas de spinner plein écran, mises à jour optimistes, listes virtualisées `@tanstack/react-virtual`, transitions CSS respectant `prefers-reduced-motion` — révision ADR-017 du 2026-09-25).
 - `pnpm lint && pnpm typecheck && pnpm test` au vert.
 
-Parallélisation possible : M3 (core) peut démarrer en même temps que M1 et M2, après M0 (fait : M3 terminée pendant M1).
+Parallélisation possible : M3 (core) peut démarrer en même temps que M1 et M2, après M0 (fait : M3 terminée pendant M1). La vague 1 de M2 (`database`) et la vague 2 (`core-engine`) peuvent avancer en parallèle de M1-web.
 
 ---
 
@@ -51,11 +52,12 @@ Critères de fin :
 - ADR-020 prévoit un script explicite et confirmé pour `db reset --linked` : absent (seul `db:reset` local existe). Aligner (script `db:reset:linked` avec confirmation, `release`) ou acter.
 - ~~ARCHITECTURE §11 cite Playwright dans la CI~~ : **résolue en M1** (job `e2e-web` dans `ci.yml`, 2026-09-25) — reste à confirmer par un run GitHub (branche non poussée).
 - ~~`docs/RELEASE.md` et `projectId` EAS~~ : aligné le 2026-09-18.
-- EAS signale que `runtimeVersion: appVersion` + `updates.url` supposent `expo-updates`, non installé : à ajouter quand les mises à jour OTA seront utilisées (au plus tard M9).
+- ~~EAS signale que `runtimeVersion: appVersion` + `updates.url` supposent `expo-updates`, non installé~~ : **sans objet** depuis ADR-023 (`apps/app` et EAS gelés).
 
 ---
 
-## Phase M1 — Design system, shell et animations · `Terminée` (2026-09-25)
+## Phase M1 — Design system, shell et animations (Expo) · `Terminée` (2026-09-25)
+> Livrée dans `apps/app`, **gelé depuis ADR-023** ; refaite pour le web en phase M1-web. Les acquis réutilisés sont les tokens (`tokens.data.cjs`), les fonctions pures et les contrats (`Chart`, préférences).
 Réf. : §6, ADR-012, ADR-017, ADR-011, ADR-021
 Agents : `app-ui`, `release` (CI), `code-reviewer` — lancer avec `/phase M1`
 
@@ -87,20 +89,65 @@ Agents : `app-ui`, `release` (CI), `code-reviewer` — lancer avec `/phase M1`
 **Dette et mesures reportées (M1)** — assumée à la clôture, à traiter aux échéances indiquées :
 | # | Élément | Échéance | Propriétaire |
 |---|---|---|---|
-| D1 | **Mesure de fluidité native** (barres HWUI sur l'APK preview, ADR-017) : mesure qui fait foi, non réalisée | Avant publication, **M9 au plus tard** | `qa-tests` |
-| D2 | **Reliquat M0** : sur téléphone Android, lecture d'`app_meta` et **bascule FR/EN** non confirmées par l'utilisateur | M2 (écrans réels à vérifier) | utilisateur |
-| D3 | Cibles tactiles de la heatmap sous 44 pt | M7 (écran Analytics) | `app-ui` |
-| D4 | Navigation clavier du `Select` web | M2 (premiers formulaires) | `app-ui` |
+| D1 | **Mesure de fluidité native** : transférée par ADR-023 — la mesure **web** fait foi en M1-web (W-9) ; mesure native sur **Capacitor Android** | **P6** | `qa-tests` |
+| D2 | ~~Reliquat M0 : téléphone Android (Expo), `app_meta` et bascule FR/EN~~ — **sans objet** (ADR-023) ; remplacé par la vérification sur navigateur mobile / PWA (W-8, M2-19) | — | — |
+| D3 | Cibles tactiles de la heatmap sous 44 px (à respecter dans `apps/web`) | M7 (écran Analytics) | `app-ui` |
+| D4 | Navigation clavier du `Select` web — couverte par le `Select` shadcn/Radix | M1-web (W-4), vérifiée en M2-18 | `app-ui` |
 | D5 | Libellés d'accessibilité du `DateRangePicker` | M5 | `app-ui` |
-| D6 | Graphiques natifs multi-séries sans infobulle | M7 | `app-ui` |
-| D7 | CI jamais exécutée sur le code M1/M3 (branche non poussée) | À la fusion dans `main` | `release` |
+| D6 | ~~Graphiques natifs multi-séries sans infobulle~~ — **sans objet** (`apps/app` gelé) ; infobulles multi-séries exigées dans `Chart` web | M7 | `app-ui` |
+| D7 | CI jamais exécutée sur le code M1/M3 (branche non poussée) | M1-web (W-8) | `release` |
+
+---
+
+## Phase M1-web — Application web : shell, Dashboard, Calendrier · `En cours` (démarrée le 2026-09-25)
+Réf. : ADR-023, ADR-024, ADR-025, ADR-011, ADR-012, ADR-017 ; ARCHITECTURE §0, §3, §4, §6
+Agents : `architect`, `release`, `app-ui`, `core-engine`, `qa-tests`, `code-reviewer` — lancer avec `/phase M1-web`
+Dépend de : M0, M1 (tokens), M3
+
+| # | Tâche | Agent | Dépend de | Vérification |
+|---|---|---|---|---|
+| W-0 | ADR-023/024/025 `Acceptée` ; docs, `CLAUDE.md`, fiches agents et `/phase` alignés | `architect` | validation utilisateur | Plus aucune référence à Expo comme cible du MVP dans `docs/` |
+| W-1 | Racine : scripts `dev` (= web), `dev:web`, `dev:app-legacy`, `e2e:web` → `@repo/web`, filtres `--filter=!@repo/app` sur `lint`/`typecheck`/`build`, `vitest.config.ts` (exclure `apps/app`, inclure `apps/web`), préréglage ESLint navigateur + `restrictImports` (interdit `react-native*`, `expo*`, barrel `@repo/ui`, `apps/*`), `check-secrets` (`VITE_*`, `apps/web/.env`, `apps/web/dist`) | `release` | W-0 | `pnpm lint && pnpm typecheck && pnpm test` verts **sans** `apps/app` |
+| W-2 | **Fenêtre d'installation unique** : création d'`apps/web` (Vite, React 19.2.x aligné sur `apps/app`, TS strict, Tailwind v4, shadcn init, TanStack Router + Query, react-i18next, recharts, `@tanstack/react-virtual`, `@fontsource-variable/inter`, `tw-animate-css`, `vite-plugin-pwa`, supabase-js, react-hook-form, `@hookform/resolvers`, zustand — absorbe M2-6) ; `.env.example` (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`) | `app-ui` | W-1 | `pnpm dev:web` affiche une page ; `pnpm build` vert ; cohabitation Tailwind 3/4 vérifiée |
+| W-3 | Tokens : sous-chemin `@repo/ui/tokens-data`, `@theme` Tailwind généré, thèmes sombre/clair sans rechargement, couleurs P&L, test de contraste AA repris | `app-ui` | W-2 | Bascule de thème instantanée ; test de contraste vert |
+| W-4 | Primitives shadcn thémées (Card, StatTile, Button, IconButton, Segmented, Select, Sheet, Skeleton, Toast, EmptyState, DayCell, DateRangePicker) + `Chart` (ligne/aire, barres, histogramme, heatmap CSS) ; route `/dev/catalog` | `app-ui` | W-3 | Catalogue visible en dev, absent du build de production ; `Select` pilotable au clavier (D4) |
+| W-5 | Shell (ADR-011) : onglets bas < 1024 px (flottants, `backdrop-blur`), sidebar ≥ 1024 px, header (compte, période, masquage), ajout rapide global, i18n FR/EN, préférences persistées (thème, P&L, masquage, langue) | `app-ui` | W-4 | Navigation clavier ; rechargement sur route profonde OK ; FR/EN, sombre/clair |
+| W-6 | Dashboard et Calendrier sur les **données factices actuelles** (copiées depuis `apps/app/features/*/sampleData.ts` et `sampleAccounts` — jamais importées depuis `apps/*`) ; agrégats via `packages/core` ; couche `src/data` sans DOM | `app-ui` | W-5 | Chiffres identiques à l'app Expo sur les mêmes données |
+| W-6b | Examen de `buildCalendarGrid` / `calendarLayout` (`apps/app`) : logique de dates → `packages/core` (testée), sinon copie dans `apps/web` | `core-engine` | — (parallèle à W-4) | Tests portés verts |
+| W-7 | PWA : manifeste, icônes, service worker précachant **uniquement** le shell | `app-ui` | W-5 | Lighthouse « installable » ; aucune réponse Supabase en cache |
+| W-8 | CI (`quality` + `e2e-web` sur `apps/web`), branche poussée (solde D7) ; préproduction Cloudflare Pages à URL fixe + `_headers` (CSP de base) — **compte à créer par l'utilisateur** | `release` | W-2 (parallèle à W-3…W-7) | CI verte sur GitHub ; l'utilisateur ouvre l'URL sur son téléphone et installe la PWA |
+| W-9 | Playwright sur `apps/web` : navigation, préférences, calendrier, graphiques ; fluidité **bloquante** sur `vite preview` (CPU ×4, ≥ 55 fps, aucune image > 50 ms) | `qa-tests` | W-6 | `pnpm e2e:web` vert |
+| W-10 | Revue | `code-reviewer` | W-9 | Aucun point bloquant |
+
+**Parallélisation** : W-8 en parallèle de W-3…W-7 ; W-6b en parallèle de W-4 ; W-9 démarre dès W-5 (tests de navigation). Vagues 1–2 de M2 possibles en parallèle.
+
+- [x] **W-0** Décisions et docs (2026-09-25)
+- [ ] **W-1** Racine, scripts, lint, secrets
+- [ ] **W-2** Création d'`apps/web` (installation unique)
+- [ ] **W-3** Tokens et thèmes
+- [ ] **W-4** Primitives + `Chart` + catalogue
+- [ ] **W-5** Shell (onglets, sidebar, header, préférences)
+- [ ] **W-6** Dashboard + Calendrier (données factices) · **W-6b** grille du calendrier
+- [ ] **W-7** PWA
+- [ ] **W-8** CI + préproduction Cloudflare Pages
+- [ ] **W-9** Playwright (parcours + fluidité)
+- [ ] **W-10** Revue `code-reviewer`
+
+**Critères de fin** :
+- [ ] `pnpm dev:web` ouvre le shell ; Dashboard et Calendrier affichent les données factices avec les mêmes chiffres que l'app Expo.
+- [ ] Thème sombre/clair et FR/EN basculables sans rechargement, persistés ; « réduire les animations » respecté.
+- [ ] PWA installable ; service worker sans données Supabase en cache.
+- [ ] `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e:web` verts, `apps/app` exclu ; CI verte sur GitHub.
+- [ ] Fluidité web ADR-017 (révision 2026-09-25) atteinte sur l'export de production.
+- [ ] Vérification par l'utilisateur sur téléphone (navigateur ou PWA) — via la préproduction si le compte Cloudflare existe, sinon reportée à W-8.
+- [ ] Aucun point bloquant de `code-reviewer`.
 
 ---
 
 ## Phase M2 — Auth, onboarding et comptes · `En cours` (démarrée le 2026-09-25)
 Réf. : §5.1, §5.11, ADR-018, ADR-019, ADR-020, ADR-022 · Données : DATA_MODEL § Utilisateur, § Comptes
 Agents : `database`, `core-engine`, `app-ui`, `qa-tests`, `security-auditor`, `release`, `code-reviewer` — lancer avec `/phase M2`
-Dépend de : M0, M1, M3
+Dépend de : M0, M1, M3 ; **vagues 3 à 5 : M1-web** (implémentées dans `apps/web`, ADR-023). Vagues 1 et 2 : indépendantes de l'UI.
 
 **Décisions actées le 2026-09-25** (ne pas rouvrir sans nouvel ADR) :
 - Suppression de compte : **option B** — lien « demander la suppression » dans Réglages + traitement manuel ; `profiles.deleted_at` créée dès M2-1 ; bascule vers l'Edge Function avant toute ouverture publique (ADR-018, M9).
@@ -108,6 +155,7 @@ Dépend de : M0, M1, M3
 - Connexion : **e-mail + mot de passe + magic link uniquement**, ni Google ni Apple (ADR-022 ; rouvert en P6).
 - Onboarding : premier jour de semaine et devise d'affichage **déduits de la locale**, pré-remplis et modifiables (ADR-022).
 - Données factices : seuls les **comptes** factices disparaissent en M2 (`sampleAccounts`) ; les **trades** factices du dashboard et du calendrier restent jusqu'à M4/M5 (seed issu du fixture golden).
+- Plateforme : écrans dans **`apps/web`** (ADR-023) ; garde de navigation via `beforeLoad` de TanStack Router (ADR-024).
 
 ### Vague 1 — base de données (`database`, séquentiel ; rien d'autre en parallèle sur `supabase/`)
 | # | Tâche | Agent | Dépend de | Vérification |
@@ -116,58 +164,58 @@ Dépend de : M0, M1, M3
 | M2-2 | RLS des 4 tables : `using`/`with check` sur `user_id = auth.uid()`, **aucune policy croisée via `accounts`** (c'est la raison de la dénormalisation de M2-1) ; `deleted_at` non nul bloque l'accès applicatif | `database` | M2-1 | Tests RLS A/B verts |
 | M2-3 | Trigger de création de profil et de préférences à l'inscription (`handle_new_user` sur `auth.users`, `security definer`, **`search_path` figé**, non exécutable par `anon`/`authenticated`) | `database` | M2-1 | Une inscription crée exactement 1 `profiles` + 1 `preferences` ; fonction absente de l'API PostgREST |
 | M2-4 | Tests RLS A/B des 4 tables (lecture, écriture, mise à jour croisée, `cash_movements` d'autrui) ; `--passWithNoTests` interdit sur `test:rls` | `database` | M2-2, M2-3 | `pnpm test:rls` vert et **en échec** si aucun test n'est collecté |
-| M2-5 | Réglages d'auth du projet cloud (tableau de bord, **jamais `supabase config push`**) : mot de passe ≥ 8 caractères avec exigences, redirections en **liste exacte** (magic link, réinitialisation), confirmation d'e-mail **désactivée sur dev** (ADR-020) | `release` | — | Réglages consignés dans `docs/RELEASE.md` ; aucun joker `/**` sur un domaine public |
+| M2-5 | Réglages d'auth du projet cloud (tableau de bord, **jamais `supabase config push`**) : mot de passe ≥ 8 caractères avec exigences, redirections en **liste exacte** (magic link, réinitialisation ; `localhost` Vite + URL fixe de préproduction, ADR-020/025), confirmation d'e-mail **désactivée sur dev** (ADR-020) ; `supabase/config.toml` local : `localhost:8081` → port Vite (`database`) | `release` | — | Réglages consignés dans `docs/RELEASE.md` ; aucun joker `/**` sur un domaine public |
 
 ### Fenêtre d'installation unique (une seule à la fois ; personne d'autre ne lance `pnpm add`)
 | # | Tâche | Agent | Dépend de | Vérification |
 |---|---|---|---|---|
-| M2-6 | Installer **en une seule passe** les dépendances de M2 : `react-hook-form`, `@hookform/resolvers`, `zustand` (compatibilité web + natif et présence dans Expo Go vérifiées — ADR-021) | `release` | — | `pnpm install` propre puis `pnpm lint && pnpm typecheck && pnpm test` verts |
+| M2-6 | ~~Installer `react-hook-form`, `@hookform/resolvers`, `zustand`~~ — **absorbée par W-2** (M1-web, ADR-023) | — | — | Voir W-2 |
 
-### Vague 2 — calculs purs (`core-engine`, en parallèle de la vague 1 une fois M2-6 passée)
+### Vague 2 — calculs purs (`core-engine`, en parallèle de la vague 1 et de M1-web)
 | # | Tâche | Agent | Dépend de | Vérification |
 |---|---|---|---|---|
 | M2-7 | `packages/core` : dérivation **locale → premier jour de semaine + devise d'affichage** (FR → lundi/EUR, EN → dimanche/USD), fonction pure testée (ADR-022) | `core-engine` | — | Tests FR, EN et locale inconnue (repli documenté) |
 | M2-8 | `packages/schemas` : schémas zod `profile`, `preferences`, `onboarding` ; complément de `account` et `cashMovement` (livrés en M3) ; messages = clés i18n (`VALIDATION_KEYS`) | `core-engine` | — | `pnpm --filter @repo/schemas test` vert ; aucun texte en dur |
 
-### Vague 3 — auth et session (`app-ui`, après M2-1 à M2-6)
+### Vague 3 — auth et session (`app-ui`, dans `apps/web`, après M2-1 à M2-5 et M1-web)
 | # | Tâche | Agent | Dépend de | Vérification |
 |---|---|---|---|---|
-| M2-9 | Client auth : web `flowType: 'pkce'`, `detectSessionInUrl` activé **uniquement** avec PKCE ; deep links `scheme edgebook` avec **liste blanche de chemins**, jamais de redirection dérivée d'un paramètre entrant | `app-ui` | M2-5 | Un lien du type `edgebook://…?redirect=https://evil` n'ouvre rien hors liste blanche |
-| M2-10 | Écrans login / signup / mot de passe oublié / magic link (**ni Google ni Apple**, ADR-022) : états d'erreur traduits FR/EN, squelettes, haptique | `app-ui` | M2-9 | Parcours complet sur web, iOS et Android, en sombre et en clair |
+| M2-9 | Client auth (`apps/web/src/lib/supabase`) : `flowType: 'pkce'`, `detectSessionInUrl` activé **uniquement** avec PKCE ; **liste blanche des routes de retour**, jamais de redirection dérivée d'un paramètre entrant (le scheme `edgebook://` reviendra avec Capacitor en P6) | `app-ui` | M2-5 | Une URL du type `/auth/callback?redirect=https://evil` ne quitte jamais l'app ni la liste blanche |
+| M2-10 | Écrans login / signup / mot de passe oublié / magic link (**ni Google ni Apple**, ADR-022) : états d'erreur traduits FR/EN, squelettes, haptique | `app-ui` | M2-9 | Parcours complet sur navigateur de bureau et mobile (PWA), en sombre et en clair |
 | M2-11 | Sécurité de session : sur `SIGNED_OUT`, `queryClient.clear()` + suppression du cache persisté ; **clé de persistance propre à chaque utilisateur** | `app-ui` | M2-9 | E2E : déconnexion de A puis connexion de B sur le même appareil → aucune donnée de A restaurée |
 | M2-12 | Garde de navigation : pas de session → écrans d'auth ; `onboarding_completed_at` nul → onboarding ; `profiles.deleted_at` non nul → écran « suppression demandée » | `app-ui` | M2-10 | Un rechargement web sur une route profonde conserve la bonne destination |
 
 ### Vague 4 — onboarding, comptes et préférences (`app-ui`, séquentiel après la vague 3)
 | # | Tâche | Agent | Dépend de | Vérification |
 |---|---|---|---|---|
-| M2-13 | Onboarding animé : prénom, marchés, style, fuseau, **premier jour de semaine et devise d'affichage pré-remplis depuis la locale et modifiables** (M2-7), premier compte manuel ; écrit `profiles`, `preferences` et `accounts` | `app-ui` | M2-7, M2-12 | Un nouvel utilisateur termine l'onboarding sur mobile et retrouve tout sur le web |
+| M2-13 | Onboarding animé : prénom, marchés, style, fuseau, **premier jour de semaine et devise d'affichage pré-remplis depuis la locale et modifiables** (M2-7), premier compte manuel ; écrit `profiles`, `preferences` et `accounts` | `app-ui` | M2-7, M2-12 | Un nouvel utilisateur termine l'onboarding sur téléphone (PWA) et retrouve tout sur le navigateur de bureau |
 | M2-14 | Gestion des comptes : créer / éditer / archiver ; `kind` (`personal`, `demo`, `backtest`, `prop_challenge`, `prop_funded`, `paper`), devise, solde initial, fuseau, heure de bascule, méthode de regroupement ; **mises à jour optimistes** | `app-ui` | M2-13 | Création visible immédiatement puis confirmée ; retour arrière propre en cas d'erreur |
 | M2-15 | Dépôts et retraits (`cash_movements`) : saisie, liste, suppression ; signes selon DATA_MODEL § Conventions de calcul, point 7 | `app-ui` | M2-14 | Le solde suit `solde initial + Σ P&L net + mouvements` calculé par `packages/core` |
 | M2-16 | Sélecteur de compte global branché sur les **vraies** données (**`sampleAccounts` supprimé**), « Tous les comptes » groupé par devise (ADR-019), persisté (Zustand + URL web). Les **trades** factices du dashboard et du calendrier **restent** jusqu'à M4/M5 | `app-ui` | M2-14 | `sampleAccounts` absent du dépôt ; le compte choisi survit à un rechargement |
-| M2-17 | Préférences en base (langue, thème, couleurs P&L, premier jour de semaine, masquage des montants) : lecture au démarrage, écriture optimiste, repli local si la requête échoue (garde-fou M1 conservé) | `app-ui` | M2-13 | Un changement de préférence sur mobile se retrouve sur le web après reconnexion |
-| M2-18 | Réglages : déconnexion, **lien « demander la suppression de mon compte »** (ADR-018, option B) ; splash « Bon retour, {prénom} » < 1 s avec préchargement des requêtes du dashboard ; **dette M1 D4** : navigation clavier du `Select` web | `app-ui` | M2-17 | Splash mesuré < 1 s ; `Select` pilotable au clavier (Tab, flèches, Entrée, Échap) |
+| M2-17 | Préférences en base (langue, thème, couleurs P&L, premier jour de semaine, masquage des montants) : lecture au démarrage, écriture optimiste, repli local si la requête échoue (garde-fou M1 conservé) | `app-ui` | M2-13 | Un changement de préférence sur téléphone se retrouve sur le bureau après reconnexion |
+| M2-18 | Réglages : déconnexion, **lien « demander la suppression de mon compte »** (ADR-018, option B) ; splash « Bon retour, {prénom} » < 1 s avec préchargement des requêtes du dashboard ; **dette M1 D4** : vérifier la navigation clavier du `Select` (shadcn/Radix, W-4) | `app-ui` | M2-17 | Splash mesuré < 1 s ; `Select` pilotable au clavier (Tab, flèches, Entrée, Échap) |
 
 ### Vague 5 — vérification (après la vague 4)
 | # | Tâche | Agent | Dépend de | Vérification |
 |---|---|---|---|---|
-| M2-19 | E2E web (inscription → onboarding → 2e compte → déconnexion / reconnexion), vérification de la **dette M0 D2** sur téléphone Android (données réelles + bascule FR/EN), revue `code-reviewer` puis `security-auditor` (auth, RLS, deep links, cache de session) | `qa-tests`, puis `code-reviewer` et `security-auditor` | M2-18 | `pnpm lint && pnpm typecheck && pnpm test && pnpm test:rls && pnpm e2e:web` verts ; aucun point bloquant |
+| M2-19 | E2E web (inscription → onboarding → 2e compte → déconnexion / reconnexion ; projet Playwright en émulation mobile), vérification par l'utilisateur sur téléphone (PWA : données réelles + bascule FR/EN), revue `code-reviewer` puis `security-auditor` (auth, RLS, deep links, cache de session) | `qa-tests`, puis `code-reviewer` et `security-auditor` | M2-18 | `pnpm lint && pnpm typecheck && pnpm test && pnpm test:rls && pnpm e2e:web` verts ; aucun point bloquant |
 
 **Parallélisation** : vague 1 (`database`) et vague 2 (`core-engine`) en parallèle une fois M2-6 passée ; dans la vague 3, M2-10 et M2-11 peuvent avancer ensemble après M2-9. Les vagues 4 et 5 sont séquentielles.
 
 **Critères de fin** :
-- [ ] Un nouvel utilisateur s'inscrit sur mobile, termine l'onboarding, crée un deuxième compte et retrouve tout sur le web.
+- [ ] Un nouvel utilisateur s'inscrit sur téléphone (navigateur ou PWA), termine l'onboarding, crée un deuxième compte et retrouve tout sur le navigateur de bureau.
 - [ ] Tests RLS des 4 tables verts ; `test:rls` **échoue** s'il ne collecte aucun test ; `rls_disabled_tables()` vide.
 - [ ] Créations et éditions de compte **optimistes** ; squelettes, aucun spinner plein écran (ADR-017).
 - [ ] Après déconnexion de A puis connexion de B sur le même appareil, **aucune donnée de A** n'est restaurée depuis le cache.
 - [ ] `sampleAccounts` supprimé ; le sélecteur de compte lit la base (les trades factices restent jusqu'à M4/M5).
-- [ ] Critères transversaux M1–M9 (web + iOS + Android, sombre et clair, FR et EN, `lint` / `typecheck` / `test` verts).
+- [ ] Critères transversaux M1–M9 (bureau + mobile + PWA, sombre et clair, FR et EN, `lint` / `typecheck` / `test` verts).
 - [ ] Aucun point bloquant de `code-reviewer` ni de `security-auditor`.
 
 **Dérives ouvertes suivies en M2** (héritées de M0 — aligner ou acter) :
 | Dérive | Écart | Propriétaire | Échéance |
 |---|---|---|---|
 | Script `db:reset:linked` | ADR-020 prévoit un script explicite et confirmé pour `supabase db reset --linked` (destructif) ; seul `db:reset` (local) existe | `release` | M2 (le schéma va changer plusieurs fois) |
-| `expo-updates` absent | `eas.json` utilise `runtimeVersion: appVersion` et `updates.url`, qui supposent `expo-updates` installé | `release` | M9 au plus tard (avec les mises à jour OTA) |
+| ~~`expo-updates` absent~~ | **Sans objet** depuis ADR-023 (EAS gelé avec `apps/app`) | — | — |
 
 ---
 
@@ -209,12 +257,12 @@ Dépend de : M1, M2, M3
 - [ ] **Dette M3** : lors d'une **inversion de position**, l'exécution qui appartient à deux trades est **scindée en deux lignes** à l'écriture (`executions.trade_id` reste une clé étrangère simple)
 - [ ] Seed : utilisateur démo, comptes `Prop Challenge 200k` (USD, type `prop_challenge`) et `Compte perso actions` (EUR), jeu de mars 2026 + 1er avril **généré à partir du fixture golden de `packages/core`** (M3) — UUID v5 déterministes, swap porté par la ligne de trade
 - [ ] Formulaire de saisie (react-hook-form + zod) : mode simple (entrée/sortie → 2 exécutions) et mode avancé (exécutions partielles) ; aperçu P&L/R en direct via `packages/core` ; bouton d'ajout rapide accessible depuis tous les onglets
-- [ ] Trade log FlashList : filtres (compte, période, symbole, tag, setup, résultat), tri, pagination par curseur
+- [ ] Trade log virtualisé (`@tanstack/react-virtual`) : filtres (compte, période, symbole, tag, setup, résultat), tri, pagination par curseur
 - [ ] Détail en sheet : édition, suppression, tags/setups, notes, captures (upload Storage)
 - [ ] Gestion des tags et setups (création, couleur, type)
 - [ ] Mises à jour optimistes sur création/édition/suppression, invalidation ciblée des requêtes calendrier/dashboard
 
-**Critères de fin** : avec le seed, le trade log filtré sur `Prop Challenge 200k` et mars 2026 liste 24 trades ; un trade créé sur mobile apparaît immédiatement (optimiste) puis sur le web après rafraîchissement ; défilement du trade log à 60 fps avec 1 000 trades générés ; tests RLS (tables + Storage) verts.
+**Critères de fin** : avec le seed, le trade log filtré sur `Prop Challenge 200k` et mars 2026 liste 24 trades ; un trade créé sur téléphone (PWA) apparaît immédiatement (optimiste) puis sur le bureau après rafraîchissement ; défilement du trade log à 60 fps avec 1 000 trades générés (export de production, CPU ×4) ; tests RLS (tables + Storage) verts.
 
 ---
 
@@ -229,7 +277,7 @@ Dépend de : M4
 - [ ] Squelettes ; **aucune donnée périmée au changement de mois ou de compte**
 - [ ] Tap sur un jour → sheet du jour (trades du jour + accès au journal)
 
-**Critères de fin** : avec le seed, sur les 3 plateformes, mars 2026 affiche exactement 24 trades, −17 527,71 et 3 jours gagnants / 7 perdants ; le dashboard de `Prop Challenge 200k` (toute la période) affiche un solde de 180 256,57 $ et −9,87 % ; test E2E : passer de mars à avril n'affiche jamais un chiffre de mars ; premier affichage du dashboard < 1,5 s (protocole ADR-017).
+**Critères de fin** : avec le seed, sur bureau et mobile (navigateur/PWA), mars 2026 affiche exactement 24 trades, −17 527,71 et 3 jours gagnants / 7 perdants ; le dashboard de `Prop Challenge 200k` (toute la période) affiche un solde de 180 256,57 $ et −9,87 % ; test E2E : passer de mars à avril n'affiche jamais un chiffre de mars ; premier affichage du dashboard < 1,5 s (protocole ADR-017).
 
 ---
 
@@ -240,11 +288,11 @@ Dépend de : M5
 
 - [ ] Table `journal_entries` + RLS ; captures du journal via `attachments` + Storage
 - [ ] Check-in pré-session (humeur, sommeil, plan, biais) et débrief post-session (humeur, respect du plan, notes, leçons), émotions en tags
-- [ ] Brouillon local persistant (mobile et web) jusqu'à l'enregistrement
+- [ ] Brouillon local persistant (navigateur et PWA) jusqu'à l'enregistrement
 - [ ] Mode Psych du calendrier (couleur par humeur) et lien jour ↔ journal
 - [ ] Seed : entrées de journal des 12 et 13 septembre 2026 sans trade
 
-**Critères de fin** : les 12 et 13 septembre 2026 s'affichent comme « journal seul » et le mode Psych les colore selon l'humeur ; une entrée avec capture créée sur mobile est visible sur le web ; un brouillon survit à la fermeture de l'app ; enregistrement optimiste.
+**Critères de fin** : les 12 et 13 septembre 2026 s'affichent comme « journal seul » et le mode Psych les colore selon l'humeur ; une entrée avec capture créée sur téléphone est visible sur le bureau ; un brouillon survit à la fermeture de l'onglet / de la PWA ; enregistrement optimiste.
 
 ---
 
@@ -258,7 +306,7 @@ Dépend de : M5 (peut avancer en parallèle de M6)
 - [ ] Heatmap heure × jour ; tuiles de stats (win rate, PF, espérance, ratio moyen, séries)
 - [ ] Transitions animées entre rapports, squelettes par graphique
 
-**Critères de fin** : avec le seed, sur `Prop Challenge 200k` toute période : win rate 16 %, profit factor 0,56, ratio moyen 2,92 ; pire jour affiché = 30 mars 2026 ; chaque rapport concorde avec les fonctions de `packages/core` (tests sur fixtures) ; identique sur les 3 plateformes.
+**Critères de fin** : avec le seed, sur `Prop Challenge 200k` toute période : win rate 16 %, profit factor 0,56, ratio moyen 2,92 ; pire jour affiché = 30 mars 2026 ; chaque rapport concorde avec les fonctions de `packages/core` (tests sur fixtures) ; identique sur bureau et mobile.
 
 ---
 
@@ -277,20 +325,20 @@ Dépend de : M4 ; M7 pour le rapport par confluence
 
 ---
 
-## Phase M9 — Finition, performance et QA 3 plateformes · `À faire`
+## Phase M9 — Finition, performance et QA web/PWA · `À faire`
 Réf. : §6, §9, §10, §11, ADR-017
 Agents : `qa-tests`, `app-ui`, `security-auditor`, `code-reviewer`, `release` — lancer avec `/phase M9`
 Dépend de : M1–M8
 
-- [ ] Protocole de performance ADR-017 documenté et exécuté : 60 fps (trade log, calendrier, sheets, segments), dashboard < 1,5 s, résultats consignés
-- [ ] Passe de finition visuelle écran par écran (espacements, états vides, erreurs, transitions, haptique) en sombre et clair
-- [ ] Playwright (parcours web principaux) + Maestro (parcours iOS et Android principaux) : inscription, onboarding, saisie de trade, calendrier, journal, analytics, règles
+- [ ] Protocole de performance ADR-017 (révision 2026-09-25) exécuté sur l'export de production : 60 fps (trade log, calendrier, sheets, segments), dashboard < 1,5 s (Lighthouse mobile), résultats consignés
+- [ ] Passe de finition visuelle écran par écran (espacements, états vides, erreurs, transitions) en sombre et clair, bureau et mobile
+- [ ] Playwright (bureau + émulation mobile) : inscription, onboarding, saisie de trade, calendrier, journal, analytics, règles ; vérification manuelle sur iOS Safari et Android Chrome (PWA installée)
 - [ ] Audit accessibilité (tailles dynamiques, contraste AA, lecteurs d'écran) et i18n (aucun texte en dur, FR/EN complets)
-- [ ] Audit sécurité : RLS de toutes les tables et du Storage, aucun secret client, session sécurisée
-- [ ] Déploiement web de préproduction (hébergement statique) et builds EAS internes (pas de soumission aux stores)
-- [ ] CSP stricte sur l'hébergement web (jetons en `localStorage`, pas de cookie `httpOnly` sans serveur — ADR-016, ARCHITECTURE §9)
+- [ ] Audit sécurité : RLS de toutes les tables et du Storage, aucun secret client, session sécurisée, service worker sans données utilisateur en cache
+- [ ] Préproduction Cloudflare Pages à jour (ADR-025) ; pas d'app native (Capacitor en P6)
+- [ ] CSP stricte via `_headers` Cloudflare Pages (jetons en `localStorage`, pas de cookie `httpOnly` sans serveur — ADR-016, ARCHITECTURE §9)
 
-**Critères de fin** : suites Playwright et Maestro vertes sur web, iOS et Android ; mesures ADR-017 atteintes et consignées ; aucun point bloquant de `security-auditor` ni de `code-reviewer` ; web de préproduction et builds internes utilisables avec le compte démo ; en-tête CSP vérifié sur la préproduction.
+**Critères de fin** : suite Playwright verte (bureau + mobile) ; PWA vérifiée sur iOS Safari et Android Chrome ; mesures ADR-017 atteintes et consignées ; aucun point bloquant de `security-auditor` ni de `code-reviewer` ; préproduction utilisable avec le compte démo ; en-tête CSP vérifié sur la préproduction.
 
 **Avant toute ouverture publique** (bloquant, même hors stores) :
 - [ ] **Projet Supabase de production créé** (il n'existe pas encore) avec **confirmation d'e-mail activée** — elle reste désactivée sur le projet de dev (ADR-020, précision du 2026-09-25).
@@ -360,8 +408,10 @@ Réf. : §5.9, ADR-009
 
 **Critères de fin** : un achat sandbox iOS débloque Pro sur le web.
 
-## Phase P6 — Conformité et publication sur les stores · `Reportée`
-Réf. : §5.11, §9, §11, §12
+## Phase P6 — Apps natives (Capacitor), conformité et publication sur les stores · `Reportée`
+Réf. : §5.11, §9, §11, §12, ADR-023
+- [ ] Capacitor iOS/Android autour d'`apps/web` ; stockage sécurisé de session (plugin), `@capacitor/haptics` derrière l'interface `Haptics`, deep links (`edgebook://`, liste blanche), push ; fonctions natives suffisantes pour la règle Apple 4.2
+- [ ] **Dette D1** : mesure de fluidité native sur Capacitor Android (build release, Android milieu de gamme) ; tests E2E natifs (Maestro ou équivalent)
 - [ ] Sentry + PostHog + événements clés ; export RGPD ; suppression de compte in-app définitive ; Sign in with Apple si reporté
 - [ ] Pages légales, fiches stores, compte de démo pour la review, privacy manifest, Data safety
 - [ ] Déploiement production (web, server, DB) + soumission des stores
@@ -379,4 +429,4 @@ Réf. : §5.11, §9, §11, §12
 - Mode mentor / coach humain (accès en lecture partagé)
 - Widgets iOS/Android (P&L du jour)
 - Apple Watch : rappel de règles
-- Application desktop (Tauri) si demande
+- Application desktop (Tauri) si demande — la PWA couvre déjà l'installation sur ordinateur

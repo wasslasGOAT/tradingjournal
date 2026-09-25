@@ -42,4 +42,4 @@ Autres commandes :
 ## Décisions à prendre de ton côté
 - MVP : suppression de compte (ADR-018), agrégats multi-devises (ADR-019), onglets MVP (ADR-011), nom et logo (ADR-012)
 - Après le MVP : pondération du score (ADR-008), découpage Free/Pro et prix (`packages/config/plans.ts`), premiers connecteurs broker (phase P4)
-- Comptes à ouvrir pour le MVP : Supabase, Apple Developer et Google Play Console (builds EAS internes, Sign in with Apple/Google), hébergement web statique. Après le MVP : Fly.io/Railway, RevenueCat, Stripe, Anthropic API, Sentry, PostHog, MetaApi (si MT4/MT5)
+- Comptes à ouvrir pour le MVP : Supabase et Cloudflare Pages (hébergement web, ADR-025). Apple Developer et Google Play Console seulement pour la publication sur les stores via Capacitor (P6, ADR-023). Après le MVP : Fly.io/Railway, RevenueCat, Stripe, Anthropic API, Sentry, PostHog, MetaApi (si MT4/MT5)

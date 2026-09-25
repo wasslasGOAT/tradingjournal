@@ -32,6 +32,12 @@ export const en = {
       },
       catalogButton: 'View catalog',
     },
+    // Temporary theme toggle button (W-3, `apps/web`) : replaced by the
+    // Settings screen in M2 — reuses `settings.theme` labels.
+    themeToggle: {
+      cycleButton: 'Theme: {{theme}}',
+      accessibilityLabel: 'Change theme (current: {{theme}})',
+    },
     notFound: {
       title: 'Page not found',
       description: "This screen doesn't exist.",
@@ -178,6 +184,7 @@ export const en = {
       analytics: 'Analytics',
       rules: 'Rules',
       settings: 'Settings',
+      landmark: 'Primary navigation',
     },
     header: {
       accounts: {
@@ -228,6 +235,17 @@ export const en = {
         },
         tooltipLabel: 'Balance',
       },
+      loading: 'Loading dashboard…',
+      error: {
+        title: 'Could not load the dashboard',
+        description: 'Check your connection and try again.',
+        retry: 'Retry',
+      },
+      empty: {
+        title: 'No trades for this period',
+        description: 'Add a trade or change the period to see your stats.',
+        action: 'Add a trade',
+      },
     },
     calendar: {
       title: 'Calendar',
@@ -247,6 +265,28 @@ export const en = {
         empty: 'No trades',
       },
       dayAccessibility: '{{day}}, {{state}}',
+      monthNav: {
+        previous: 'Previous month',
+        next: 'Next month',
+      },
+      loading: 'Loading calendar…',
+      error: {
+        title: 'Could not load the calendar',
+        description: 'Check your connection and try again.',
+        retry: 'Retry',
+      },
+      empty: {
+        title: 'No data this month',
+        description: 'No trades or journal entries for this month — change month or add a trade.',
+        action: 'Add a trade',
+      },
+      detail: {
+        titleWithJournal: '{{day}} · Journal',
+        tradesTitle: "Day's trades",
+        noTrades: 'No trades on this day.',
+        journalNote: 'A journal entry exists for this day (preview coming soon).',
+        direction: { long: 'Long', short: 'Short' },
+      },
     },
     trades: {
       empty: {
@@ -307,6 +347,17 @@ export const en = {
     comingSoon: {
       title: 'Coming soon',
       description: 'This screen is under construction.',
+    },
+    // Service worker update prompt (W-7, PWA) : shown via the toast
+    // (`sonner`) already mounted at the root — never a forced reload.
+    pwa: {
+      updateAvailable: {
+        message: 'A new version is available.',
+        action: 'Update',
+      },
+      offlineReady: {
+        message: 'The app is ready to work offline.',
+      },
     },
   },
 } as const;

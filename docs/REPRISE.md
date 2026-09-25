@@ -3,6 +3,16 @@
 > À lire en premier pour reprendre le travail. Mis à jour le **2026-09-25**, au changement de cap vers le web (ADR-023).
 > Le détail fait foi dans `ROADMAP.md` (cases à cocher) et `DECISIONS.md` (ADR).
 
+## Arrêt du 2026-09-25 (soir) — M1-web en cours, stoppé pendant W-6
+
+Arrêt propre demandé par l'utilisateur. **Rien n'est commité depuis `36ec42c`** (docs du changement de cap) : tout le travail W-1…W-6 est dans l'arbre de travail de `wip/m1-m3`.
+- **Faits et vérifiés** : W-1 (scripts racine, `apps/app` exclu), W-6b (`buildCalendarGrid` dans `packages/core`), W-2 (création d'`apps/web`), W-3 (tokens/thèmes générés depuis `@repo/ui/tokens-data`), W-4 (primitives shadcn, `Chart`, catalogue `/dev/catalog` réservé au dev), W-5 (shell : onglets, sidebar, header, Réglages, compte+période dans l'URL).
+- **W-6 (Dashboard + Calendrier) interrompu en fin de tâche** : code présent (`apps/web/src/data/**`, `features/dashboard`, `features/calendar`), écrans affichés avec les données factices, mais **pas encore validé** : comparer les chiffres avec `apps/app`, vérifier les totaux hebdo du calendrier, captures 390/1280 px clair/sombre FR/EN.
+- Au moment de l'arrêt : `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm check:secrets` **verts** (774 tests).
+- **Reste** : finir/valider W-6, W-7 (PWA), W-8 (CI + Cloudflare — compte à créer par l'utilisateur), W-9 (Playwright + fluidité), W-10 (revue), clôture ; puis commit (message proposé : `feat(web): scaffold web app shell, theme, primitives, dashboard and calendar (M1-web W-1..W-6)`). Cases W-1…W-6 à cocher dans `ROADMAP.md`.
+- Lancer : `pnpm dev:web` → http://localhost:5173 (catalogue : `/dev/catalog`). `apps/web/.env` existe sur ce PC (copie des clés publiques de `apps/app/.env`, préfixe `VITE_`).
+- Pièges vus : après un changement de `vite.config.ts`, **redémarrer** le serveur de dev ; ne jamais nommer des tokens `--spacing-*` (collision avec l'échelle Tailwind v4, utiliser `--space-*`).
+
 ## État au 2026-09-25 — M0, M1 (Expo) et M3 `Terminées` ; **M1-web `En cours`** ; M2 `En cours` (aucun code livré)
 
 **Changement de cap (décision utilisateur du 2026-09-25, ADR-023/024/025)** : le MVP devient d'abord une **application web** — nouvelle app `apps/web` en React + Vite + TypeScript strict + Tailwind v4 + shadcn/ui + recharts, routeur TanStack Router, responsive mobile-first et **installable (PWA)**. iOS/Android viendront en **P6** en emballant ce même code avec **Capacitor**. Hébergement : **Cloudflare Pages** (compte à créer par l'utilisateur, nécessaire seulement à la tâche W-8).

@@ -1,0 +1,28 @@
+{
+  "extends": "@repo/config/tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["node", "vite/client"],
+    // `lib` réaffecté (`tsconfig.base.json` ne pose que `ES2023`) : les tests Vitest
+    // (jsdom) et les callbacks `page.evaluate` de Playwright (W-9, `e2e/**`)
+    // référencent des globals DOM (`document`, `window`, `DOMMatrixReadOnly`,
+    // `requestAnimationFrame`, `HTMLScriptElement`…) — sans ce lib, `typescript-eslint`
+    // les type en `error`/`any` et déclenche en cascade les règles `no-unsafe-*`.
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    // Même alias que `tsconfig.json` (W-4) : les fichiers `*.test.ts` sous
+    // `src/` (typés ici, pas dans `tsconfig.json` qui les exclut) importent
+    // eux aussi via `@/...` (ex. `components/chart/*.test.ts` -> `@/lib/theme/tokens`)
+    // — sans cet alias, ces imports échouaient uniquement lors du typecheck
+    // (le build Vite, qui lit `vite.config.ts` `resolve.alias`, ne les voyait pas).
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": [
+    "vite.config.ts",
+    "vitest.config.ts",
+    "playwright.config.ts",
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "e2e/**/*.ts"
+  ]
+}

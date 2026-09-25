@@ -39,8 +39,9 @@
  *      nom commence par `.env`, sauf `*.env.example`) suivi par git.
  *  10. (Mode `--history` uniquement) Un fichier `.env` réel qui a existé à un
  *      moment donné dans l'historique, même supprimé depuis.
- * Le mode par défaut vérifie aussi que `apps/app/.env` et `supabase/tests/.env`
- * seraient bien ignorés par git (sanity check du `.gitignore`).
+ * Le mode par défaut vérifie aussi que `apps/app/.env`, `apps/web/.env` et
+ * `supabase/tests/.env` seraient bien ignorés par git (sanity check du
+ * `.gitignore`).
  *
  * Les fichiers `*.env.example` sont volontairement scannés par les motifs 1 à 8
  * ci-dessus, dans les trois modes (défaut, `--staged`, `--history`) : ils sont
@@ -72,8 +73,11 @@ const SCRIPT_RELATIVE_PATH = toPosix(relative(ROOT, SCRIPT_PATH));
 // `.expo` n'est volontairement PAS ignoré totalement : voir `walkExpoLogs`
 // (seuls ses `*.log` sont scannés, pour garder une performance raisonnable).
 // Volontairement absent de cette liste : `dist` / `web-build` — un bundle web
-// généré peut embarquer une variable EXPO_PUBLIC_* fautive, donc on le scanne.
-const IGNORED_DIR_NAMES = new Set(['node_modules', '.git', '.turbo', 'coverage']);
+// généré (dont `apps/web/dist`, ADR-023/024) peut embarquer une variable
+// EXPO_PUBLIC_* ou VITE_* fautive, donc on le scanne. `apps/web/dev-dist`
+// (précache `vite-plugin-pwa` en dev) est ignoré au même titre que `.turbo` :
+// c'est un cache local jamais versionné, jamais buildé en CI.
+const IGNORED_DIR_NAMES = new Set(['node_modules', '.git', '.turbo', 'coverage', 'dev-dist']);
 
 // Extensions binaires : lues sans intérêt (bruit, risque d'erreur d'encodage).
 const BINARY_EXTENSIONS = new Set([
@@ -492,7 +496,7 @@ function main() {
         problems.push(`✖ ${file} : fichier .env réel suivi par git (ne doit jamais être committé)`);
       }
 
-      const pathsThatMustBeIgnored = ['apps/app/.env', 'supabase/tests/.env'];
+      const pathsThatMustBeIgnored = ['apps/app/.env', 'apps/web/.env', 'supabase/tests/.env'];
       for (const path of pathsThatMustBeIgnored) {
         if (!isPathGitIgnored(path)) {
           problems.push(

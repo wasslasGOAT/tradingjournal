@@ -23,3 +23,9 @@ minimumReleaseAgeExclude:
   - '@expo/metro-runtime@57.0.16'
   - '@expo/ui@57.0.19'
   - expo-router@57.0.22
+  - '@supabase/auth-js@2.117.2'
+  - '@supabase/functions-js@2.117.2'
+  - '@supabase/postgrest-js@2.117.2'
+  - '@supabase/realtime-js@2.117.2'
+  - '@supabase/storage-js@2.117.2'
+  - '@supabase/supabase-js@2.117.2'

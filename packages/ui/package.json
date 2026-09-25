@@ -6,7 +6,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./theme/preferencesStorage": "./src/theme/preferencesStorage.ts",
-    "./tailwind-preset": "./tailwind-preset.cjs"
+    "./tailwind-preset": "./tailwind-preset.cjs",
+    "./tokens-data": "./src/tokens.data.cjs"
   },
   "scripts": {
     "lint": "eslint .",

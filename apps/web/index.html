@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#000000" />
+    <meta name="description" content="Edgebook — journal de trading multi-plateforme." />
+
+    <!-- PWA (W-7, ADR-023/024) : manifeste généré par `vite-plugin-pwa` depuis
+         `vite.config.ts` (source de vérité des icônes/couleurs), pas de
+         fichier statique dans `public/`. -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
+
+    <!-- Meta iOS (installation « Ajouter à l'écran d'accueil », ADR-023) :
+         pas de mode natif Capacitor avant P6, mais ces balises sont déjà
+         nécessaires pour la PWA installée sur iOS Safari. -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Edgebook" />
+
+    <title>Edgebook</title>
+    <script>
+      // Anti-flash (W-3, ARCHITECTURE §6.2) : pose `data-theme` sur `<html>`
+      // avant le premier rendu React, à partir de la préférence persistée
+      // (`edgebook.web.preferences.themePreference`, voir
+      // `src/features/preferences/theme-store.ts`) ou du système sinon.
+      // Enveloppé de `try/catch` : `localStorage` peut être indisponible.
+      (function () {
+        try {
+          var KEY = 'edgebook.web.preferences.themePreference';
+          var raw = window.localStorage.getItem(KEY);
+          var preference = raw === 'dark' || raw === 'light' || raw === 'system' ? raw : 'system';
+          var prefersLight =
+            preference === 'system' &&
+            window.matchMedia &&
+            window.matchMedia('(prefers-color-scheme: light)').matches;
+          var mode = preference === 'system' ? (prefersLight ? 'light' : 'dark') : preference;
+          document.documentElement.dataset.theme = mode;
+        } catch (e) {
+          document.documentElement.dataset.theme = 'dark';
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

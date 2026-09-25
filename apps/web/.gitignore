@@ -1,0 +1,5 @@
+# Généré par le plugin TanStack Router (routage par fichiers) à chaque build/dev.
+src/routeTree.gen.ts
+
+# Généré depuis @repo/ui/tokens-data à chaque chargement de vite.config.ts (W-3).
+src/styles/theme.generated.css

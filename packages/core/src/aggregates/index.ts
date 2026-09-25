@@ -1,3 +1,5 @@
+export { buildCalendarGrid } from './calendarGrid';
+export type { CalendarGridCell } from './calendarGrid';
 export { aggregateByTradingDay } from './day';
 export type { DayAggregate, ResolvedCashMovement } from './day';
 export {

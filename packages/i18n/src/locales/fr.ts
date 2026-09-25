@@ -35,6 +35,12 @@ export const fr = {
       },
       catalogButton: 'Voir le catalogue',
     },
+    // Bouton temporaire de bascule de thème (W-3, `apps/web`) : remplacé par
+    // l'écran Réglages en M2 — réutilise les libellés de `settings.theme`.
+    themeToggle: {
+      cycleButton: 'Thème : {{theme}}',
+      accessibilityLabel: 'Changer de thème (actuel : {{theme}})',
+    },
     notFound: {
       title: 'Page introuvable',
       description: "Cet écran n'existe pas.",
@@ -181,6 +187,7 @@ export const fr = {
       analytics: 'Analytics',
       rules: 'Règles',
       settings: 'Réglages',
+      landmark: 'Navigation principale',
     },
     header: {
       accounts: {
@@ -231,6 +238,17 @@ export const fr = {
         },
         tooltipLabel: 'Solde',
       },
+      loading: 'Chargement du dashboard…',
+      error: {
+        title: 'Impossible de charger le dashboard',
+        description: 'Vérifie ta connexion puis réessaie.',
+        retry: 'Réessayer',
+      },
+      empty: {
+        title: 'Aucun trade sur cette période',
+        description: 'Ajoute un trade ou change de période pour voir tes statistiques.',
+        action: 'Ajouter un trade',
+      },
     },
     calendar: {
       title: 'Calendrier',
@@ -250,6 +268,28 @@ export const fr = {
         empty: 'Aucun trade',
       },
       dayAccessibility: '{{day}}, {{state}}',
+      monthNav: {
+        previous: 'Mois précédent',
+        next: 'Mois suivant',
+      },
+      loading: 'Chargement du calendrier…',
+      error: {
+        title: 'Impossible de charger le calendrier',
+        description: 'Vérifie ta connexion puis réessaie.',
+        retry: 'Réessayer',
+      },
+      empty: {
+        title: 'Aucune donnée ce mois-ci',
+        description: 'Aucun trade ni entrée de journal pour ce mois — change de mois ou ajoute un trade.',
+        action: 'Ajouter un trade',
+      },
+      detail: {
+        titleWithJournal: '{{day}} · Journal',
+        tradesTitle: 'Trades du jour',
+        noTrades: 'Aucun trade ce jour-là.',
+        journalNote: 'Une entrée de journal existe pour ce jour (aperçu à venir).',
+        direction: { long: 'Achat', short: 'Vente' },
+      },
     },
     trades: {
       empty: {
@@ -310,6 +350,17 @@ export const fr = {
     comingSoon: {
       title: 'Bientôt disponible',
       description: 'Cet écran est en cours de construction.',
+    },
+    // Invite de mise à jour du service worker (W-7, PWA) : affichée via le
+    // toast (`sonner`) déjà monté à la racine, jamais de rechargement forcé.
+    pwa: {
+      updateAvailable: {
+        message: 'Une nouvelle version est disponible.',
+        action: 'Mettre à jour',
+      },
+      offlineReady: {
+        message: "L'app est prête à fonctionner hors connexion.",
+      },
     },
   },
 } as const;

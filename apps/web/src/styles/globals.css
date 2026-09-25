@@ -1,0 +1,36 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import '@fontsource-variable/inter';
+@import './theme.generated.css';
+
+/*
+ * Thème réel (W-3, ADR-012/ADR-024) : couleurs, rayons, espacements, typo,
+ * durées/courbes d'animation générés depuis `@repo/ui/tokens-data` dans
+ * `theme.generated.css` (voir `vite.config.ts` /
+ * `src/lib/theme/generate-theme-css.ts`) — ne pas ajouter de couleur/taille
+ * en dur ici, uniquement des classes utilitaires Tailwind lisant ces tokens.
+ */
+body {
+  @apply bg-background text-foreground;
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * `prefers-reduced-motion` (ADR-017, W-4) : les utilitaires d'animation de
+ * shadcn/ui et `tw-animate-css` (`animate-in`/`animate-out`/`animate-pulse`,
+ * squelettes, ouverture de `Dialog`/`Drawer`/`Sheet`/`Select`…) ignorent par
+ * défaut cette préférence système — on les fige globalement ici plutôt que
+ * dans chaque composant, seul point qui couvre aussi les composants
+ * générés par le CLI shadcn.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

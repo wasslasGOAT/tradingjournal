@@ -1,3 +1,4 @@
+import type { Href } from 'expo-router';
 import type { LucideIcon } from 'lucide-react-native';
 import {
   BarChart3,
@@ -23,7 +24,13 @@ export interface NavItem {
    * `name: 'index'` (route racine du Dashboard), contrairement à `name` (contraint par le fichier de route). */
   readonly id:
     'dashboard' | 'calendar' | 'trades' | 'journal' | 'more' | 'analytics' | 'rules' | 'settings';
-  readonly href: `/${string}`;
+  /**
+   * Route du groupe `(app)`, typée `Href` **ici seulement** plutôt qu'assertée à chaque
+   * usage : le type des routes d'`expo-router` dépend du fichier généré par `expo start`
+   * (présent en local, absent en CI), donc une assertion `as Href` côté appelant passe en
+   * local mais devient « inutile » — donc une erreur de lint — en intégration continue.
+   */
+  readonly href: Href;
   /** Clé i18n (`common.nav.<key>`). */
   readonly labelKey: string;
   readonly icon: LucideIcon;

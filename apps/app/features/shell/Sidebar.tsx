@@ -1,4 +1,3 @@
-import type { Href } from 'expo-router';
 import { usePathname, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
@@ -32,11 +31,7 @@ export function Sidebar() {
             label={t(item.labelKey)}
             icon={item.icon}
             active={pathname === item.href}
-            // `NAV_ITEM.href` est un gabarit `/${string}` construit à la main (routes
-            // fixes ci-dessus, `navItems.ts`) : correspond toujours à une route valide
-            // du groupe `(app)`, mais `expo-router` (routes typées) ne peut pas le
-            // vérifier statiquement pour un tableau de données plutôt qu'un littéral.
-            onPress={() => router.push(item.href as Href)}
+            onPress={() => router.push(item.href)}
           />
         ))}
       </View>

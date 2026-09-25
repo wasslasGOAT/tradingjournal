@@ -28,7 +28,7 @@ Seules les tables du MVP sont créées pendant les phases M0–M9 ; les autres l
 | Post-MVP | `connections`, `balance_snapshots` | P4 |
 | Post-MVP | `subscriptions` | P5 |
 | Post-MVP | `jobs`, `audit_log`, `notifications`, `push_tokens` | P1–P6 selon besoin |
-| À décider | `fx_rates` : selon ADR-019 (non créée si l'option A est retenue) | M2 |
+| Post-MVP | `fx_rates` : **non créée** pendant le MVP (ADR-019, option A : un total par devise, sans conversion) | P1 |
 
 Particularités MVP :
 - Toutes les colonnes dérivées (`trading_day`, `gross_pnl`, `net_pnl`, `r_multiple`, `avg_entry`, `avg_exit`, `session`…) sont calculées par `packages/core` dans l'app, puis écrites via une fonction Postgres transactionnelle sans calcul (ADR-016).
@@ -68,17 +68,24 @@ erDiagram
 ### Utilisateur
 | Table | Colonnes principales |
 |---|---|
-| `profiles` | `id (= auth.users.id)`, `first_name`, `display_currency`, `locale`, `timezone`, `onboarding_completed_at`, `deleted_at` |
+| `profiles` | `id (= auth.users.id)`, `first_name`, `display_currency`, `locale`, `timezone`, `onboarding_completed_at`, `deleted_at` (créée dès M2, ADR-018) |
 | `preferences` | `user_id`, `trading_style` (`scalper`/`day`/`swing`/`position`), `markets text[]`, `sessions text[]`, `week_starts_on smallint`, `pnl_display` (`currency`/`percent`/`r`), `pnl_colors` (`blue_gray`/`green_red`), `hide_amounts bool`, `coach_tone`, `notifications jsonb` |
 | `subscriptions` | `user_id`, `entitlement`, `status`, `store`, `period_end`, `raw jsonb` |
+
+Précisions M2 :
+- **`profiles.deleted_at`** (nullable, ADR-018 option B) : marque une **demande de suppression** en attente de traitement manuel. Non nulle ⇒ l'app bloque l'accès (écran dédié) et la RLS ne renvoie plus les données. Elle n'efface rien : la purge reste la suppression d'`auth.users` (cascade) plus les fichiers Storage. La colonne existe dès M2 pour éviter une migration le jour de la bascule vers l'Edge Function.
+- **`profiles.display_currency`** et **`preferences.week_starts_on`** (0 = dimanche, 1 = lundi) : **pré-remplies à partir de la locale** à l'onboarding (FR → lundi / EUR, EN → dimanche / USD) par une fonction pure de `packages/core`, puis **modifiables** (onboarding et Réglages) — ADR-022. `display_currency` est une **devise d'affichage**, pas une conversion : « Tous les comptes » reste groupé par devise (ADR-019).
+- **Création du profil** : trigger `after insert on auth.users` → `public.handle_new_user()`, qui insère **une ligne `profiles` et une ligne `preferences`**. `security definer` (l'appelant n'a pas de session au moment de l'insertion), **`search_path` figé** (`set search_path = ''`, tous les objets qualifiés en `public.`/`auth.`), `revoke execute` pour `anon` et `authenticated` (jamais appelable via PostgREST). Les valeurs déduites de la locale sont écrites par l'app à l'onboarding, pas par le trigger (il pose des valeurs par défaut neutres).
 
 ### Comptes et connexions
 | Table | Colonnes principales |
 |---|---|
 | `connections` | `user_id`, `connector_id`, `label`, `credentials_encrypted bytea`, `status`, `last_error`, `last_synced_at` |
 | `accounts` | `user_id`, `connection_id?`, `name`, `kind`, `broker`, `platform`, `external_account_id`, `currency`, `starting_balance`, `starting_date`, `timezone`, `day_rollover_time time`, `grouping_method` (`fifo`/`average`), `rule_set_id?`, `rule_set_params jsonb`, `is_archived` |
-| `cash_movements` | `account_id`, `type` (`deposit`/`withdrawal`/`payout`/`fee`/`adjustment`), `amount`, `occurred_at`, `note` |
+| `cash_movements` | **`user_id`** (dénormalisé, voir ci-dessous), `account_id`, `type` (`deposit`/`withdrawal`/`payout`/`fee`/`adjustment`), `amount`, `occurred_at`, `note` |
 | `balance_snapshots` | `account_id`, `taken_at`, `balance`, `equity`, `source` (`broker`/`computed`) |
+
+Note (M2) — **`cash_movements.user_id` dénormalisé** : la colonne duplique `accounts.user_id` pour que la RLS s'écrive `user_id = auth.uid()` **sans policy croisée** (`exists (select 1 from accounts …)`). Une policy croisée dépend de la lisibilité d'`accounts` pour l'appelant : elle est plus coûteuse et, surtout, une erreur sur la policy d'`accounts` se propage silencieusement à `cash_movements`. Cohérence garantie par une contrainte : `foreign key (account_id, user_id) references accounts (id, user_id)` (clé unique `(id, user_id)` sur `accounts`) — impossible de rattacher un mouvement au compte d'un autre utilisateur. Même règle pour toute table fille créée ensuite (`executions`, `trades`, `trade_notes`…, M4).
 
 ### Marché
 | Table | Colonnes principales |
@@ -132,6 +139,7 @@ Notes :
 Fonctions système (migration M0) :
 - `public.rls_disabled_tables()` : liste les tables de `public` sans RLS (`security definer`, `search_path` vide, exécutable par `anon`/`authenticated`). Garde-fou des tests RLS : doit renvoyer un ensemble vide.
 - `public.set_updated_at()` : trigger `updated_at` (convention ci-dessus), non appelable via l'API.
+- `public.handle_new_user()` (migration M2) : création de `profiles` + `preferences` à l'inscription (`security definer`, `search_path` figé, non appelable via l'API) — voir « Précisions M2 ».
 
 Post-MVP : `jobs` (pg-boss, schéma dédié), `audit_log` (`user_id`, `action`, `meta`, `at`), `notifications` (`user_id`, `type`, `payload`, `read_at`), `push_tokens` (`user_id`, `token`, `platform`).
 

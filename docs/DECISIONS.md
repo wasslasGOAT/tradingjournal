@@ -163,13 +163,18 @@ Alternatives : `Animated` de React Native (animations sur le thread JS, moins fl
 Réversibilité : facile.
 
 ## ADR-018 — Suppression de compte pendant le MVP
-Statut : Proposée | Date : 2026-09-17
+Statut : Acceptée (2026-09-25, option B) | Date : 2026-09-17
 Contexte : supprimer un utilisateur Supabase Auth exige la clé `service_role`, interdite côté client ; le MVP n'a pas de serveur (ADR-016). Apple impose la suppression in-app pour la publication ; le RGPD impose le droit à l'effacement dès qu'il y a des utilisateurs réels.
 Options :
 - **A. Supabase Edge Function minimale** `delete-account` : vérifie le JWT, purge les fichiers Storage de l'utilisateur, supprime `auth.users` (cascade sur les tables). + Suppression in-app dès le MVP, conforme. − Introduit un runtime (Deno) et un secret hors de l'app ; exception au « sans serveur ».
 - **B. Report à la publication sur les stores** : pendant le MVP, suppression sur demande (lien e-mail dans Réglages, traitement manuel dans le tableau de bord Supabase). + Zéro infra. − Processus manuel ; inacceptable pour un lancement public.
 - **C. Suppression logique côté client** (`profiles.deleted_at` + effacement des données via RLS, compte Auth conservé), purge réelle post-MVP. + Pas de secret. − Compte Auth résiduel : ce n'est pas une vraie suppression.
 Recommandation : **B** si le MVP reste en test privé (utilisateurs invités) ; **A** si le web est ouvert au public pendant le MVP.
+Décision (utilisateur, 2026-09-25) : **option B**, tant que l'accès reste privé (utilisateurs invités par le propriétaire).
+- Réglages affiche un lien **« demander la suppression de mon compte »** (e-mail pré-rempli) ; le traitement est **manuel**, fait par l'utilisateur-propriétaire depuis le tableau de bord Supabase : suppression de `auth.users` (cascade sur les tables) puis purge des fichiers Storage.
+- `profiles.deleted_at` est créée **dès la migration M2-1** (nullable) : elle marque une demande en cours, permet de bloquer l'accès applicatif en attendant la purge, et évite une migration de plus le jour de la bascule (DATA_MODEL § Utilisateur).
+- **Bascule vers l'option A** (Edge Function `delete-account`, suppression in-app) **obligatoire avant toute ouverture publique** — déjà listée comme bloquante dans ROADMAP M9 § « Avant toute ouverture publique ». Elle ne demande aucun changement de schéma.
+Conséquences : zéro infrastructure pendant le MVP, mais **aucune suppression en libre-service** : tant que B s'applique, l'inscription ne doit pas être ouverte au public et l'app ne peut pas être soumise aux stores (Apple exige la suppression in-app). Dès qu'un utilisateur réel autre que le propriétaire existe, le délai de traitement manuel doit rester compatible avec le RGPD (un mois).
 Réversibilité : facile (A et B migrent vers `DELETE /v1/account`, ADR-003).
 
 ## ADR-019 — Agrégats multi-devises pendant le MVP
@@ -194,6 +199,7 @@ Conséquences :
 - Projet gratuit mis en pause après inactivité : le réactiver avant une session.
 - Jamais de `service_role` côté client ni dans les tests (tests RLS avec clé anon + utilisateurs authentifiés).
 - Les migrations restent la source de vérité (`supabase/migrations`), rejouées en CI sur base locale.
+- Précision (utilisateur, 2026-09-25) — **confirmation d'e-mail** : **désactivée sur le projet de dev** (chaque inscription de test exigerait sinon une boîte mail réelle, et les parcours E2E d'inscription deviendraient instables) ; **activée sur le projet de production**, qui **reste à créer**. Activation et création du projet de production : bloquantes avant toute ouverture publique (ROADMAP M9).
 - `supabase config push` est **proscrit** vers tout projet cloud : `supabase/config.toml` porte des réglages locaux permissifs (confirmation d'e-mail désactivée, mot de passe min 6, redirections `http://localhost:8081/**`, `allowed_cidrs 0.0.0.0/0`). L'auth cloud se règle dans le tableau de bord ; aucune redirection d'auth avec joker `/**` sur un domaine public (liste exacte).
 Alternatives : Docker Desktop local (non installé sur ce poste, ajoutable plus tard) ; base partagée avec la préproduction (rejetée : isolation).
 Réversibilité : facile (ajouter Docker local plus tard ; mêmes migrations).
@@ -209,3 +215,13 @@ Décision :
 Conséquences : l'interface `Chart` doit rester commune aux deux adaptateurs (rendus proches, pas identiques) ; les versions suivent le SDK Expo (`npx expo install`) ; toute dépendance native nouvelle est vérifiée contre la liste Expo Go avant ajout.
 Alternatives : Skia partout y compris web (CanvasKit lourd au premier chargement) ; ECharts sur web (poids, style moins natif) ; lib de heatmap dédiée (dépendance inutile) ; police système (rendu inégal entre plateformes, chiffres non tabulaires partout) ; builds de dev iOS (compte Apple payant requis).
 Réversibilité : facile (graphiques derrière `Chart`, police en token) ; la règle Expo Go sera levée avec un compte Apple développeur (au plus tard P6).
+
+## ADR-022 — Périmètre d'authentification et valeurs par défaut de l'onboarding (MVP)
+Statut : Acceptée | Date : 2026-09-25
+Contexte : M2 livre l'auth et l'onboarding. Deux questions se posaient : (a) faut-il des connexions sociales dès le MVP ? (b) d'où viennent le premier jour de semaine et la devise d'affichage d'un nouvel utilisateur ?
+Décision (utilisateur, 2026-09-25) :
+- **Authentification du MVP** : **e-mail + mot de passe** et **magic link** uniquement. **Ni Google ni Sign in with Apple.** Raison : dès qu'une app iOS propose une connexion sociale tierce, Apple impose Sign in with Apple, donc un compte Apple Developer payant — hors périmètre du MVP (ADR-021 : vérification iPhone via Expo Go, sans compte payant). Question rouverte en **P6** (publication sur les stores) ; ROADMAP § « Décisions mises de côté » n° 6, tranchée.
+- **Valeurs par défaut de l'onboarding** : premier jour de semaine et devise d'affichage sont **déduits de la locale** (FR → lundi / EUR, EN → dimanche / USD, ADR-013), **pré-remplis et modifiables** sur le dernier écran de l'onboarding, puis stockés dans `preferences.week_starts_on` et `profiles.display_currency`. La dérivation est une **fonction pure de `packages/core`** (aucune règle de locale codée dans un écran).
+Conséquences : pas de fournisseur OAuth à configurer dans Supabase pendant le MVP ; la liste des redirections d'auth reste courte (magic link + réinitialisation) ; ajouter un fournisseur plus tard ne change pas le schéma (`auth.identities` est géré par Supabase). Le choix de la devise d'affichage n'est pas une conversion : « Tous les comptes » reste groupé par devise (ADR-019).
+Alternatives : Google dès le MVP (impose Sign in with Apple, donc le compte payant, pour un gain faible en test privé) ; demander explicitement le jour de semaine et la devise sans valeur par défaut (un écran d'onboarding de plus, friction inutile).
+Réversibilité : facile (ajout d'un fournisseur social sans migration ; valeurs par défaut modifiables dans les Réglages).

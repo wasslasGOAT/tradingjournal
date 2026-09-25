@@ -97,25 +97,77 @@ Agents : `app-ui`, `release` (CI), `code-reviewer` — lancer avec `/phase M1`
 
 ---
 
-## Phase M2 — Auth, onboarding et comptes · `À faire`
-Réf. : §5.1, §5.11, ADR-018, ADR-019
-Agents : `database`, `app-ui`, `qa-tests`, `security-auditor` — lancer avec `/phase M2`
+## Phase M2 — Auth, onboarding et comptes · `En cours` (démarrée le 2026-09-25)
+Réf. : §5.1, §5.11, ADR-018, ADR-019, ADR-020, ADR-022 · Données : DATA_MODEL § Utilisateur, § Comptes
+Agents : `database`, `core-engine`, `app-ui`, `qa-tests`, `security-auditor`, `release`, `code-reviewer` — lancer avec `/phase M2`
+Dépend de : M0, M1, M3
 
-- [ ] Tables `profiles`, `preferences`, `accounts`, `cash_movements` + RLS + tests RLS (B ne lit ni n'écrit rien de A)
-- [ ] Écrans login / signup / mot de passe oublié / magic link (Google et Sign in with Apple mis de côté, voir « Décisions mises de côté » n° 6)
-- [ ] Onboarding animé : prénom, marchés, style, devise d'affichage, fuseau, premier compte (manuel)
-- [ ] Gestion des comptes : créer / éditer / archiver ; type (`personal`, `demo`, `backtest`, `prop_challenge`, `prop_funded`, `paper`), devise, solde initial, fuseau, heure de bascule ; dépôts/retraits
-- [ ] Sélecteur de compte global (« Tous les comptes » selon ADR-019) branché sur les vraies données, persisté (Zustand + URL web)
-- [ ] Préférences : langue, thème, couleurs P&L, premier jour de semaine, masquage des montants
-- [ ] Splash « Bon retour, {prénom} » court (< 1 s), préchargement des requêtes du dashboard
-- [ ] Déconnexion ; suppression de compte selon la décision d'ADR-018
-- [ ] Sécurité session : sur `SIGNED_OUT`, `queryClient.clear()` + suppression du cache persisté ; clé de persistance du cache propre à chaque utilisateur
-- [ ] Web : `flowType: 'pkce'` ; `detectSessionInUrl` activé uniquement avec PKCE (magic link, reset)
-- [ ] Deep links (`scheme edgebook`) : liste blanche de chemins ; jamais de redirection dérivée d'un paramètre entrant
-- [ ] Auth cloud (tableau de bord, ADR-020) : mot de passe ≥ 8 caractères avec exigences ; redirections d'auth en liste exacte
-- [ ] Chaque nouvelle table : `revoke all` + `grant` explicites ; fonctions avec `search_path` figé ; tests RLS A/B ; `--passWithNoTests` interdit sur `test:rls`
+**Décisions actées le 2026-09-25** (ne pas rouvrir sans nouvel ADR) :
+- Suppression de compte : **option B** — lien « demander la suppression » dans Réglages + traitement manuel ; `profiles.deleted_at` créée dès M2-1 ; bascule vers l'Edge Function avant toute ouverture publique (ADR-018, M9).
+- Confirmation d'e-mail : **désactivée sur le projet de dev**, activée sur le projet de production (à créer) — ADR-020, bloquant M9.
+- Connexion : **e-mail + mot de passe + magic link uniquement**, ni Google ni Apple (ADR-022 ; rouvert en P6).
+- Onboarding : premier jour de semaine et devise d'affichage **déduits de la locale**, pré-remplis et modifiables (ADR-022).
+- Données factices : seuls les **comptes** factices disparaissent en M2 (`sampleAccounts`) ; les **trades** factices du dashboard et du calendrier restent jusqu'à M4/M5 (seed issu du fixture golden).
 
-**Critères de fin** : un nouvel utilisateur s'inscrit sur mobile, termine l'onboarding, crée un deuxième compte et retrouve tout sur le web ; les tests RLS de ces tables passent (`test:rls` échoue s'il n'y a aucun test) ; les créations/éditions de compte sont optimistes ; test : après déconnexion de A puis connexion de B sur le même appareil, aucune donnée de A n'est restaurée depuis le cache.
+### Vague 1 — base de données (`database`, séquentiel ; rien d'autre en parallèle sur `supabase/`)
+| # | Tâche | Agent | Dépend de | Vérification |
+|---|---|---|---|---|
+| M2-1 | Migration des 4 tables `profiles`, `preferences`, `accounts`, `cash_movements` : `profiles.deleted_at`, `profiles.display_currency`, `preferences.week_starts_on`, **`cash_movements.user_id` dénormalisé** (DATA_MODEL § Comptes), `revoke all` + `grant` explicites, index (`accounts.user_id`, `cash_movements(account_id, occurred_at)`), trigger `set_updated_at` | `database` | — | `pnpm db:push` puis `pnpm db:types` sans diff inattendu ; `rls_disabled_tables()` vide |
+| M2-2 | RLS des 4 tables : `using`/`with check` sur `user_id = auth.uid()`, **aucune policy croisée via `accounts`** (c'est la raison de la dénormalisation de M2-1) ; `deleted_at` non nul bloque l'accès applicatif | `database` | M2-1 | Tests RLS A/B verts |
+| M2-3 | Trigger de création de profil et de préférences à l'inscription (`handle_new_user` sur `auth.users`, `security definer`, **`search_path` figé**, non exécutable par `anon`/`authenticated`) | `database` | M2-1 | Une inscription crée exactement 1 `profiles` + 1 `preferences` ; fonction absente de l'API PostgREST |
+| M2-4 | Tests RLS A/B des 4 tables (lecture, écriture, mise à jour croisée, `cash_movements` d'autrui) ; `--passWithNoTests` interdit sur `test:rls` | `database` | M2-2, M2-3 | `pnpm test:rls` vert et **en échec** si aucun test n'est collecté |
+| M2-5 | Réglages d'auth du projet cloud (tableau de bord, **jamais `supabase config push`**) : mot de passe ≥ 8 caractères avec exigences, redirections en **liste exacte** (magic link, réinitialisation), confirmation d'e-mail **désactivée sur dev** (ADR-020) | `release` | — | Réglages consignés dans `docs/RELEASE.md` ; aucun joker `/**` sur un domaine public |
+
+### Fenêtre d'installation unique (une seule à la fois ; personne d'autre ne lance `pnpm add`)
+| # | Tâche | Agent | Dépend de | Vérification |
+|---|---|---|---|---|
+| M2-6 | Installer **en une seule passe** les dépendances de M2 : `react-hook-form`, `@hookform/resolvers`, `zustand` (compatibilité web + natif et présence dans Expo Go vérifiées — ADR-021) | `release` | — | `pnpm install` propre puis `pnpm lint && pnpm typecheck && pnpm test` verts |
+
+### Vague 2 — calculs purs (`core-engine`, en parallèle de la vague 1 une fois M2-6 passée)
+| # | Tâche | Agent | Dépend de | Vérification |
+|---|---|---|---|---|
+| M2-7 | `packages/core` : dérivation **locale → premier jour de semaine + devise d'affichage** (FR → lundi/EUR, EN → dimanche/USD), fonction pure testée (ADR-022) | `core-engine` | — | Tests FR, EN et locale inconnue (repli documenté) |
+| M2-8 | `packages/schemas` : schémas zod `profile`, `preferences`, `onboarding` ; complément de `account` et `cashMovement` (livrés en M3) ; messages = clés i18n (`VALIDATION_KEYS`) | `core-engine` | — | `pnpm --filter @repo/schemas test` vert ; aucun texte en dur |
+
+### Vague 3 — auth et session (`app-ui`, après M2-1 à M2-6)
+| # | Tâche | Agent | Dépend de | Vérification |
+|---|---|---|---|---|
+| M2-9 | Client auth : web `flowType: 'pkce'`, `detectSessionInUrl` activé **uniquement** avec PKCE ; deep links `scheme edgebook` avec **liste blanche de chemins**, jamais de redirection dérivée d'un paramètre entrant | `app-ui` | M2-5 | Un lien du type `edgebook://…?redirect=https://evil` n'ouvre rien hors liste blanche |
+| M2-10 | Écrans login / signup / mot de passe oublié / magic link (**ni Google ni Apple**, ADR-022) : états d'erreur traduits FR/EN, squelettes, haptique | `app-ui` | M2-9 | Parcours complet sur web, iOS et Android, en sombre et en clair |
+| M2-11 | Sécurité de session : sur `SIGNED_OUT`, `queryClient.clear()` + suppression du cache persisté ; **clé de persistance propre à chaque utilisateur** | `app-ui` | M2-9 | E2E : déconnexion de A puis connexion de B sur le même appareil → aucune donnée de A restaurée |
+| M2-12 | Garde de navigation : pas de session → écrans d'auth ; `onboarding_completed_at` nul → onboarding ; `profiles.deleted_at` non nul → écran « suppression demandée » | `app-ui` | M2-10 | Un rechargement web sur une route profonde conserve la bonne destination |
+
+### Vague 4 — onboarding, comptes et préférences (`app-ui`, séquentiel après la vague 3)
+| # | Tâche | Agent | Dépend de | Vérification |
+|---|---|---|---|---|
+| M2-13 | Onboarding animé : prénom, marchés, style, fuseau, **premier jour de semaine et devise d'affichage pré-remplis depuis la locale et modifiables** (M2-7), premier compte manuel ; écrit `profiles`, `preferences` et `accounts` | `app-ui` | M2-7, M2-12 | Un nouvel utilisateur termine l'onboarding sur mobile et retrouve tout sur le web |
+| M2-14 | Gestion des comptes : créer / éditer / archiver ; `kind` (`personal`, `demo`, `backtest`, `prop_challenge`, `prop_funded`, `paper`), devise, solde initial, fuseau, heure de bascule, méthode de regroupement ; **mises à jour optimistes** | `app-ui` | M2-13 | Création visible immédiatement puis confirmée ; retour arrière propre en cas d'erreur |
+| M2-15 | Dépôts et retraits (`cash_movements`) : saisie, liste, suppression ; signes selon DATA_MODEL § Conventions de calcul, point 7 | `app-ui` | M2-14 | Le solde suit `solde initial + Σ P&L net + mouvements` calculé par `packages/core` |
+| M2-16 | Sélecteur de compte global branché sur les **vraies** données (**`sampleAccounts` supprimé**), « Tous les comptes » groupé par devise (ADR-019), persisté (Zustand + URL web). Les **trades** factices du dashboard et du calendrier **restent** jusqu'à M4/M5 | `app-ui` | M2-14 | `sampleAccounts` absent du dépôt ; le compte choisi survit à un rechargement |
+| M2-17 | Préférences en base (langue, thème, couleurs P&L, premier jour de semaine, masquage des montants) : lecture au démarrage, écriture optimiste, repli local si la requête échoue (garde-fou M1 conservé) | `app-ui` | M2-13 | Un changement de préférence sur mobile se retrouve sur le web après reconnexion |
+| M2-18 | Réglages : déconnexion, **lien « demander la suppression de mon compte »** (ADR-018, option B) ; splash « Bon retour, {prénom} » < 1 s avec préchargement des requêtes du dashboard ; **dette M1 D4** : navigation clavier du `Select` web | `app-ui` | M2-17 | Splash mesuré < 1 s ; `Select` pilotable au clavier (Tab, flèches, Entrée, Échap) |
+
+### Vague 5 — vérification (après la vague 4)
+| # | Tâche | Agent | Dépend de | Vérification |
+|---|---|---|---|---|
+| M2-19 | E2E web (inscription → onboarding → 2e compte → déconnexion / reconnexion), vérification de la **dette M0 D2** sur téléphone Android (données réelles + bascule FR/EN), revue `code-reviewer` puis `security-auditor` (auth, RLS, deep links, cache de session) | `qa-tests`, puis `code-reviewer` et `security-auditor` | M2-18 | `pnpm lint && pnpm typecheck && pnpm test && pnpm test:rls && pnpm e2e:web` verts ; aucun point bloquant |
+
+**Parallélisation** : vague 1 (`database`) et vague 2 (`core-engine`) en parallèle une fois M2-6 passée ; dans la vague 3, M2-10 et M2-11 peuvent avancer ensemble après M2-9. Les vagues 4 et 5 sont séquentielles.
+
+**Critères de fin** :
+- [ ] Un nouvel utilisateur s'inscrit sur mobile, termine l'onboarding, crée un deuxième compte et retrouve tout sur le web.
+- [ ] Tests RLS des 4 tables verts ; `test:rls` **échoue** s'il ne collecte aucun test ; `rls_disabled_tables()` vide.
+- [ ] Créations et éditions de compte **optimistes** ; squelettes, aucun spinner plein écran (ADR-017).
+- [ ] Après déconnexion de A puis connexion de B sur le même appareil, **aucune donnée de A** n'est restaurée depuis le cache.
+- [ ] `sampleAccounts` supprimé ; le sélecteur de compte lit la base (les trades factices restent jusqu'à M4/M5).
+- [ ] Critères transversaux M1–M9 (web + iOS + Android, sombre et clair, FR et EN, `lint` / `typecheck` / `test` verts).
+- [ ] Aucun point bloquant de `code-reviewer` ni de `security-auditor`.
+
+**Dérives ouvertes suivies en M2** (héritées de M0 — aligner ou acter) :
+| Dérive | Écart | Propriétaire | Échéance |
+|---|---|---|---|
+| Script `db:reset:linked` | ADR-020 prévoit un script explicite et confirmé pour `supabase db reset --linked` (destructif) ; seul `db:reset` (local) existe | `release` | M2 (le schéma va changer plusieurs fois) |
+| `expo-updates` absent | `eas.json` utilise `runtimeVersion: appVersion` et `updates.url`, qui supposent `expo-updates` installé | `release` | M9 au plus tard (avec les mises à jour OTA) |
 
 ---
 
@@ -240,7 +292,10 @@ Dépend de : M1–M8
 
 **Critères de fin** : suites Playwright et Maestro vertes sur web, iOS et Android ; mesures ADR-017 atteintes et consignées ; aucun point bloquant de `security-auditor` ni de `code-reviewer` ; web de préproduction et builds internes utilisables avec le compte démo ; en-tête CSP vérifié sur la préproduction.
 
-**Avant toute ouverture publique** (bloquant, même hors stores) : confirmation d'e-mail activée sur le projet de production ; ADR-018 tranché et implémenté ; export RGPD des données ; politique de confidentialité ; disclaimer financier (pas de conseil en investissement).
+**Avant toute ouverture publique** (bloquant, même hors stores) :
+- [ ] **Projet Supabase de production créé** (il n'existe pas encore) avec **confirmation d'e-mail activée** — elle reste désactivée sur le projet de dev (ADR-020, précision du 2026-09-25).
+- [ ] **Bascule d'ADR-018 de l'option B vers l'option A** : Edge Function `delete-account` et suppression **in-app** (le lien de demande manuel livré en M2 ne suffit plus). Aucun changement de schéma (`profiles.deleted_at` existe depuis M2).
+- [ ] Export RGPD des données ; politique de confidentialité ; disclaimer financier (pas de conseil en investissement).
 
 ---
 
@@ -250,12 +305,12 @@ Dépend de : M1–M8
 
 | # | Sujet | Proposition de Claude | Choix provisoire en attendant | Au plus tard |
 |---|---|---|---|---|
-| 1 | Suppression de compte (ADR-018) | B (report) si test privé ; A (Edge Function) si web public | B — report | Avant toute ouverture publique |
+| 1 | Suppression de compte (ADR-018) | B (report) si test privé ; A (Edge Function) si web public | **Tranchée le 2026-09-25 : B** (ADR-018 `Acceptée`) — lien de demande + `profiles.deleted_at` ; bascule vers A obligatoire | Avant toute ouverture publique |
 | 2 | « Tous les comptes » multi-devises (ADR-019) | A — un total par devise, sans conversion | **Tranchée le 2026-09-18 : A** (ADR-019 `Acceptée`) | — |
 | 3 | Écritures atomiques (ADR-016) | Fonction Postgres transactionnelle (trade + exécutions + tags + checklist), valeurs déjà calculées par `packages/core`, aucun calcul SQL | Appliquée | M4 |
 | 4 | Règle `max_total_loss` (perte max vs solde initial) | L'ajouter pour garder le critère « 256,57 $ restants » | Ajoutée | M8 |
 | 5 | Onglets MVP (ADR-011) | Dashboard · Calendrier · Trades · Journal · Plus | **Tranchée le 2026-09-18** (ADR-011 `Acceptée`, + ajout rapide global) | — |
-| 6 | Google + Sign in with Apple | Selon les comptes développeur disponibles | Reportés : email + mot de passe + magic link uniquement | P6 (stores) |
+| 6 | Google + Sign in with Apple | Selon les comptes développeur disponibles | **Tranchée le 2026-09-25 : non** (ADR-022) — e-mail + mot de passe + magic link uniquement ; un login social tiers imposerait Sign in with Apple, donc un compte Apple Developer payant | Rouverte en P6 (stores) |
 | 7 | Nom et logo (ADR-012) | « Edgebook » provisoire | Edgebook | Avant P6 |
 | 8 | Pondération du score (ADR-008) | 30 / 20 / 25 / 15 / 10 | — (score hors MVP) | P2 |
 | 9 | Fichiers d'agents `database.md` (Drizzle dans `apps/server`) et `app-ui.md` (`packages/api-client`) à aligner sur le MVP | Ajuster les deux fichiers | **Validé le 2026-09-17** : note « MVP » dans les deux fichiers (types dans `packages/db` ; données via `apps/app/lib/supabase` + TanStack Query) | M0 |

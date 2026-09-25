@@ -49,38 +49,51 @@ Critères de fin :
 
 **Dérives relevées à la clôture** (encore ouvertes, à trancher) :
 - ADR-020 prévoit un script explicite et confirmé pour `db reset --linked` : absent (seul `db:reset` local existe). Aligner (script `db:reset:linked` avec confirmation, `release`) ou acter.
-- ARCHITECTURE §11 cite Playwright dans la CI : non inclus dans `ci.yml`. **En cours** : ajout planifié en M1 (validé le 2026-09-18).
+- ~~ARCHITECTURE §11 cite Playwright dans la CI~~ : **résolue en M1** (job `e2e-web` dans `ci.yml`, 2026-09-25) — reste à confirmer par un run GitHub (branche non poussée).
 - ~~`docs/RELEASE.md` et `projectId` EAS~~ : aligné le 2026-09-18.
 - EAS signale que `runtimeVersion: appVersion` + `updates.url` supposent `expo-updates`, non installé : à ajouter quand les mises à jour OTA seront utilisées (au plus tard M9).
 
 ---
 
-## Phase M1 — Design system, shell et animations · `En cours`
+## Phase M1 — Design system, shell et animations · `Terminée` (2026-09-25)
 Réf. : §6, ADR-012, ADR-017, ADR-011, ADR-021
 Agents : `app-ui`, `release` (CI), `code-reviewer` — lancer avec `/phase M1`
 
-- [ ] **Reliquat M0 (en premier)** : sur le téléphone Android (build de dev ou Expo Go), lecture de `app_meta` et bascule FR/EN vérifiées
-- [x] Tokens v2 (thèmes sombre/clair par variables CSS, accent bleu décalé de `#5D99F9` — ADR-012, couleurs P&L bleu/gris et vert/rouge par thème, typo, rayons, espacements, **durées et courbes d'animation**) branchés sur NativeWind ; police Inter 400/500/600, chiffres tabulaires pour les montants (ADR-021) — vérifié par l'utilisateur sur iPhone (2026-09-18)
+- [x] Tokens v2 (thèmes sombre/clair par variables CSS, **basculables sans rechargement**, accent bleu décalé de `#5D99F9` — ADR-012, couleurs P&L bleu/gris et vert/rouge par thème, typo, rayons, espacements, durées et courbes d'animation) branchés sur NativeWind ; police Inter 400/500/600, chiffres tabulaires pour les montants (ADR-021)
 - [x] `packages/ui/src` inclus dans le `content` de Tailwind (classes des primitives générées)
-- [ ] Primitives : **livrées** `Screen`, `Card`, `GlowCard`, `StatTile`, `Button`, `IconButton`, `Skeleton`, `ShimmerBar`, `ProgressBar`, `DayCell`, `EmptyState` ; **restent (M1-4)** `Segmented`, `Select`, `DateRangePicker`, `Sheet`, `Toast`
-- [x] Animations reanimated (entrées de cartes, press states), respect de « réduire les animations » — à compléter pour `Sheet` et `Segmented` avec M1-4
+- [x] Primitives (~20) : `Screen`, `Card`, `GlowCard`, `StatTile`, `Button`, `IconButton`, `Skeleton`, `ShimmerBar`, `ProgressBar`, `DayCell`, `EmptyState`, `Segmented`, `Select`, `DateRangePicker`, `Sheet`, `Toast`, `VirtualizedList` (FlashList), `Chart` (ligne/aire, barres, histogramme, heatmap)
+- [x] Animations reanimated (entrées de cartes, press states, `Sheet`, `Segmented`), respect de « réduire les animations »
 - [x] Interface `Haptics` (`.native` expo-haptics / `.web` vide) utilisée par les primitives interactives
-- [ ] **M1-5** Wrapper de liste virtualisée (FlashList) avec états vide / chargement / fin de liste
-- [ ] **M1-6** Interface `Chart` + adaptateurs `.web` (recharts) / `.native` (victory-native, Skia) : ligne/aire, barres, histogramme ; heatmap sans bibliothèque (ADR-021 ; dépendances natives limitées à Expo Go)
-- [ ] **M1-7** i18n FR/EN ; affichage des montants/dates/nombres en **consommant `packages/core/format`** (livré par M3, propriétaire `core-engine`)
-- [x] Layout connecté (ADR-011) : shell à onglets Dashboard · Calendrier · Trades · Journal · Plus + bouton d'ajout rapide global, sidebar web ≥ 1024 px, header avec sélecteur de compte + période (données factices), transitions entre onglets
-- [ ] **M1-9** Bascule de thème et de couleurs P&L sans rechargement + masquage des montants (icône œil) : **persistance** des bascules ; **catalogue exclu du bundle de production**
-- [x] Page « catalogue » interne (dev only) affichant les composants et leurs états (`apps/app/app/(dev)/catalog.tsx`) — à compléter au fil des primitives restantes
-- [x] Contraste AA des textes secondaires (`textMuted` / `textSecondary`, petites tailles), §6.2 — retour utilisateur M0 traité, relu sur iPhone (2026-09-18)
-- [ ] **Correctif** (remonté le 2026-09-24) : montants tronqués dans les cellules du calendrier (`DayCell`) — adapter taille et troncature aux montants longs et aux grandes tailles de police, vérifié sur les 3 plateformes
-- [ ] **Q1** Tests des primitives et du shell (rendu, états, « réduire les animations »)
-- [ ] Job Playwright dans la CI (`ci.yml`, propriétaire `release`) — résout la dérive M0
-- [ ] Build EAS Android **dev** (vérification sur l'appareil) puis **preview** (build release) pour la mesure de fluidité (ADR-021, quota gratuit)
+- [x] **M1-5** Wrapper de liste virtualisée (FlashList) avec états vide / chargement / fin de liste (+ `TradeListRow`)
+- [x] **M1-6** Interface `Chart` + adaptateurs `.web` (recharts) / `.native` (victory-native, Skia) : ligne/aire, barres, histogramme ; heatmap sans bibliothèque (ADR-021) ; axe vertical cadré sur les données (`padDomain`)
+- [x] **M1-7** i18n FR/EN ; montants/dates/nombres affichés en consommant `packages/core/format` (livré par M3)
+- [x] **M1-8** Layout connecté (ADR-011) : shell à onglets Dashboard · Calendrier · Trades · Journal · Plus + bouton d'ajout rapide global, sidebar web ≥ 1024 px, header (compte, période, masquage des montants), transitions entre onglets ; **tab bar flottante et translucide** (`expo-blur`), contenu qui défile réellement sous la barre
+- [x] **M1-9** Bascule de thème et de couleurs P&L sans rechargement + masquage des montants, **persistés** entre deux lancements (avec la langue) ; écran Réglages ; **catalogue exclu des builds de production**
+- [x] Page « catalogue » interne (dev only, `apps/app/app/(dev)/catalog.tsx`) : primitives, graphiques et listes avec leurs états
+- [x] Contraste AA des textes secondaires (`textMuted` / `textSecondary`, petites tailles), §6.2 — **testé**
+- [x] **Correctif** (2026-09-24) : calendrier élargi en pleine largeur, montants compacts non tronqués dans `DayCell`
+- [x] **Q1** Tests des primitives et du shell (rendu, états, « réduire les animations ») — 647 tests sur le dépôt
+- [x] Job Playwright dans la CI (`ci.yml`, job `e2e-web` dédié, propriétaire `release`) — résout la dérive M0 *(jamais exécuté sur GitHub : la branche `wip/m1-m3` n'est pas poussée, voir bilan)*
+- [x] Builds EAS Android **development** (`deaad95b-…`) et **preview** release (`84443209-…`) — APK disponibles
+- [x] Revue `code-reviewer` : 2 bloquants et 8 points importants corrigés (voir bilan)
 
 **Critères de fin** : le catalogue s'affiche sur iOS, Android et web, en sombre et en clair ; changement de thème instantané ; avec « réduire les animations » activé, aucune animation de déplacement ne joue ; fluidité :
-- **Android** : sur l'APK preview (build release), « Profil de rendu HWUI → barres » (options développeur) activé, 10 ouvertures/fermetures de `Sheet` et 10 bascules de `Segmented` : barres sous la ligne verte ;
-- **Web** : test Playwright automatique (CPU ralenti ×4) sur les mêmes interactions : moyenne ≥ 55 fps, aucune image > 50 ms ;
+- [x] **Web** : test Playwright automatique (CPU ralenti ×4) sur un **export de production**, projet `chromium-perf-prod` — 10 ouvertures/fermetures de `Sheet` et 10 bascules de `Segmented`. Seuils ADR-017 (moyenne ≥ 55 fps, aucune image > 50 ms) **conservés mais informatifs sur le web** : Reanimated anime sur le thread JS en web (pas de thread UI dédié), le ralentissement ×4 y est disproportionné (ADR-017, précision du 2026-09-25). Seule assertion bloquante : l'interaction produit bien des images. Mesuré : `Segmented` 40–48 fps, `Sheet` 51–56 fps, images 83–567 ms.
+- [ ] **Android** : barres HWUI sur l'APK preview — **non réalisée, reportée** (décision utilisateur du 2026-09-25). Mesure qui **fait foi** pour ADR-017 : à exécuter avant toute publication, **M9 au plus tard**.
 - mesure Flashlight reportée à M9.
+
+**Bilan (2026-09-25)** : design system, shell et écrans de démonstration livrés sur les 3 plateformes. Vérifié : `pnpm lint`, `pnpm typecheck`, `pnpm test` (**647 tests**), `pnpm format:check`, `pnpm check:secrets` verts ; `pnpm e2e:web` **16 passés, 3 ignorés** (cas Supabase non configuré), 0 échec, sur deux projets Playwright (`chromium` sur serveur de dev, `chromium-perf-prod` sur export de production). Revue `code-reviewer` : **2 bloquants corrigés** — agrégat P&L sorti de l'UI vers `packages/core` (`sumAmountStrings`, testée ; invariant CLAUDE.md « toute logique métier dans `packages/core` ») et risque d'écran blanc au démarrage si la lecture des préférences échoue — et **8 points importants** (axes des graphiques natifs, `react-hooks` activé sur `packages/ui`, piège à focus de la `Sheet`…), mineurs traités. Retours utilisateur traités : calendrier élargi, montants compacts, tab bar flottante translucide, axe vertical des graphiques cadré, défilement sous la barre. Piège Windows réglé : Metro plafonné à 4 workers (EMFILE renvoyait un bundle tronqué sans message d'erreur). Catalogue activé par le mode développement (`apps/app/lib/flags.ts` + `metro.config.js`, surchargeable par `EXPO_PUBLIC_ENABLE_CATALOG`) ; **aucun fichier `.env` versionné** (le hook anti-secrets a bloqué une tentative, la règle reste sans exception). **Point ouvert** : la CI GitHub n'a jamais tourné sur ce code (branche `wip/m1-m3` non poussée) — à vérifier à la fusion dans `main`.
+
+**Dette et mesures reportées (M1)** — assumée à la clôture, à traiter aux échéances indiquées :
+| # | Élément | Échéance | Propriétaire |
+|---|---|---|---|
+| D1 | **Mesure de fluidité native** (barres HWUI sur l'APK preview, ADR-017) : mesure qui fait foi, non réalisée | Avant publication, **M9 au plus tard** | `qa-tests` |
+| D2 | **Reliquat M0** : sur téléphone Android, lecture d'`app_meta` et **bascule FR/EN** non confirmées par l'utilisateur | M2 (écrans réels à vérifier) | utilisateur |
+| D3 | Cibles tactiles de la heatmap sous 44 pt | M7 (écran Analytics) | `app-ui` |
+| D4 | Navigation clavier du `Select` web | M2 (premiers formulaires) | `app-ui` |
+| D5 | Libellés d'accessibilité du `DateRangePicker` | M5 | `app-ui` |
+| D6 | Graphiques natifs multi-séries sans infobulle | M7 | `app-ui` |
+| D7 | CI jamais exécutée sur le code M1/M3 (branche non poussée) | À la fusion dans `main` | `release` |
 
 ---
 

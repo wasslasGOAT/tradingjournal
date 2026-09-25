@@ -331,14 +331,17 @@ Synchro terminée/échouée, règle proche de la limite ou violée, rappel de jo
   MVP (ADR-011, acceptée) : Dashboard · Calendrier · Trades · Journal · Plus (Analytics, Règles, Réglages) ; bouton d'ajout rapide de trade global.
 - **Web ≥ 1024 px** : sidebar fixe avec toutes les sections ; en dessous, même tab bar que le mobile.
 - Header : sélecteur de compte global (« Tous les comptes » inclus) + période, persistés dans Zustand + URL (web).
+- Réalisé en M1 : tab bar **flottante** (détachée des bords, coins arrondis, ombre) et **translucide** (`expo-blur`) ; le contenu défile sous la barre (marge basse réservée sur chaque écran).
 
 ### 6.2 Design system
 - Tokens dans `packages/ui/tokens.ts` (couleurs, rayons, espacements, typo), exposés à NativeWind.
 - Direction visuelle **acceptée** (ADR-012) : fond noir, cartes `#0E0E11`, accent bleu légèrement décalé de `#5D99F9` (ADR-012), police Inter (ADR-021), profits en bleu. Nom et logo restent provisoires (ADR-012). Aucun nom, logo, texte ni maquette de la référence n'est copié.
 - Thème sombre par défaut, thème clair prévu dans les tokens.
 - Option « couleurs P&L » : bleu/gris (défaut) ou vert/rouge.
-- Composants de base : `Screen`, `Card`, `GlowCard`, `StatTile`, `Button`, `IconButton`, `Segmented`, `Select`, `DateRangePicker`, `Sheet`, `Skeleton`, `ShimmerBar`, `ProgressBar`, `ScoreRing` (post-MVP), `DayCell`, `EmptyState`, `Toast`, `Chart`.
+- Composants de base : `Screen`, `Card`, `GlowCard`, `StatTile`, `Button`, `IconButton`, `Segmented`, `Select`, `DateRangePicker`, `Sheet`, `Skeleton`, `ShimmerBar`, `ProgressBar`, `ScoreRing` (post-MVP), `DayCell`, `EmptyState`, `Toast`, `VirtualizedList` (FlashList), `Chart`.
+- **Persistance des préférences d'affichage** (M1) : thème, couleurs P&L, masquage des montants et langue sont lus au démarrage depuis le stockage local (avant le premier rendu, avec repli sur les valeurs par défaut si la lecture échoue) et réécrits à chaque changement. Ils seront **synchronisés avec `preferences` en base** en M2 (§5.1, DATA_MODEL).
 - Masquage des montants (icône œil) global, persistant.
+- **Catalogue interne** de composants (`app/(dev)/catalog.tsx`) : activé par le mode développement (`apps/app/lib/flags.ts` + `metro.config.js`, surchargeable par `EXPO_PUBLIC_ENABLE_CATALOG`), **exclu des builds de production**.
 - Accessibilité : tailles dynamiques, contraste AA, libellés pour lecteurs d'écran, respect de « réduire les animations ».
 
 ### 6.3 Fluidité et finition **[priorité n° 1 du MVP]**
@@ -353,6 +356,8 @@ Exigences et protocole de mesure : ADR-017. En résumé, vérifiées à chaque c
 | Interactions principales | 60 fps (Android milieu de gamme, build release) |
 | Dashboard | premier affichage < 1,5 s |
 | Changement de mois/compte | aucune donnée périmée visible |
+
+Mesure de fluidité : la mesure **native** (HWUI, APK preview) fait foi ; la mesure web automatisée (Playwright, CPU ×4, export de production) est **informative** — voir ADR-017, précision du 2026-09-25.
 
 ---
 

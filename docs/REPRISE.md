@@ -1,33 +1,25 @@
 # Point de reprise
 
-> À lire en premier pour reprendre le travail. Mis à jour le **2026-09-24**, à la clôture de la phase M3.
+> À lire en premier pour reprendre le travail. Mis à jour le **2026-09-25**, à la clôture de la phase M1.
 > Le détail fait foi dans `ROADMAP.md` (cases à cocher) et `DECISIONS.md` (ADR).
 
-## État au 2026-09-24 — travail en cours sur la branche `wip/m1-m3`
+## État au 2026-09-25 — M0, M1 et M3 terminées ; prochaine phase : M2
 
-Le travail M1/M3 n'est **pas sur `main`** : il est sur la branche **`wip/m1-m3`**. `main` reste au dernier état vert (clôture M0). Pour reprendre : `git checkout wip/m1-m3`.
+Le travail M1/M3 n'est **pas sur `main`** : il est sur la branche **`wip/m1-m3`** (dernier commit `00760b1`). `main` reste au dernier état vert (clôture M0). Pour reprendre : `git checkout wip/m1-m3`.
 
-**M3 (moteur de calcul) — `Terminée` le 2026-09-24.**
-- Livré : `packages/core` (`format`, `money`, `time`, `trading`, `stats`, `aggregates`) et `packages/schemas` (compte, exécution, trade, mouvement de trésorerie, messages = clés i18n).
-- Vérifié : `@repo/core` 278 tests verts (521 sur tout le dépôt), couverture **98,24 %** (seuil 90 % bloquant) ; `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm format:check`, `pnpm test:rls` (12) verts ; chiffres golden au centime (200 000 → −19 743,43 → 180 256,57, −9,87 %, mars 24 trades −17 527,71, pire jour 30/03).
-- Conventions de calcul consignées dans `DATA_MODEL.md` § « Conventions de calcul (M3) » ; ADR-005 et ADR-019 complétés. **Toute évolution de ces conventions exige un ADR.**
-- Dette reportée en M4 (inscrite dans ROADMAP) : colonne `sequence` sur `executions` (ADR à créer), scission d'une exécution lors d'une inversion de position, seed généré depuis le fixture golden.
+**M3 (moteur de calcul) — `Terminée` le 2026-09-24.** `packages/core` (money, time, trading, stats, aggregates, format) et `packages/schemas` livrés en fonctions pures testées ; couverture 98,24 % ; chiffres golden au centime (200 000 → −19 743,43 → 180 256,57, −9,87 %). Conventions de calcul dans `DATA_MODEL.md` § « Conventions de calcul (M3) » — **toute évolution exige un ADR**. Dette reportée en M4 : colonne `sequence` sur `executions` (ADR à créer), scission d'exécution lors d'une inversion, seed généré depuis le fixture golden.
 
-**M1 (design system, shell) — `En cours`** — état au 2026-09-24 au soir, commit `9a3ee26` (647 tests, lint/typecheck/format/check:secrets verts).
+**M1 (design system, shell) — `Terminée` le 2026-09-25.**
+- Livré : tokens v2 (thèmes sombre/clair basculables sans rechargement, couleurs P&L par thème, Inter, contrastes AA testés), haptique, animations reanimated respectant « réduire les animations », ~20 primitives (dont `Sheet`, `Select`, `DateRangePicker`, `Segmented`, `Toast`, `VirtualizedList`/FlashList, `Chart`), shell à onglets (ADR-011) + sidebar web ≥ 1024 px + header, **tab bar flottante translucide** (`expo-blur`), Dashboard (courbe d'equity), Calendrier pleine largeur, Réglages avec **préférences persistées**, catalogue interne **exclu des builds de production**.
+- Vérifié : `pnpm lint`, `pnpm typecheck`, `pnpm test` (**647 tests**), `pnpm format:check`, `pnpm check:secrets` verts ; `pnpm e2e:web` **16 passés, 3 ignorés** (Supabase non configuré), 0 échec, sur les projets `chromium` (serveur de dev) et `chromium-perf-prod` (export de production).
+- Builds EAS Android **development** (`deaad95b-…`) et **preview** release (`84443209-…`) terminés, APK disponibles.
+- Revue `code-reviewer` : 2 bloquants + 8 points importants corrigés (agrégat P&L remonté dans `packages/core` via `sumAmountStrings` ; écran blanc au démarrage si la lecture des préférences échoue ; axes natifs, `react-hooks` sur `packages/ui`, piège à focus de la `Sheet`).
+- **Fluidité (ADR-017, décision utilisateur du 2026-09-25)** : clôture **sans** la mesure sur appareil. La mesure **native** (barres HWUI sur l'APK preview) **fait foi** et reste à faire — **avant toute publication, M9 au plus tard**. La mesure **web** est désormais **informative** (Reanimated anime sur le thread JS en web : le CPU ×4 y est disproportionné) ; seule assertion bloquante : l'interaction produit bien des images. Mesuré : `Segmented` 40–48 fps, `Sheet` 51–56 fps, images 83–567 ms.
+- **Dette M1** (tableau D1–D7 dans `ROADMAP.md`, phase M1) : mesure native reportée, vérifications utilisateur sur Android et bascule FR/EN non confirmées, cibles tactiles de la heatmap < 44 pt, navigation clavier du `Select` web, libellés d'accessibilité du `DateRangePicker`, graphiques natifs multi-séries sans infobulle, **CI jamais exécutée sur ce code** (branche non poussée).
 
-**Mise à jour de fin de session (2026-09-24) — ce qui reste vraiment :**
-1. **Mesure de fluidité (ADR-017)** : protocole refait sur un **export de production** (projet Playwright `chromium-perf-prod`, `webServer` sur le port 4173) — **travail interrompu, seuils à confirmer**. Sur le bundle de développement, les deux tests échouaient (fps moyen 16,2 pour `Segmented`, 2,8 pour `Sheet`) : mesure non représentative, c'est pourquoi le protocole a changé. Les 14 autres tests e2e passent.
-2. **Build EAS Android** de dev puis preview (`expo-blur` et d'autres modules natifs ajoutés depuis le build de M0).
-3. **Vérifications utilisateur** : barre flottante, graphiques avec axes, persistance des réglages (fermer/rouvrir l'app), Android, bascule FR/EN.
-4. **Revue finale + clôture M1**, puis fusion de `wip/m1-m3` dans `main`.
-
-**Dette M1 assumée** (revue `code-reviewer`, à traiter plus tard) : cibles tactiles de la heatmap sous 44 pt, navigation clavier du `Select` web, libellés d'accessibilité du sélecteur de dates, axes natifs des graphiques multi-séries sans infobulle.
+**Prochaine étape : phase M2 — auth, onboarding et comptes.** Décisions à trancher avant de coder : ADR-018 (suppression de compte), confirmation d'e-mail sur le projet cloud, Google/Apple (mise de côté n° 6), premier jour de semaine et devise d'affichage dans l'onboarding, remplacement des données factices (`sampleAccounts`, `sampleData`) par les vraies données.
 
 **Catalogue** : activé par le **mode développement** (`apps/app/lib/flags.ts` + `metro.config.js`), surchargeable par `EXPO_PUBLIC_ENABLE_CATALOG`. Aucun fichier `.env` n'est versionné : le hook anti-secrets a bloqué une tentative en ce sens, la règle reste sans exception.
-- Livré : tokens v2 (thèmes sombre/clair, P&L par thème, Inter, contrastes AA vérifiés sur iPhone), haptique et animations reanimated, primitives de base, **M1-4** (`Segmented`, `Sheet`, `Select`, `DateRangePicker`, `Toast` + header branché), **M1-5** (liste FlashList + `TradeListRow`), **M1-6** (`Chart` : ligne/aire, barres, histogramme, heatmap ; courbe d'equity sur le dashboard), catalogue interne, shell à onglets + sidebar web + header.
-- **Retours utilisateur traités** : calendrier élargi en pleine largeur avec montants compacts ; **tab bar flottante** (détachée des bords, coins arrondis, ombre) et translucide via `expo-blur` (voile 0,3/0,45, `blurMethod: 'dimezisBlurView'` sur Android) ; axe vertical des graphiques cadré sur les données (`padDomain`) — sans quoi une courbe autour de 24 000 était écrasée en haut, donc invisible.
-- Reste : ajouter graphiques et listes au **catalogue** (agent coupé par une erreur réseau), M1-7 (i18n complet), M1-9 (persistance des bascules, catalogue exclu du bundle de production), tests Q1, Playwright en CI, builds EAS Android (dev puis preview — `expo-blur` a été ajouté depuis le dernier build), revue et clôture.
-- Vérifications utilisateur restantes : Android (lecture d'`app_meta`, bascule FR/EN), fluidité sur l'APK preview, rendu de la barre flottante et de la courbe sur téléphone.
 
 **Piège Windows réglé** : Metro dépassait la limite de descripteurs (`EMFILE`) et renvoyait alors au téléphone une erreur de 2 Ko à la place du bundle — l'app restait donc sur son ancienne version, sans message d'erreur. `apps/app/metro.config.js` plafonne désormais `maxWorkers` à 4 sur Windows ; en cas de rechute, relancer avec `npx expo start --max-workers 2`. **Vérifier la taille du bundle** (`curl .../entry.bundle?platform=ios&dev=true`, plusieurs Mo attendus) avant de conclure qu'un changement n'a pas pris.
 
@@ -38,12 +30,11 @@ Le travail M1/M3 n'est **pas sur `main`** : il est sur la branche **`wip/m1-m3`*
 ## Où on en est
 
 - **Périmètre** : on construit d'abord le **MVP** (phases M0 → M9, ARCHITECTURE §0). Pas de serveur, pas de broker, pas d'import CSV, pas de coach IA (ADR-015/016).
-- **Phase M0 (fondations)** : `Terminée` le 2026-09-18 (CI verte, build Android de dev EAS, vérifiée sur iPhone ; reste à vérifier sur Android et la bascule FR/EN sur téléphone, en début de M1). Dérives encore ouvertes : voir ROADMAP, Phase M0.
-- **Phase M3 (moteur de calcul)** : `Terminée` le 2026-09-24 (voir ci-dessus). Elle livre `packages/core/format` (consommé par M1) et le fixture golden (réutilisé par le seed en M4).
-- **Phase M1 (design system, shell)** : `En cours` depuis le 2026-09-18 ; reliquat M0 (Android + FR/EN sur téléphone) toujours ouvert.
-- **Décisions du 2026-09-18** : ADR-011 (onglets + ajout rapide global) et ADR-019 (total par devise) `Acceptées` ; ADR-021 (victory-native/recharts, Inter, uniquement des libs incluses dans Expo Go) ; accent bleu décalé de la référence (ADR-012).
-- **Ensuite** : M2 (auth, onboarding, comptes).
-- **CI** : `gh` (GitHub CLI) est installé et authentifié sur ce PC ; la session peut lire les runs elle-même (`gh run list`, `gh run view`).
+- **M0** `Terminée` (2026-09-18) — dérives encore ouvertes : voir ROADMAP, phase M0 (script `db:reset:linked`, `expo-updates`). La dérive « Playwright absent de la CI » est **résolue** (job `e2e-web` dans `ci.yml`, M1).
+- **M3** `Terminée` (2026-09-24), **M1** `Terminée` (2026-09-25).
+- **M2** (auth, onboarding, comptes) : `À faire` — prochaine phase.
+- **Décisions en vigueur** : ADR-011 (onglets + ajout rapide global), ADR-019 (total par devise), ADR-021 (victory-native/recharts, Inter, libs incluses dans Expo Go), ADR-017 complétée le 2026-09-25 (mesure native qui fait foi, mesure web informative).
+- **CI** : `gh` (GitHub CLI) est installé et authentifié sur ce PC (`gh run list`, `gh run view`). **Dernier run : `35389707958` sur `main` (2026-09-18)** — la branche `wip/m1-m3` n'a jamais été poussée, donc la CI n'a jamais vu le code M1/M3.
 
 ## Comptes et ressources
 

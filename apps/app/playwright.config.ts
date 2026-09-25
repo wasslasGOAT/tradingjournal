@@ -19,13 +19,13 @@ import { defineConfig, devices } from '@playwright/test';
  *   pas de rechargement à chaud inutile pour un run de test) ; `BROWSER=none`
  *   empêche l'ouverture automatique d'un onglet navigateur sur le poste dev.
  *
- * Exception — fluidité (`e2e/{performance.spec.ts,zzzTempPerf.spec.ts}`, ADR-017) : ces tests mesurent des
+ * Exception — fluidité (`e2e/performance.spec.ts`, ADR-017) : ces tests mesurent des
  * images (`requestAnimationFrame`) sous CPU ralenti ×4, contre le bundle web *dev*
  * (non minifié, React en mode développement, hot reload actif, sourcemaps) —
  * mesure jamais représentative (fps très dégradé, indépendamment de toute régression
  * réelle). Projet dédié `chromium-perf-prod`, port distinct (4173), export de
  * production (`expo export --platform web`) servi statiquement — voir `webServer`
- * ci-dessous et l'en-tête de `{performance.spec.ts,zzzTempPerf.spec.ts}`.
+ * ci-dessous et l'en-tête de `performance.spec.ts`.
  */
 export default defineConfig({
   testDir: './e2e',
@@ -51,16 +51,16 @@ export default defineConfig({
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'], baseURL: 'http://localhost:8081' },
-      // `e2e/{performance.spec.ts,zzzTempPerf.spec.ts}` (fluidité, CPU ralenti ×4) tourne à part, contre un
+      // `e2e/performance.spec.ts` (fluidité, CPU ralenti ×4) tourne à part, contre un
       // export de production (projet `chromium-perf-prod` ci-dessous) — voir l'en-tête
       // de ce fichier pour le pourquoi. Tous les autres specs restent ici, contre le
       // serveur de dev.
-      testIgnore: '**/{performance.spec.ts,zzzTempPerf.spec.ts}',
+      testIgnore: '**/performance.spec.ts',
     },
     {
       name: 'chromium-perf-prod',
       use: { ...devices['Desktop Chrome'], baseURL: 'http://localhost:4173' },
-      testMatch: '**/{performance.spec.ts,zzzTempPerf.spec.ts}',
+      testMatch: '**/performance.spec.ts',
     },
   ],
   webServer: [
@@ -76,7 +76,7 @@ export default defineConfig({
     {
       // Port distinct (4173) et projet dédié (`chromium-perf-prod`) : cet export tourne
       // en parallèle du serveur de dev ci-dessus sans le ralentir ni être ralenti par
-      // lui — voir l'en-tête de ce fichier et `e2e/{performance.spec.ts,zzzTempPerf.spec.ts}`.
+      // lui — voir l'en-tête de ce fichier et `e2e/performance.spec.ts`.
       // `expo export` régénère `dist/` avant chaque run (pas de risque de mesurer un
       // export périmé) ; `npx serve -s` sert `dist/` en statique avec repli SPA
       // (`--single` : toute route inconnue de l'hébergeur renvoie `index.html`, requis

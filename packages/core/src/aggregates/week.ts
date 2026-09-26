@@ -1,6 +1,5 @@
-import { formatInTimeZone } from 'date-fns-tz';
-
 import { Decimal } from '../money';
+import { getLocalTimeParts } from '../time/localTimeCache';
 import type { DayAggregate } from './day';
 import type { WeekStartsOn } from './types';
 
@@ -54,12 +53,12 @@ export function tradingDayWeekday(day: string): number {
  * civil dès que la bascule n'est pas minuit (ex. rollover 17:00 New York),
  * ce qui placerait une même exécution sur un couple (jour, heure)
  * incohérent. Même technique que {@link tradingDayWeekday}/`packages/core/time`
- * `tradingDayOf` (`formatInTimeZone` directement sur l'instant UTC, correct
- * pendant les changements d'heure).
+ * `tradingDayOf` (décomposition directe de l'instant UTC via
+ * {@link getLocalTimeParts}, mémoïsée par fuseau — correct pendant les
+ * changements d'heure).
  */
 export function localWeekdayOf(instant: Date, timezone: string): number {
-  const dayString = formatInTimeZone(instant, timezone, 'yyyy-MM-dd');
-  const [year = 0, month = 1, day = 1] = dayString.split('-').map(Number);
+  const { year, month, day } = getLocalTimeParts(instant, timezone);
   return new Date(Date.UTC(year, month - 1, day)).getUTCDay();
 }
 

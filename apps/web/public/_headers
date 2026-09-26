@@ -1,0 +1,49 @@
+# Cloudflare Pages — en-têtes (ADR-025, ROADMAP M1-web W-8).
+# Réf. : CLAUDE.md, ARCHITECTURE §9, docs/RELEASE.md §0.
+#
+# CSP « de base » (pas encore la CSP stricte exigée en M9, ARCHITECTURE §9) :
+# - `script-src 'unsafe-inline'` : nécessaire pour le petit script anti-flash inline
+#   d'`index.html` (pose `data-theme` avant le premier rendu React, voir ce fichier).
+#   À remplacer en M9 par un hash `'sha256-...'` (script statique, jamais généré
+#   dynamiquement) ou un nonce, pour retirer `unsafe-inline`.
+# - `style-src 'unsafe-inline'` : styles en ligne posés par React/Radix via la CSSOM
+#   (`element.style.xxx = ...`) et par certains composants (`components/chart`,
+#   `components/ui/virtualized-list.tsx`, etc.) ; pas de hash/nonce praticable pour du
+#   style généré dynamiquement — accepté pour la CSP « de base », à revisiter en M9
+#   si une alternative existe.
+# - `connect-src` : le domaine Supabase du projet (`https://*.supabase.co` en HTTPS,
+#   `wss://*.supabase.co` pour le canal realtime de supabase-js) — jamais un joker plus
+#   large (ADR-020 : liste exacte pour les redirections d'auth ; ici, wildcard de
+#   sous-domaine accepté car propre à l'infrastructure Supabase, pas à un domaine
+#   public arbitraire).
+# - `worker-src 'self'` : enregistrement du service worker PWA (`/sw.js`,
+#   `vite-plugin-pwa`, W-7) et de son import `workbox-*.js`, même origine.
+# - `img-src`/`font-src` avec `data:` : icônes et police Inter auto-hébergée
+#   (`@fontsource-variable/inter`, ADR-024) peuvent embarquer des URI `data:`.
+# - `frame-ancestors 'none'` + `X-Frame-Options: DENY` : l'app ne doit jamais être
+#   chargée dans une iframe tierce (redondant volontairement, tous les navigateurs
+#   ciblés ne lisent pas `frame-ancestors` de la même façon qu'`X-Frame-Options`).
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; manifest-src 'self'; worker-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
+  X-Frame-Options: DENY
+
+# Fichiers construits avec un hash dans leur nom (`vite build`, dossier
+# `assets/`) : jamais réécrits sous le même nom, cache long et immuable.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Service worker et manifeste : jamais de cache long, pour que les mises à jour de
+# l'app (nouveau `sw.js` précaché) arrivent au prochain chargement (ADR-025 §0).
+/sw.js
+  Cache-Control: no-cache
+
+/manifest.webmanifest
+  Cache-Control: no-cache
+
+# Coquille HTML : jamais de cache long non plus (sinon un navigateur garde une
+# ancienne référence vers des fichiers `/assets/*` remplacés).
+/index.html
+  Cache-Control: no-cache

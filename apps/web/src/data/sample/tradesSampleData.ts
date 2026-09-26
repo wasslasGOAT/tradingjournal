@@ -162,9 +162,28 @@ export function toSampleTradeRecord(accountId: SampleAccountId, seed: SampleTrad
   }
 }
 
+/**
+ * Cache mémoire par compte (W-9 boucle 2, ADR-017) : `toSampleTradeRecord`
+ * appelle `tradingDayOf` (`@repo/core/time`), qui reconstruit un
+ * `Intl.DateTimeFormat` et reformate l'horodatage via `date-fns-tz` à
+ * *chaque* trade — mesuré au profil CPU comme le premier poste de coût du
+ * changement de mois du Calendrier (~30 % du temps total, cumul
+ * `assertValidTimezone`/`toLocalDateTimeParts`). `SAMPLE_TRADE_SEEDS` est une
+ * constante figée au chargement du module : recalculer les mêmes
+ * `TradeRecord` à chaque appel (Dashboard *et* Calendrier, `staleTime` par
+ * défaut à `0` → un refetch par navigation) est un travail pur perdu, jamais
+ * observable par l'appelant (résultat identique, comparé par valeur dans les
+ * tests). Calculé une fois par compte, au premier appel.
+ */
+const sampleTradeRecordsCache = new Map<SampleAccountId, readonly TradeRecord[]>()
+
 /** Tous les trades factices d'un compte, déjà convertis en {@link TradeRecord} (triés par jour d'origine, voir `sortTradesChronologically` côté `@repo/core` pour un ordre garanti). */
-export function sampleTradeRecordsForAccount(accountId: SampleAccountId): TradeRecord[] {
-  return SAMPLE_TRADE_SEEDS[accountId].map((seed) => toSampleTradeRecord(accountId, seed))
+export function sampleTradeRecordsForAccount(accountId: SampleAccountId): readonly TradeRecord[] {
+  const cached = sampleTradeRecordsCache.get(accountId)
+  if (cached) return cached
+  const records = SAMPLE_TRADE_SEEDS[accountId].map((seed) => toSampleTradeRecord(accountId, seed))
+  sampleTradeRecordsCache.set(accountId, records)
+  return records
 }
 
 /** Tous les identifiants de comptes factices connus (ordre stable, utilisé par le mode « Tous les comptes »). */

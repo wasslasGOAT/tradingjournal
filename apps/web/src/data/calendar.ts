@@ -97,6 +97,21 @@ export async function getCalendarMonthSummary(filters: CalendarFilters): Promise
   return { currency, weeks, dayByTradingDay, monthStats }
 }
 
+/**
+ * Le `QueryClient` global (`src/main.tsx`) n'a pas de `staleTime` par défaut
+ * (`0`) : sans réglage local, revenir sur un mois déjà visité (ex. mois
+ * suivant puis mois précédent, W-9 boucle 2) redéclenche quand même un
+ * fetch en arrière-plan — donc un recalcul complet (`aggregateByTradingDay`,
+ * `computeMonthStats`, `buildCalendarGrid`) — à chaque clic, alors que les
+ * données factices de ce mois n'ont pas changé. Mesuré au profil CPU comme
+ * un doublement inutile du travail sur les allers-retours du test de
+ * fluidité. `staleTime` garde le résultat en cache tel quel pour toute la
+ * session (les données factices ne changent jamais pendant le MVP,
+ * ADR-016) ; un vrai backend (M4/M5, Supabase) reviendra sur ce réglage
+ * avec `database`/`backend` selon la fraîcheur réellement requise.
+ */
+const CALENDAR_MONTH_STALE_TIME_MS = 5 * 60 * 1000
+
 export function calendarMonthQueryOptions(filters: CalendarFilters) {
   return {
     queryKey: dataQueryKeys.calendarMonth(filters.accountId, filters.year, filters.month),
@@ -107,5 +122,6 @@ export function calendarMonthQueryOptions(filters: CalendarFilters) {
     // ralenti). Ne redonne jamais de données périmées d'un *autre* compte/période :
     // la clé de requête reste filtrée par compte + année + mois (règle du projet).
     placeholderData: keepPreviousData,
+    staleTime: CALENDAR_MONTH_STALE_TIME_MS,
   }
 }

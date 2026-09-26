@@ -1,10 +1,10 @@
 import { formatSignedAmount, parseAmount } from "@repo/core"
 import type { Decimal, SupportedLocale } from "@repo/core"
+import { clsx } from "clsx"
 import { NotebookPen } from "lucide-react"
 import { memo } from "react"
 
 import { formatCompactSignedAmount } from "@/lib/format/compactAmount"
-import { cn } from "@/lib/utils"
 
 import { resolveDayCellContentState, resolveDayCellPnlIntent } from "./day-cell-state"
 import type { PnlIntent } from "@/lib/theme/tokens"
@@ -73,7 +73,12 @@ function DayCellComponent({
       data-testid={testId}
       onClick={onClick}
       aria-label={ariaLabel}
-      className={cn(
+      // `clsx` (pas `cn`/`twMerge`, W-9 boucle 2, ADR-017) : ces classes ne se chevauchent
+      // jamais (une seule branche de chaque ternaire est présente à la fois), donc rien à
+      // fusionner — `twMerge` (résolution de conflits Tailwind) fait un travail inutile ici,
+      // mesuré au profil CPU comme non négligeable répété sur ~42 cellules à chaque
+      // changement de mois sous CPU ralenti.
+      className={clsx(
         "flex min-h-11 min-w-11 flex-1 flex-col rounded-md border p-1.5 text-left transition-colors sm:p-2",
         contentState === "empty" ? "bg-card" : "bg-muted",
         isToday ? "border-2 border-primary" : "border-border",
@@ -85,7 +90,7 @@ function DayCellComponent({
       <div className="flex flex-1 items-center justify-center">
         {contentState === "trades" && intent !== null && pnlDecimal !== null && currency ? (
           <span
-            className={cn(
+            className={clsx(
               "truncate text-center font-semibold tabular-nums",
               // `sm:` (bureau, colonnes larges) : remonte à `text-sm` (14px) — `2xs`/`xs` restent
               // réservés aux grilles denses (mobile, colonne « Total ») où la place manque.

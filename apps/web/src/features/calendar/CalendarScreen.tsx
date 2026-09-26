@@ -7,10 +7,10 @@ import {
   toAmountString,
 } from "@repo/core"
 import type { TradingDay } from "@repo/core"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useSearch } from "@tanstack/react-router"
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react"
-import { useMemo, useState } from "react"
+import { startTransition, useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Button } from "@/components/ui/button"
@@ -29,11 +29,59 @@ import { resolveApproximateToday } from "@/features/shell/filters"
 import { resolveLocale } from "@/lib/i18n"
 import { useWindowWidth } from "@/lib/use-media-query"
 
-import { isNarrowCalendarLayout } from "./calendarLayout"
+import { dayNumberFromTradingDay, isNarrowCalendarLayout } from "./calendarLayout"
+import type { CalendarDayStateKey } from "./resolveCalendarDayStateKey"
 import { resolveCalendarDayStateKey } from "./resolveCalendarDayStateKey"
+
+/** Toutes les valeurs possibles de {@link CalendarDayStateKey} (voir ce type). */
+const DAY_STATE_KEYS: readonly CalendarDayStateKey[] = [
+  "profit",
+  "loss",
+  "flat",
+  "journalOnly",
+  "today",
+  "empty",
+]
 
 /** Premier jour de la semaine par locale (`packages/core` n'expose pas encore ce réglage par préférence utilisateur, M2+). */
 const WEEK_STARTS_ON: Record<"fr" | "en", 0 | 1> = { fr: 1, en: 0 }
+
+interface MonthCursor {
+  readonly year: number
+  readonly month: number
+}
+
+/** Décale un curseur année/mois de `delta` mois (`-1`/`+1` : navigation calendrier). */
+function shiftCursor(cursor: MonthCursor, delta: -1 | 1): MonthCursor {
+  if (delta === -1) {
+    return cursor.month === 1 ? { year: cursor.year - 1, month: 12 } : { year: cursor.year, month: cursor.month - 1 }
+  }
+  return cursor.month === 12 ? { year: cursor.year + 1, month: 1 } : { year: cursor.year, month: cursor.month + 1 }
+}
+
+/**
+ * Semaine de référence (2023-01-01 = dimanche) réordonnée `dimanche->samedi`
+ * en `lundi->dimanche` — utilisée uniquement pour lire le libellé de
+ * jour de semaine abrégé (`formatWeekdayShort`) de chaque colonne d'en-tête.
+ * Aucun rapport avec le mois affiché : la séquence des jours de semaine par
+ * colonne ne dépend que de `weekStartsOn`, jamais du mois (W-9 boucle 2,
+ * ADR-017) — recalculer ces 7 libellés à chaque changement de mois (comme
+ * avant, via `data.weeks[0]`) refaisait un travail identique à chaque clic
+ * pour un résultat qui ne change jamais tant que la locale ne change pas.
+ */
+const SUNDAY_START_REFERENCE_WEEK = [
+  "2023-01-01",
+  "2023-01-02",
+  "2023-01-03",
+  "2023-01-04",
+  "2023-01-05",
+  "2023-01-06",
+  "2023-01-07",
+] as const
+const REFERENCE_WEEK_BY_WEEK_STARTS_ON: Record<0 | 1, readonly string[]> = {
+  0: SUNDAY_START_REFERENCE_WEEK,
+  1: [...SUNDAY_START_REFERENCE_WEEK.slice(1), SUNDAY_START_REFERENCE_WEEK[0]],
+}
 
 /**
  * Écran Calendrier (W-6, ARCHITECTURE §5.5) : grille du mois (`DayCell` par
@@ -68,10 +116,32 @@ export function CalendarScreen() {
   )
   const monthLabel = formatMonthLabel(monthLabelDay, { locale })
 
-  const goToPreviousMonth = () =>
-    setCursor((prev) => (prev.month === 1 ? { year: prev.year - 1, month: 12 } : { year: prev.year, month: prev.month - 1 }))
-  const goToNextMonth = () =>
-    setCursor((prev) => (prev.month === 12 ? { year: prev.year + 1, month: 1 } : { year: prev.year, month: prev.month + 1 }))
+  // `startTransition` (W-9 boucle 2, ADR-017) : la mise à jour du curseur déclenche le
+  // recalcul de ~42 `DayCell` + en-tête + stats — un rendu synchrone unique dans le même
+  // tick que le clic. Marquer ce `setState` en transition permet à React 18+ de découper
+  // ce rendu en tranches interruptibles (concurrent rendering) plutôt qu'un unique
+  // rendu bloquant, laissant le fil principal rendre une image intermédiaire — mesuré au
+  // profil CPU comme réduisant la pire image (celle qui dépasse 50 ms).
+  const goToPreviousMonth = () => startTransition(() => setCursor((prev) => shiftCursor(prev, -1)))
+  const goToNextMonth = () => startTransition(() => setCursor((prev) => shiftCursor(prev, 1)))
+
+  const queryClient = useQueryClient()
+  // Préchargement des mois voisins (W-9 boucle 2, ADR-017) : le tout premier aller vers
+  // un mois jamais visité reste un vrai fetch (cache froid) — mesuré au profil comme la
+  // pire image du test de fluidité (~66-83 ms), la seule à dépasser franchement les
+  // autres une fois le mois déjà visité mis en cache par `staleTime`
+  // (`src/data/calendar.ts`). Précharger silencieusement le mois précédent et le mois
+  // suivant dès que le curseur ou le compte change réchauffe ce cache avant le clic,
+  // sans jamais afficher de donnée périmée (clé de requête identique à celle lue par
+  // `useQuery` ci-dessus, `getCalendarMonthSummary` reste pur/sans DOM).
+  useEffect(() => {
+    for (const delta of [-1, 1] as const) {
+      const neighbor = shiftCursor(cursor, delta)
+      void queryClient.prefetchQuery(
+        calendarMonthQueryOptions({ accountId: search.account, year: neighbor.year, month: neighbor.month, weekStartsOn }),
+      )
+    }
+  }, [cursor, search.account, weekStartsOn, queryClient])
 
   const hasData = query.data ? query.data.dayByTradingDay.size > 0 : false
   const selectedDayData = selectedDay ? (query.data?.dayByTradingDay.get(selectedDay) ?? null) : null
@@ -81,6 +151,28 @@ export function CalendarScreen() {
   // recalculer/re-rendre les ~35 `DayCell` de la grille (cause mesurée de
   // saccades sous CPU ralenti). `DayCell`/`WeekTotalCell`/`StatTile` sont eux-mêmes
   // mémoïsés (`React.memo`), en complément.
+  // Libellés d'état (W-9 boucle 2, ADR-017) : `CalendarDayStateKey` n'a que 6 valeurs
+  // possibles — un seul appel `t()` par valeur (6 au total) plutôt qu'un appel `t()`
+  // imbriqué par cellule (jusqu'à ~42 par changement de mois, mesuré au profil CPU
+  // comme une part notable du coût sous CPU ralenti, aux côtés du formatage de date).
+  const dayStateLabels = useMemo(
+    () =>
+      Object.fromEntries(
+        DAY_STATE_KEYS.map((key) => [key, t(`calendar.dayState.${key}`)]),
+      ) as Record<CalendarDayStateKey, string>,
+    [t],
+  )
+
+  // Libellés d'en-tête (jours de semaine) : dépendent seulement de `weekStartsOn`/`locale`,
+  // jamais du mois affiché — voir le commentaire de `REFERENCE_WEEK_BY_WEEK_STARTS_ON`.
+  const weekdayHeaderLabels = useMemo(
+    () =>
+      REFERENCE_WEEK_BY_WEEK_STARTS_ON[weekStartsOn].map((day) =>
+        formatWeekdayShort(day as TradingDay, { locale }),
+      ),
+    [weekStartsOn, locale],
+  )
+
   const data = query.data
   const monthGridAndStats = useMemo(() => {
     if (!data) return null
@@ -90,9 +182,9 @@ export function CalendarScreen() {
           <div className="flex gap-1">
             {/* Clé positionnelle (index de colonne, W-9/ADR-017) — voir le commentaire
                 équivalent sur la cellule du jour ci-dessous. */}
-            {data.weeks[0]?.map((cell, columnIndex) => (
+            {weekdayHeaderLabels.map((label, columnIndex) => (
               <span key={columnIndex} className="flex-1 truncate text-center text-xs text-muted-foreground">
-                {formatWeekdayShort(cell.tradingDay, { locale })}
+                {label}
               </span>
             ))}
             {narrow ? null : (
@@ -123,7 +215,7 @@ export function CalendarScreen() {
                       day?.hasJournalEntry ?? false,
                       isToday,
                     )
-                    const dayNumberLabel = formatDayNumber(cell.tradingDay, { locale })
+                    const dayNumberLabel = dayNumberFromTradingDay(cell.tradingDay)
 
                     const cellNode = (
                       <DayCell
@@ -139,7 +231,7 @@ export function CalendarScreen() {
                         onClick={cell.inCurrentMonth ? () => setSelectedDay(cell.tradingDay) : undefined}
                         aria-label={t("calendar.dayAccessibility", {
                           day: dayNumberLabel,
-                          state: t(`calendar.dayState.${stateKey}`),
+                          state: dayStateLabels[stateKey],
                         })}
                       />
                     )
@@ -224,7 +316,7 @@ export function CalendarScreen() {
     )
     // `selectedDay` exclu volontairement des dépendances (voir commentaire ci-dessus) ;
     // `setSelectedDay` (useState) est stable.
-  }, [data, locale, hideAmounts, narrow, today, t])
+  }, [data, locale, hideAmounts, narrow, today, t, dayStateLabels, weekdayHeaderLabels])
 
   return (
     <div data-testid="screen-calendar" className="flex flex-col gap-4 p-4 sm:p-6">

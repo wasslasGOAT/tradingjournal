@@ -9,17 +9,139 @@
 
 ## 0. Déploiement web — Cloudflare Pages (ADR-025)
 
-État : **à mettre en place en M1-web (W-8)** ; le compte Cloudflare est à créer par l'utilisateur (non bloquant pour W-1 à W-7).
+État : **mis en place en M1-web (W-8)**, mode manuel (option 1 ci-dessous) ; **aucun déploiement
+n'a encore été effectué** (le compte Cloudflare vient d'être créé par l'utilisateur, `wrangler
+login` reste à faire — §0.3).
 
-- **Build** : `pnpm --filter @repo/web build` → sortie statique `apps/web/dist` (commande et dossier à confirmer en W-2). Version de Node lue depuis `.nvmrc`.
-- **Projet Pages** : relié au dépôt GitHub privé ; branche de production = `main` ; une **URL de préproduction fixe** (alias de branche ou projet dédié). Les URL d'aperçu par commit ne sont **pas** ajoutées aux redirections d'auth.
-- **Variables** (tableau de bord Pages, jamais dans le dépôt) : `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` du projet de dev — **uniquement la clé anon**, jamais `service_role`. Documentées dans `apps/web/.env.example`.
-- **En-têtes** : fichier `apps/web/public/_headers` (CSP, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`) ; CSP stricte exigée en M9 (ARCHITECTURE §9). Repli SPA : `_redirects` ou comportement SPA natif de Pages (à vérifier en W-8).
-- **PWA** : le service worker ne précharge que le shell ; `sw.js` servi sans cache long (`Cache-Control: no-cache`) pour que les mises à jour arrivent.
-- **Supabase** (tableau de bord, jamais `supabase config push`, ADR-020) : ajouter l'URL fixe de préproduction et `http://localhost:<port Vite>` en **liste exacte** dans les redirections d'auth.
+### 0.1 Mode de déploiement retenu : option 1 (`wrangler pages deploy`, manuel, PC)
+
+Trois options étaient possibles (voir la consigne W-8) :
+
+1. **`wrangler pages deploy` depuis le PC** *(retenue maintenant)*.
+2. Intégration Git Cloudflare (build fait par Cloudflare).
+3. Déploiement depuis GitHub Actions (jeton API).
+
+**Choix : option 1**, pour ces raisons :
+- **Immédiat** : ne dépend d'aucun secret à stocker côté GitHub/Cloudflare avant de pouvoir
+  déployer une première fois — juste `wrangler login` (une fois) puis une commande.
+- **Fiable pour ce monorepo** : l'option 2 (build fait par Cloudflare) demanderait à Cloudflare
+  Pages de comprendre un monorepo pnpm 12 avec `nodeLinker: hoisted` et Node 24 — configurable
+  (racine du projet Pages = `apps/web`, commande `pnpm --filter @repo/web build`, dossier de
+  sortie `apps/web/dist`, variable `NODE_VERSION`/`.nvmrc`), mais c'est une source classique
+  d'échecs de build (résolution de `pnpm-workspace.yaml`, version de pnpm) à diagnostiquer sans
+  accès interactif facile pour l'utilisateur. Testable plus tard sans rien casser (site statique,
+  ADR-025).
+- **Un seul artefact de vérité** : le même `apps/web/dist` que celui vérifié en local (`pnpm
+  build`) et en CI (`check:secrets` dessus) est celui envoyé — aucune divergence possible entre
+  « ce qui a été testé » et « ce qui est en ligne ».
+- L'**option 3** (GitHub Actions + jeton API) est la cible naturelle une fois le premier
+  déploiement manuel validé : automatise `main` → production et les branches → preview, sans
+  dépendre du PC de l'utilisateur. Repoussée à plus tard (préférence utilisateur) : demande de
+  créer un jeton API Cloudflare scoped "Pages: Edit" et de le stocker en secret GitHub Actions
+  (`CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`) — aucune de ces deux valeurs n'existe encore.
+
+`wrangler` n'est **pas** installé en dépendance du monorepo : le script de déploiement l'invoque
+via `pnpm dlx wrangler` (téléchargé à la volée, mis en cache par pnpm, jamais ajouté à
+`pnpm-lock.yaml`) — conforme à la consigne de ne pas installer pendant qu'un autre agent
+travaille sur le dépôt.
+
+### 0.2 Build et sortie statique
+
+- **Build** : `pnpm --filter @repo/web build` (`vite build`) → sortie statique `apps/web/dist`.
+  Version de Node lue depuis `.nvmrc` (24).
+- **Projet Pages** : nom **`edgebook`**, relié au dépôt GitHub privé (pour l'option 3, plus tard) ;
+  branche de production = **`main`**. Toute autre branche (ex. `wip/m1-m3`) déployée avec
+  `wrangler pages deploy --branch=<branche>` obtient une **URL de preview fixe par branche**
+  (`https://<branche-normalisée>.edgebook.pages.dev`, stable d'un déploiement à l'autre depuis
+  cette branche) — **jamais** l'URL d'aperçu par commit (qui change à chaque déploiement et n'est
+  **pas** ajoutée aux redirections d'auth Supabase, ADR-020/ADR-025).
+- **Variables** : avec l'option 1, `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` sont injectées au
+  **build local** depuis `apps/web/.env` (jamais commité, voir `.gitignore` et
+  `apps/web/.env.example`) — Vite les lit automatiquement depuis ce fichier, aucune variable à
+  saisir dans le tableau de bord Pages tant que l'option 1 est utilisée. **Uniquement la clé
+  anon/publishable**, jamais `service_role` (`pnpm check:secrets` le vérifie avant tout build en
+  CI, et peut être relancé en local avant un déploiement).
+- **En-têtes** : `apps/web/public/_headers`, copié tel quel dans `apps/web/dist/_headers` par
+  Vite (dossier `public/`, vérifié après build). Voir §0.4 pour le contenu.
+- **Repli SPA** : `apps/web/public/_redirects` avec `/* /index.html 200` — explicite plutôt que
+  de dépendre du comportement par défaut de Pages (qui sert déjà `index.html` sans `404.html`
+  personnalisé, mais de façon moins prévisible sur des chemins avec point). Les fichiers statiques
+  réels (`/assets/*`, `/sw.js`…) restent toujours servis avant cette règle catch-all.
+- **PWA** : le service worker (`vite-plugin-pwa`, mode `generateSW`) ne précache que le shell
+  statique (JS/CSS/HTML/polices/icônes) — jamais les réponses Supabase (`runtimeCaching: []`,
+  `apps/web/vite.config.ts`). `sw.js` et `manifest.webmanifest` servis sans cache long
+  (`Cache-Control: no-cache`) pour que les mises à jour arrivent ; `/assets/*` (noms hashés par
+  Vite) en cache long immuable.
+
+### 0.3 Étapes pour l'utilisateur (à transmettre)
+
+**Une seule fois**, dans un terminal PowerShell, à la racine du projet :
+
+1. `pnpm dlx wrangler login`
+   → ouvre le navigateur, demande d'autoriser Wrangler à accéder au compte Cloudflare. Une fois
+   l'autorisation donnée dans le navigateur, revenir au terminal : il doit afficher un message de
+   succès (« Successfully logged in »).
+
+**Ensuite, pour chaque déploiement** (depuis la racine du projet, avec `apps/web/.env` déjà
+rempli — voir `apps/web/.env.example`) :
+
+2. `pnpm deploy:web`
+   → construit `apps/web` puis déploie `apps/web/dist` sur le projet Pages `edgebook`, sur la
+   branche de preview correspondant à la branche git courante (ou en production si la branche
+   git courante est `main`). Le script affiche l'URL de déploiement à la fin.
+
+Rien d'autre à saisir : ni jeton, ni identifiant. Le nom du projet Pages (`edgebook`) est créé
+automatiquement par `wrangler pages deploy` s'il n'existe pas encore, au premier déploiement.
+
+### 0.4 En-têtes (`apps/web/public/_headers`)
+
+CSP « de base » (pas encore la CSP **stricte** exigée en M9, ARCHITECTURE §9 — voir les
+commentaires dans le fichier lui-même pour le détail de chaque directive) :
+
+```
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; manifest-src 'self'; worker-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
+  X-Frame-Options: DENY
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/sw.js
+  Cache-Control: no-cache
+
+/manifest.webmanifest
+  Cache-Control: no-cache
+
+/index.html
+  Cache-Control: no-cache
+```
+
+`connect-src` autorise `https://*.supabase.co` et `wss://*.supabase.co` (API REST/Auth/Storage et
+canal realtime de supabase-js) — jamais un domaine plus large. `script-src`/`style-src` gardent
+`'unsafe-inline'` pour le script anti-flash d'`index.html` et les styles posés dynamiquement
+(React/Radix, graphiques) : à retirer en M9 (CSP stricte) via un hash ou un nonce pour le script,
+à réévaluer pour les styles.
+
+### 0.5 Supabase — redirections d'auth
+
+**Manuel, tableau de bord Supabase, jamais `supabase config push` (ADR-020)** : ajouter, en
+**liste exacte** (jamais de joker `/**` sur un domaine public) :
+- `http://localhost:5173/**` (serveur de dev Vite) ;
+- l'URL fixe de préproduction Cloudflare Pages une fois le premier déploiement fait depuis
+  `wip/m1-m3` (ex. `https://wip-m1-m3.edgebook.pages.dev/**`) — **jamais** une URL d'aperçu par
+  commit.
+
+### 0.6 Accès et vérification
+
 - **Accès** : privé tant qu'ADR-018 option B s'applique (URL non diffusée, utilisateurs invités).
-- **Vérification** : la CI exécute `check:secrets` sur `apps/web/dist` ; après déploiement, contrôler les en-têtes (`curl -I <url>`) et l'installabilité (Lighthouse).
-- Changer d'hébergeur est trivial (site statique) : rebrancher le build et recopier les en-têtes.
+- **Vérification** : la CI exécute `check:secrets` sur `apps/web/dist` (job `quality`) ; après
+  déploiement, contrôler les en-têtes (`curl -I <url>`, doit renvoyer les en-têtes de §0.4) et
+  l'installabilité (Lighthouse, ou « Ajouter à l'écran d'accueil » sur téléphone).
+- Changer d'hébergeur est trivial (site statique) : rebrancher le build et recopier
+  `_headers`/`_redirects`.
 
 ## 1. Ce qui est déjà en place (fait par `release`, sans compte) — `apps/app`, gelé
 

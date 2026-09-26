@@ -81,6 +81,25 @@ describe('tradingDayOf', () => {
     );
   });
 
+  it('rejette un fuseau horaire inconnu de façon répétée (la mémoïsation par fuseau ne met jamais un fuseau invalide en cache comme valide)', () => {
+    expect(() =>
+      tradingDayOf(new Date('2026-03-30T21:30:00Z'), 'Repeated/Invalid', '00:00'),
+    ).toThrow(InvalidTimezoneError);
+    // Deuxième appel avec le même fuseau invalide : doit lever à nouveau, pas retourner un résultat mis en cache par erreur.
+    expect(() =>
+      tradingDayOf(new Date('2026-03-31T10:00:00Z'), 'Repeated/Invalid', '00:00'),
+    ).toThrow(InvalidTimezoneError);
+  });
+
+  it('un fuseau valide appelé juste après un fuseau invalide continue de fonctionner normalement (pas de pollution du cache)', () => {
+    expect(() =>
+      tradingDayOf(new Date('2026-03-30T21:30:00Z'), 'Another/Invalid', '00:00'),
+    ).toThrow(InvalidTimezoneError);
+    expect(tradingDayOf(new Date('2026-01-15T23:30:00Z'), 'Europe/Paris', '00:00')).toBe(
+      '2026-01-16',
+    );
+  });
+
   describe('changements d’heure (DST) — tests golden', () => {
     // Tableau de référence (revue code-reviewer), identique quel que soit le TZ du process
     // d'exécution (TZ=UTC, TZ=Europe/Paris, TZ=Asia/Tokyo, TZ=America/New_York...).

@@ -116,21 +116,21 @@ Dépend de : M0, M1 (tokens), M3
 | W-6b | Examen de `buildCalendarGrid` / `calendarLayout` (`apps/app`) : logique de dates → `packages/core` (testée), sinon copie dans `apps/web` | `core-engine` | — (parallèle à W-4) | Tests portés verts |
 | W-7 | PWA : manifeste, icônes, service worker précachant **uniquement** le shell | `app-ui` | W-5 | Lighthouse « installable » ; aucune réponse Supabase en cache |
 | W-8 | CI (`quality` + `e2e-web` sur `apps/web`), branche poussée (solde D7) ; préproduction Cloudflare Pages à URL fixe + `_headers` (CSP de base) — **compte à créer par l'utilisateur** | `release` | W-2 (parallèle à W-3…W-7) | CI verte sur GitHub ; l'utilisateur ouvre l'URL sur son téléphone et installe la PWA |
-| W-9 | Playwright sur `apps/web` : navigation, préférences, calendrier, graphiques ; fluidité **bloquante** sur `vite preview` (CPU ×4, ≥ 55 fps, aucune image > 50 ms) | `qa-tests` | W-6 | `pnpm e2e:web` vert |
+| W-9 | Playwright sur `apps/web` : navigation, préférences, calendrier, graphiques ; fluidité **bloquante** sur `vite preview` (CPU ×4, ≥ 55 fps, aucune image > 50 ms) — `Segmented` mesuré sur un usage sans changement de thème (ex. $/%/R) ; le **changement de thème** est hors seuil fps : sans rechargement, < 200 ms (ADR-017, amendement du 2026-09-25) | `qa-tests` | W-6 | `pnpm e2e:web` vert |
 | W-10 | Revue | `code-reviewer` | W-9 | Aucun point bloquant |
 
 **Parallélisation** : W-8 en parallèle de W-3…W-7 ; W-6b en parallèle de W-4 ; W-9 démarre dès W-5 (tests de navigation). Vagues 1–2 de M2 possibles en parallèle.
 
 - [x] **W-0** Décisions et docs (2026-09-25)
-- [ ] **W-1** Racine, scripts, lint, secrets
-- [ ] **W-2** Création d'`apps/web` (installation unique)
-- [ ] **W-3** Tokens et thèmes
-- [ ] **W-4** Primitives + `Chart` + catalogue
-- [ ] **W-5** Shell (onglets, sidebar, header, préférences)
-- [ ] **W-6** Dashboard + Calendrier (données factices) · **W-6b** grille du calendrier
-- [ ] **W-7** PWA
+- [x] **W-1** Racine, scripts, lint, secrets
+- [x] **W-2** Création d'`apps/web` (installation unique)
+- [x] **W-3** Tokens et thèmes
+- [x] **W-4** Primitives + `Chart` + catalogue
+- [x] **W-5** Shell (onglets, sidebar, header, préférences)
+- [x] **W-6** Dashboard + Calendrier (données factices) · **W-6b** grille du calendrier
+- [x] **W-7** PWA (W-1…W-7 committés en `a779a71`)
 - [ ] **W-8** CI + préproduction Cloudflare Pages
-- [ ] **W-9** Playwright (parcours + fluidité)
+- [ ] **W-9** Playwright (parcours + fluidité) — tests écrits, fluidité en cours
 - [ ] **W-10** Revue `code-reviewer`
 
 **Critères de fin** :
@@ -138,7 +138,7 @@ Dépend de : M0, M1 (tokens), M3
 - [ ] Thème sombre/clair et FR/EN basculables sans rechargement, persistés ; « réduire les animations » respecté.
 - [ ] PWA installable ; service worker sans données Supabase en cache.
 - [ ] `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e:web` verts, `apps/app` exclu ; CI verte sur GitHub.
-- [ ] Fluidité web ADR-017 (révision 2026-09-25) atteinte sur l'export de production.
+- [ ] Fluidité web ADR-017 (révision et amendement du 2026-09-25) atteinte sur l'export de production.
 - [ ] Vérification par l'utilisateur sur téléphone (navigateur ou PWA) — via la préproduction si le compte Cloudflare existe, sinon reportée à W-8.
 - [ ] Aucun point bloquant de `code-reviewer`.
 

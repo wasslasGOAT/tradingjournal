@@ -1,4 +1,4 @@
-import { formatInTimeZone } from 'date-fns-tz';
+import { getLocalTimeParts } from './localTimeCache';
 
 /**
  * Session de marché d'un instant UTC (DATA_MODEL `trades.session`).
@@ -41,17 +41,17 @@ const SESSION_WINDOWS: readonly SessionWindow[] = [
   },
 ];
 
-const LOCAL_TIME_PATTERN = /^(\d{2}):(\d{2}):(\d{2})$/;
-
-/** Secondes écoulées depuis minuit dans `timezone`, pour l'instant UTC `utc`. */
+/**
+ * Secondes écoulées depuis minuit dans `timezone`, pour l'instant UTC `utc`
+ * — décomposition mémoïsée par fuseau (voir {@link getLocalTimeParts},
+ * `localTimeCache.ts`) : `classifySession` teste jusqu'à trois fuseaux fixes
+ * (Tokyo, Londres, New York) par instant, potentiellement pour chaque trade
+ * d'une agrégation ; le formateur `Intl.DateTimeFormat` de chaque fuseau
+ * n'est donc construit qu'une seule fois au total.
+ */
 function secondsSinceLocalMidnight(utc: Date, timezone: string): number {
-  const formatted = formatInTimeZone(utc, timezone, 'HH:mm:ss');
-  const match = LOCAL_TIME_PATTERN.exec(formatted);
-  if (!match) {
-    throw new Error(`Décomposition de l'heure locale impossible (obtenu ${formatted}).`);
-  }
-  const [, hours, minutes, seconds] = match;
-  return Number(hours) * 3600 + Number(minutes) * 60 + Number(seconds);
+  const { hour, minute, second } = getLocalTimeParts(utc, timezone);
+  return hour * 3600 + minute * 60 + second;
 }
 
 function isWithinWindow(utc: Date, window: SessionWindow): boolean {

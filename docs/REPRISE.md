@@ -3,6 +3,20 @@
 > À lire en premier pour reprendre le travail. Mis à jour le **2026-09-25**, au changement de cap vers le web (ADR-023).
 > Le détail fait foi dans `ROADMAP.md` (cases à cocher) et `DECISIONS.md` (ADR).
 
+## Arrêt du 2026-09-25 (nuit) — M1-web : revue W-10 faite, corrections à lancer
+
+Arrêt propre demandé par l'utilisateur. Dernier commit poussé : `a779a71` (W-1…W-7). **Non commité** depuis : corrections boucles 1 et 2 (navigation, fluidité calendrier), optimisation `packages/core/time` (`localTimeCache`, ×6), W-8 (CI, `_headers`, `_redirects`, `scripts/deploy-web.mjs`), tests W-9 mis à jour, amendement ADR-017 (thème hors seuil fps, < 200 ms). À l'arrêt : `lint`, `typecheck`, `test` (787), `build`, `check:secrets` **verts** ; `format:check` rouge (style d'`apps/web` ≠ config Prettier racine).
+- **En ligne** : preview Cloudflare Pages https://wip-m1-m3.edgebook-bs9.pages.dev (déployée depuis l'arbre non commité). Wrangler connecté sur ce PC ; projet Pages `edgebook` (classique, créé avec `--force` — ne plus jamais le repasser) ; `pnpm dlx wrangler` exige `--allow-build=esbuild --allow-build=workerd` (déjà dans le script).
+- **Fluidité** (poste de dev chargé, CPU ×4, `--workers=1`) : mois 54–57 fps, Sheet 48–54 fps, Segmented (masquage) 42–46 fps, thème < 1 ms. Décision utilisateur en attente : clôturer avec cette dette (mesure CI non bloquante) + ressenti sur téléphone.
+- **Corrections à relancer** (4 agents stoppés avant toute modification) :
+  - `app-ui` : bloquants revue n°1 (`weekStartsOn` absent de la clé `calendarMonth`) et n°2 (retirer `keepPreviousData`, ADR-017) ; `aria-label` qui expose le montant masqué (`CalendarScreen.tsx:399`) ; titre de Sheet i18n ; script anti-flash → `public/theme-init.js` ; `env.ts` refuse les JWT `role≠anon` ; message d'erreur `client.ts:51` ; commentaires périmés.
+  - `core-engine` : `enumerateTradingDays`, `balanceAt`, `equitySeries`, `lastDayPnl` (bug : P&L du jour multi-comptes additionne des jours différents), helper « jours du mois » ; test d'indépendance au fuseau hôte + script `test:tz` ; puis `app-ui` rebranche `dashboard.ts`/`calendar.ts`.
+  - `release` : garde-fous de `deploy-web.mjs` (check:secrets, type de clé, refus de `main` sans `--prod`, arbre propre, wrangler épinglé, nom de branche validé, `--dry-run`) ; `_headers` (connect-src hôte exact, sans `unsafe-inline` en script, `X-Robots-Tag`, COOP) ; `robots.txt` ; `.wrangler/` ignoré ; `check-secrets` étendu ; CI (`persist-credentials: false`, `pnpm audit`, `test:tz`) ; RELEASE §0.
+  - `qa-tests` : le test « thème < 200 ms » s'arrête avant la peinture (double rAF).
+  - `architect` : précision ADR-017 (job perf CI non bloquant + condition de retrait), ROADMAP (W-8 coché, dette), ADR-020/025 (inscription désactivée).
+  - Fin : `pnpm format` (commit `style:` séparé), puis re-revue et clôture.
+- **Action utilisateur (audit sécurité, Élevé)** : désactiver l'inscription sur le projet Supabase de dev (Authentication → « Allow new users to sign up ») — l'URL et la clé anon sont publiques dans la preview.
+
 ## Arrêt du 2026-09-25 (soir) — M1-web en cours, stoppé pendant W-6
 
 Arrêt propre demandé par l'utilisateur. **Rien n'est commité depuis `36ec42c`** (docs du changement de cap) : tout le travail W-1…W-6 est dans l'arbre de travail de `wip/m1-m3`.

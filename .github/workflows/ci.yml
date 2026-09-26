@@ -21,8 +21,10 @@ permissions:
 
 jobs:
   # Lint, typecheck, tests unitaires (packages/core, packages/schemas, packages/db,
-  # packages/i18n, packages/ui, apps/app), secrets, build web. Indépendant du job `db`
-  # (aucune des deux tâches n'a besoin de l'autre) : les deux tournent en parallèle.
+  # packages/i18n, apps/web), secrets, build web. `apps/app` et `packages/ui` sont gelés
+  # depuis ADR-023 : exclus des commandes racine (`--filter=!@repo/app`,
+  # `vitest.config.ts` racine) et donc de ce job. Indépendant du job `db` (aucune des
+  # deux tâches n'a besoin de l'autre) : les deux tournent en parallèle.
   quality:
     name: Lint, typecheck, tests, build web
     runs-on: ubuntu-latest
@@ -70,38 +72,43 @@ jobs:
       - name: Check secrets (history)
         run: node scripts/check-secrets.mjs --history
 
-      # `turbo run build` → seul `apps/app` définit un script `build`
-      # (`expo export --platform web` → `apps/app/dist`, voir turbo.json). Pas de variables
-      # `EXPO_PUBLIC_SUPABASE_*` factices ici : `apps/app/lib/supabase/client.ts` ne lit ces
-      # variables qu'au runtime (`getSupabaseClientState()`, jamais à l'évaluation d'un
-      # module) et renvoie proprement `{ status: 'missing-env' }` sans lever d'exception ;
-      # le build web (sortie `web.output: 'single'`, aucun rendu statique par route) n'a
-      # donc besoin d'aucune variable Supabase pour réussir.
-      - name: Build (web export)
+      # `turbo run build --filter=!@repo/app` (script racine `build`, `package.json`) :
+      # seul `apps/web` définit un script `build` dans le périmètre CI (`vite build` →
+      # `apps/web/dist`, sortie statique). Pas de `VITE_SUPABASE_*` factices ici :
+      # `apps/web` lit ces variables via `import.meta.env` au runtime, pas à la
+      # construction du bundle, et le client Supabase gère leur absence sans lever
+      # d'exception (mêmes garanties que documentées côté `apps/app`, gelé) ; le build
+      # n'a donc besoin d'aucune variable Supabase pour réussir.
+      - name: Build (apps/web)
         run: pnpm build
 
-      # Deuxième passage volontaire : `apps/app/dist` (bundle web exporté ci-dessus) doit
-      # être scanné comme le reste du dépôt, au cas où une variable EXPO_PUBLIC_* fautive
-      # ou une valeur sensible se serait glissée dans le JS embarqué (scripts/check-secrets.mjs
+      # Deuxième passage volontaire : `apps/web/dist` (bundle construit ci-dessus) doit
+      # être scanné comme le reste du dépôt, au cas où une variable VITE_* fautive ou une
+      # valeur sensible se serait glissée dans le JS embarqué (scripts/check-secrets.mjs
       # ne saute pas les dossiers `dist`, voir son commentaire).
       - name: Check secrets (build output)
         run: pnpm check:secrets
 
-  # Parcours web Playwright (`apps/app/e2e/**`, ROADMAP M1 « Job Playwright dans la CI »,
-  # résout la dérive M0 — ARCHITECTURE §11 citait déjà Playwright dans la CI). Job séparé de
-  # `quality` (pas seulement un `step` de plus) : `pnpm e2e:web` démarre son propre serveur
-  # de dev Expo (`playwright.config.ts`, `webServer`) et prend largement plus longtemps que
-  # les autres étapes de `quality` — l'isoler évite de ralentir le retour du job le plus
-  # fréquemment consulté (lint/typecheck/test) et permet de publier un rapport Playwright
-  # dédié en cas d'échec sans polluer les artefacts de `quality`.
-  # Aucun `apps/app/.env` n'est créé ici (ADR-020 : pas de secret Supabase en CI) : les tests
-  # qui exigent une configuration Supabase (`hello.spec.ts`, cas « Supabase configuré ») se
-  # `test.skip` proprement via `getSupabaseDevEnvStatus` (`e2e/helpers/env.ts`) — vérifié en
-  # local en simulant l'absence de `.env`. Tous les autres specs (`navigation`, `preferences`,
-  # `calendar`, `performance`, `charts`, et le cas « configuration absente » de `hello`) tournent
-  # sur des données factices, indépendantes de Supabase.
+  # Parcours web Playwright fonctionnels — `apps/web/e2e/**` : le projet `chromium`
+  # (serveur de dev, tous les specs hors `e2e/prod/**`) et les specs *non liées à la
+  # fluidité* d'`e2e/prod/**` (`pwa.spec.ts`, `catalog-absent.spec.ts`, export de
+  # production) exécutés explicitement sur le projet `chromium-perf-prod`. Seul
+  # `performance.spec.ts` (fluidité, ADR-017) est sorti de ce job — voir `e2e-web-perf`
+  # ci-dessous : ce job-ci reste entièrement bloquant, aucun test fonctionnel n'y est
+  # rendu tolérant aux erreurs.
+  # Job séparé de `quality` (pas seulement un `step` de plus) : `pnpm e2e:web` démarre
+  # ses propres serveurs Vite (`playwright.config.ts`, `webServer`) et prend largement
+  # plus longtemps que les autres étapes de `quality` — l'isoler évite de ralentir le
+  # retour du job le plus fréquemment consulté (lint/typecheck/test) et permet de
+  # publier un rapport Playwright dédié en cas d'échec sans polluer les artefacts de
+  # `quality`.
+  # Aucun `apps/web/.env` n'est créé ici (ADR-020 : pas de secret Supabase en CI) : les
+  # tests qui exigent une configuration Supabase se `test.skip` proprement (mêmes
+  # helpers d'environnement qu'en local, vérifiés en simulant l'absence de `.env`).
+  # Les autres specs (`navigation`, `preferences`, `calendar`, `dashboard`, `smoke`,
+  # `reducedMotion`) tournent sur des données factices, indépendantes de Supabase.
   e2e-web:
-    name: Playwright (web)
+    name: Playwright (web) — parcours fonctionnels
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -124,18 +131,19 @@ jobs:
       # `chromium-perf-prod`, utilisent le même navigateur) : pas de WebKit/Firefox à
       # installer, moindre coût CI.
       - name: Install Playwright browser (Chromium)
-        run: pnpm --filter @repo/app exec playwright install --with-deps chromium
+        run: pnpm --filter @repo/web exec playwright install --with-deps chromium
 
-      # Sans filtre `--project` : exécute les deux projets déclarés dans
-      # `playwright.config.ts` — `chromium` (serveur de dev, port 8081, tous les specs
-      # sauf `performance.spec.ts`) et `chromium-perf-prod` (export de production,
-      # port 4173, `performance.spec.ts` uniquement — ADR-017, voir l'en-tête de ce
-      # fichier de test). Les deux `webServer` (dev + export/serve statique) démarrent
-      # en parallèle ; l'export de production (~10-20 s) ajoute un budget raisonnable
-      # au démarrage, sans concurrencer l'exécution des autres specs sur le serveur de
-      # dev une fois les deux serveurs prêts.
-      - name: Run Playwright (web)
-        run: pnpm e2e:web
+      - name: Run Playwright (web) — parcours (dev server)
+        run: pnpm --filter @repo/web exec playwright test --project chromium
+
+      # Fichiers explicites (pas tout `e2e/prod/**`) : exclut volontairement
+      # `performance.spec.ts`, seul test tolérant à l'échec de ce workflow
+      # (voir le job `e2e-web-perf`).
+      - name: Run Playwright (web) — PWA et absence du catalogue (export de production)
+        run: >
+          pnpm --filter @repo/web exec playwright test
+          e2e/prod/pwa.spec.ts e2e/prod/catalog-absent.spec.ts
+          --project chromium-perf-prod
 
       # Rapport HTML (`playwright-report/`, config `reporter` de `playwright.config.ts`) +
       # traces/captures d'échec (`test-results/`, `trace: 'retain-on-failure'`,
@@ -147,8 +155,59 @@ jobs:
         with:
           name: playwright-report
           path: |
-            apps/app/playwright-report/
-            apps/app/test-results/
+            apps/web/playwright-report/
+            apps/web/test-results/
+          retention-days: 7
+
+  # Fluidité (ADR-017, `e2e/prod/performance.spec.ts`) : job séparé et volontairement
+  # **non bloquant** pour la CI globale tant que la correction de M1-web (W-9) n'est
+  # pas terminée — voir ROADMAP.md, dette D1, et l'en-tête de ce fichier de test.
+  # `continue-on-error: true` est posé sur ce *job* dédié, jamais en silence sur une
+  # étape cachée dans `e2e-web` : son échec apparaît dans l'onglet Checks de la PR avec
+  # un statut distinct (⚠, jaune) et n'empêche jamais la fusion, mais reste visible.
+  # Dès que W-9 confirme le seuil (moyenne ≥ 55 fps, aucune image > 50 ms) sur
+  # `chromium-perf-prod`, retirer `continue-on-error` ici pour rendre le job bloquant
+  # (ou le fusionner dans `e2e-web`).
+  e2e-web-perf:
+    name: Playwright (web) — fluidité (non bloquant, ADR-017)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browser (Chromium)
+        run: pnpm --filter @repo/web exec playwright install --with-deps chromium
+
+      # `pnpm run build && pnpm run preview` (webServer de `chromium-perf-prod`) :
+      # mesure sur l'export de production, jamais le bundle de dev (ADR-017).
+      - name: Run Playwright (web) — fluidité (export de production)
+        run: >
+          pnpm --filter @repo/web exec playwright test
+          e2e/prod/performance.spec.ts
+          --project chromium-perf-prod
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: playwright-report-perf
+          path: |
+            apps/web/playwright-report/
+            apps/web/test-results/
           retention-days: 7
 
   # Migrations, types générés, tests RLS — contre Supabase local (Docker du runner),

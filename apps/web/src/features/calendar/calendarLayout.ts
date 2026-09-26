@@ -19,3 +19,25 @@ export const NARROW_CALENDAR_BREAKPOINT = 400
 export function isNarrowCalendarLayout(width: number): boolean {
   return width < NARROW_CALENDAR_BREAKPOINT
 }
+
+/**
+ * Quantième du mois d'un `TradingDay` (`"YYYY-MM-DD"`), ex. `"2026-08-05"` ->
+ * `"5"` — même sortie que `formatDayNumber` (`@repo/core/format`, motif `d`
+ * de `date-fns`, sans zéro non significatif) mais **sans** passer par
+ * `formatInTimeZone`/`Intl.DateTimeFormat` : un `TradingDay` est déjà un
+ * calendrier civil résolu (voir le commentaire de `formatDayNumber`), la
+ * bascule fuseau que fait `date-fns-tz` en interne (`tzTokenizeDate`,
+ * mesurée au profil CPU W-9 boucle 2 comme un des postes dominants du
+ * changement de mois — jusqu'à ~42 appels par navigation, un par cellule de
+ * la grille) est donc un travail entièrement redondant pour cet usage
+ * précis. Les chiffres 0-9 sont identiques en `fr`/`en` (calendrier
+ * grégorien) : pas de dépendance à la locale ici, contrairement à
+ * `formatWeekdayShort`/`formatMonthLabel` (toujours via `@repo/core`).
+ * Piste `packages/core` (hors zone `app-ui`, voir rapport) : mémoïser
+ * l'`Intl.DateTimeFormat` construit par `formatInTimeZone` réglerait la
+ * même cause à la source, pour tous les appelants.
+ */
+export function dayNumberFromTradingDay(tradingDay: string): string {
+  const day = tradingDay.slice(8, 10)
+  return String(Number(day))
+}

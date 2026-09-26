@@ -353,7 +353,8 @@ Exigences et protocole de mesure : ADR-017. En résumé, vérifiées à chaque c
 | Écritures | mises à jour optimistes avec retour arrière |
 | Mobile | retours haptiques sur les interactions clés (interface `Haptics` : vide sur le web, Capacitor en P6) |
 | Listes | `@tanstack/react-virtual` au-delà de 50 éléments |
-| Interactions principales | 60 fps (export de production, CPU ×4 ; Capacitor Android en P6) |
+| Interactions principales | 60 fps (export de production, CPU ×4 ; Capacitor Android en P6) ; `Segmented` mesuré hors changement de thème |
+| Changement de thème | action ponctuelle hors seuil fps : sans rechargement, < 200 ms (ADR-017, amendement du 2026-09-25) |
 | Dashboard | premier affichage < 1,5 s |
 | Changement de mois/compte | aucune donnée périmée visible |
 

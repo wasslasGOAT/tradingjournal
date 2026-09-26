@@ -1,0 +1,11 @@
+# Cloudflare Pages — repli SPA (ADR-025, ROADMAP M1-web W-8).
+# TanStack Router gère la navigation côté client (`apps/web/src/routes`) : toute route
+# profonde (ex. `/calendar/2026-09`) doit renvoyer `index.html` (statut 200, pas une
+# redirection 30x visible) pour que l'app démarre puis affiche la bonne route.
+# Cloudflare Pages sert déjà `index.html` par défaut pour les chemins sans fichier
+# statique correspondant et sans `404.html` custom (aucun `404.html` dans ce dossier),
+# mais ce fichier explicite le comportement plutôt que de dépendre d'une heuristique non
+# documentée avec certitude selon les chemins (ex. un segment d'URL contenant un point).
+# Les vrais fichiers statiques (`/assets/*`, `/sw.js`, `/manifest.webmanifest`,
+# `/icons/*`...) sont toujours servis avant l'évaluation de cette règle catch-all.
+/*    /index.html   200

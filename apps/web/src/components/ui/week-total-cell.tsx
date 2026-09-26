@@ -1,9 +1,9 @@
 import { formatSignedAmount } from "@repo/core"
 import type { Decimal, SupportedLocale } from "@repo/core"
+import { clsx } from "clsx"
 import { memo } from "react"
 
 import { formatCompactSignedAmount } from "@/lib/format/compactAmount"
-import { cn } from "@/lib/utils"
 import { resolvePnlIntent } from "./stat-tile-value"
 import type { PnlIntent } from "@/lib/theme/tokens"
 
@@ -49,7 +49,9 @@ function WeekTotalCellComponent({
   const fullFormatted = formatSignedAmount(total, currency, { locale, hideAmounts })
   const compactFormatted = formatCompactSignedAmount(total, { locale, hideAmounts })
   const intent = resolvePnlIntent(total)
-  const valueClassName = cn("font-semibold tabular-nums text-2xs sm:text-sm", PNL_TEXT_CLASS_NAME[intent])
+  // `clsx` (pas `cn`/`twMerge`, W-9 boucle 2, ADR-017) — voir le commentaire équivalent
+  // dans `day-cell.tsx` : aucune classe en conflit réel ici.
+  const valueClassName = clsx("font-semibold tabular-nums text-2xs sm:text-sm", PNL_TEXT_CLASS_NAME[intent])
 
   if (variant === "row") {
     return (
@@ -72,7 +74,7 @@ function WeekTotalCellComponent({
       aria-label={`${label} ${fullFormatted}`}
       className="flex min-h-11 w-12 shrink-0 items-center justify-center self-stretch rounded-md bg-muted p-1 sm:w-16 sm:p-2"
     >
-      <span data-testid={testId ? `${testId}-value` : undefined} className={cn(valueClassName, "truncate")}>
+      <span data-testid={testId ? `${testId}-value` : undefined} className={clsx(valueClassName, "truncate")}>
         {compactFormatted}
       </span>
     </div>

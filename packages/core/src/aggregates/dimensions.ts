@@ -1,8 +1,7 @@
-import { formatInTimeZone } from 'date-fns-tz';
-
 import { Decimal } from '../money';
 import { compareOrdinal, computeWinLossCounts, computeWinRate, filterClosedTrades } from '../stats';
 import type { TradeRecord } from '../stats';
+import { getLocalTimeParts } from '../time/localTimeCache';
 import { localWeekdayOf } from './week';
 
 /** Clé utilisée pour regrouper les trades sans `setup` renseigné (voir {@link aggregateBySetup}). */
@@ -134,15 +133,14 @@ export function aggregateByWeekday(
  * Agrège par heure locale d'ouverture (`0`..`23`), résolue dans `timezone`
  * (typiquement le fuseau du compte, `accounts.timezone`) à partir de
  * `openedAt` (UTC) — même technique que `packages/core/time` `tradingDayOf`
- * (`formatInTimeZone` directement sur l'instant UTC, correct pendant les
- * changements d'heure). `Number(...)` ici porte une heure `0`..`23` (pas un
- * montant) : conversion sûre, voir CLAUDE.md sur l'argent.
+ * (décomposition directe de l'instant UTC via {@link getLocalTimeParts},
+ * mémoïsée par fuseau — correct pendant les changements d'heure).
  */
 export function aggregateByHourOfDay(
   trades: readonly TradeRecord[],
   timezone: string,
 ): DimensionAggregate<number>[] {
-  const groups = groupBy(trades, (t) => [Number(formatInTimeZone(t.openedAt, timezone, 'H'))]);
+  const groups = groupBy(trades, (t) => [getLocalTimeParts(t.openedAt, timezone).hour]);
   return [...groups.entries()]
     .sort(([a], [b]) => a - b)
     .map(([key, group]) => summarize(key, group));

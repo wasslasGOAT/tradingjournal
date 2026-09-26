@@ -222,6 +222,11 @@ export const fr = {
     dashboard: {
       balance: 'Solde du compte',
       pnlToday: 'P&L du jour',
+      // Jour effectivement retenu (revue W-10) : peut différer d'« aujourd'hui »
+      // en mode « Tous les comptes » (dernier jour où au moins un compte a
+      // tradé, voir `computeLastDayPnl`) — le libellé l'affiche pour lever
+      // toute ambiguïté.
+      pnlTodayWithDay: 'P&L · {{weekday}} {{day}}',
       pnlMonth: 'P&L du mois',
       returnRate: 'Rendement',
       shortcuts: {
@@ -286,10 +291,12 @@ export const fr = {
       },
       detail: {
         titleWithJournal: '{{day}} · Journal',
+        sheetTitle: '{{weekday}} {{day}} {{month}}',
         tradesTitle: 'Trades du jour',
         noTrades: 'Aucun trade ce jour-là.',
         journalNote: 'Une entrée de journal existe pour ce jour (aperçu à venir).',
         direction: { long: 'Achat', short: 'Vente' },
+        tradeAccessibility: '{{symbol}}, {{pnl}}',
       },
     },
     trades: {

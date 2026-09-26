@@ -12,18 +12,31 @@ export {
   UNSET_SETUP_KEY,
 } from './dimensions';
 export type { DimensionAggregate } from './dimensions';
-export { equityCurveByDay, equityCurveByTrade } from './equity';
+export { balanceAtDay, equityCurveByDay, equityCurveByTrade } from './equity';
 export type { EquityByDayPoint, EquityByTradePoint } from './equity';
 export { computeHeatmap } from './heatmap';
 export type { HeatmapCell } from './heatmap';
 export { computeMonthStats } from './month';
 export type { BestWorstDay, MonthStats } from './month';
-export { aggregateAccountsByCurrency } from './multiAccount';
+export { buildMonthDayIndex, groupTradesByTradingDay } from './monthIndex';
+export type { MonthDayIndexEntry } from './monthIndex';
+export {
+  aggregateAccountsByCurrency,
+  assertSingleCurrency,
+  computeLastDayPnl,
+  equityCurveByDayMultiAccount,
+  MixedCurrencyAggregationError,
+  summarizeAccountsOverPeriod,
+} from './multiAccount';
 export type {
+  AccountDaySeries,
   AccountMoneyValues,
+  AccountsPeriodSummary,
   AggregateMultiAccountOptions,
   ConvertFn,
   CurrencyTotal,
+  LastDayPnlResult,
+  MultiAccountEquityPoint,
 } from './multiAccount';
 export { computeRDistribution } from './rDistribution';
 export type { RBin, RDistributionResult } from './rDistribution';

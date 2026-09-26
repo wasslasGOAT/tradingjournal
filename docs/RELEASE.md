@@ -9,9 +9,25 @@
 
 ## 0. Déploiement web — Cloudflare Pages (ADR-025)
 
-État : **mis en place en M1-web (W-8)**, mode manuel (option 1 ci-dessous) ; **aucun déploiement
-n'a encore été effectué** (le compte Cloudflare vient d'être créé par l'utilisateur, `wrangler
-login` reste à faire — §0.3).
+État : **mis en place en M1-web (W-8)**, mode manuel (option 1 ci-dessous) ; **premier
+déploiement effectué le 2026-09-25**, depuis la branche `wip/m1-m3`.
+
+**Host réel du projet Pages : `edgebook-bs9.pages.dev`** (pas `edgebook.pages.dev`). Le projet a
+été créé une première fois avec `wrangler pages project create` puis republié avec `--force`
+pendant une expérimentation ; il est resté en mode Pages « classique » (pas d'intégration Git) et
+Cloudflare lui a attribué ce host suffixé (`-bs9`) — vraisemblablement parce que le nom court
+`edgebook` était déjà pris ou réservé sur ce compte au moment de cette manipulation. **Piège à ne
+jamais reproduire : ne plus jamais repasser `--force`** sur ce projet — cela ne « répare » pas le
+suffixe et risque de perturber un projet déjà en place. `--project-name=edgebook` (nom du projet
+côté API/CLI, stable) reste correct dans toutes les commandes ; c'est uniquement l'**host public**
+affiché aux utilisateurs/testeurs et utilisé dans les redirections d'auth Supabase qui doit
+toujours être `edgebook-bs9.pages.dev`.
+
+Autre piège Cloudflare : `pnpm dlx wrangler` (aucune installation locale, voir plus bas) exige
+**`--allow-build=esbuild --allow-build=workerd`** — sans ces deux drapeaux, pnpm refuse de
+construire les dépendances natives de wrangler et l'exécution échoue avant même d'atteindre
+`wrangler`. Ces deux drapeaux sont déjà dans `scripts/deploy-web.mjs` : ne pas les retirer si le
+script est modifié.
 
 ### 0.1 Mode de déploiement retenu : option 1 (`wrangler pages deploy`, manuel, PC)
 
@@ -49,10 +65,12 @@ travaille sur le dépôt.
 
 - **Build** : `pnpm --filter @repo/web build` (`vite build`) → sortie statique `apps/web/dist`.
   Version de Node lue depuis `.nvmrc` (24).
-- **Projet Pages** : nom **`edgebook`**, relié au dépôt GitHub privé (pour l'option 3, plus tard) ;
-  branche de production = **`main`**. Toute autre branche (ex. `wip/m1-m3`) déployée avec
+- **Projet Pages** : nom **`edgebook`** (`--project-name=edgebook`, argument stable de toutes les
+  commandes wrangler), host public réel **`edgebook-bs9.pages.dev`** (voir l'avertissement en tête
+  de §0) ; relié au dépôt GitHub privé (pour l'option 3, plus tard) ; branche de production =
+  **`main`**. Toute autre branche (ex. `wip/m1-m3`) déployée avec
   `wrangler pages deploy --branch=<branche>` obtient une **URL de preview fixe par branche**
-  (`https://<branche-normalisée>.edgebook.pages.dev`, stable d'un déploiement à l'autre depuis
+  (`https://<branche-normalisée>.edgebook-bs9.pages.dev`, stable d'un déploiement à l'autre depuis
   cette branche) — **jamais** l'URL d'aperçu par commit (qui change à chaque déploiement et n'est
   **pas** ajoutée aux redirections d'auth Supabase, ADR-020/ADR-025).
 - **Variables** : avec l'option 1, `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` sont injectées au
@@ -62,7 +80,12 @@ travaille sur le dépôt.
   anon/publishable**, jamais `service_role` (`pnpm check:secrets` le vérifie avant tout build en
   CI, et peut être relancé en local avant un déploiement).
 - **En-têtes** : `apps/web/public/_headers`, copié tel quel dans `apps/web/dist/_headers` par
-  Vite (dossier `public/`, vérifié après build). Voir §0.4 pour le contenu.
+  Vite (dossier `public/`, vérifié après build), puis réécrit par `scripts/generate-web-headers.mjs`
+  (appelé par `scripts/deploy-web.mjs` juste après le build) : le placeholder `connect-src` du
+  fichier source est remplacé par le host exact du projet Supabase, lu depuis
+  `VITE_SUPABASE_URL` (jamais la clé, jamais affichée). Voir §0.4 pour le contenu et la
+  justification de ce choix (généré plutôt qu'écrit en dur, pour ne pas figer un host dans le
+  code source alors qu'il peut différer entre postes de développement).
 - **Repli SPA** : `apps/web/public/_redirects` avec `/* /index.html 200` — explicite plutôt que
   de dépendre du comportement par défaut de Pages (qui sert déjà `index.html` sans `404.html`
   personnalisé, mais de façon moins prévisible sur des chemins avec point). Les fichiers statiques
@@ -85,13 +108,41 @@ travaille sur le dépôt.
 **Ensuite, pour chaque déploiement** (depuis la racine du projet, avec `apps/web/.env` déjà
 rempli — voir `apps/web/.env.example`) :
 
-2. `pnpm deploy:web`
-   → construit `apps/web` puis déploie `apps/web/dist` sur le projet Pages `edgebook`, sur la
-   branche de preview correspondant à la branche git courante (ou en production si la branche
-   git courante est `main`). Le script affiche l'URL de déploiement à la fin.
+2. `pnpm deploy:web` (voir les options ci-dessous) → vérifie la branche/l'arbre de travail/le
+   format de la clé, construit `apps/web`, régénère `_headers`, scanne les secrets, puis déploie
+   `apps/web/dist` sur le projet Pages `edgebook`, sur la branche de preview correspondant à la
+   branche git courante. Le script affiche l'URL de déploiement à la fin.
 
 Rien d'autre à saisir : ni jeton, ni identifiant. Le nom du projet Pages (`edgebook`) est créé
-automatiquement par `wrangler pages deploy` s'il n'existe pas encore, au premier déploiement.
+automatiquement par `wrangler pages deploy` s'il n'existe pas encore, au premier déploiement
+(mais **ne jamais** ajouter `--force` à la commande — voir l'avertissement en tête de §0).
+
+**Protections de `scripts/deploy-web.mjs`** (revue sécurité W-10) :
+- `pnpm deploy:web --dry-run` : n'exécute ni le build ni le déploiement, affiche seulement les
+  étapes et vérifications qui seraient faites — à utiliser pour tester le script sans risque.
+- Déployer depuis `main` (branche de production Pages) est **refusé par défaut** : il faut
+  `pnpm deploy:web --prod`, puis taper `DEPLOY PRODUCTION` quand le script le demande (jamais
+  automatique). Le script rappelle alors que **le projet Supabase de production n'existe pas
+  encore** (ADR-020) — ne pas confirmer sans avoir vérifié quel projet `apps/web/.env` référence.
+- Un arbre de travail non propre est **refusé par défaut** ; `--allow-dirty` l'autorise
+  explicitement (passe `--commit-dirty=true` à wrangler, visible dans l'historique Cloudflare).
+- Hors `--dry-run`, le script **échoue** si `VITE_SUPABASE_URL` ou `VITE_SUPABASE_ANON_KEY` est
+  introuvable (lues avec la même priorité de fichiers que le build réel — `.env`, `.env.local`,
+  `.env.production`, `.env.production.local`, puis l'environnement du processus). Le script
+  vérifie aussi le **format** de `VITE_SUPABASE_ANON_KEY` (préfixe `sb_publishable_`, ou JWT dont
+  le payload contient `"role":"anon"` — tout autre rôle, y compris `authenticated`, est refusé)
+  avant de construire — jamais sa valeur, ni ici ni dans les logs — pour attraper un
+  copier-coller d'une mauvaise clé (`service_role`/`sb_secret_...`). Le joker
+  `*.supabase.co`/`wss://*.supabase.co` pour `connect-src` (§0.4) n'est accepté qu'en CI, où
+  aucune de ces deux variables n'est fournie (ADR-020) : un déploiement réel régénère toujours
+  les en-têtes en mode `--strict` (`scripts/generate-web-headers.mjs --strict`), qui échoue si
+  l'URL Supabase est introuvable ou invalide plutôt que de retomber sur ce joker.
+- La version de `wrangler` invoquée via `pnpm dlx` est **épinglée** (voir `WRANGLER_PACKAGE` dans
+  le script) plutôt que `wrangler@latest` : un changement de comportement entre deux déploiements
+  ne doit jamais être une surprise silencieuse.
+- Le nom de la branche git est validé (`/^[A-Za-z0-9._/-]+$/`) avant d'être passé à une commande
+  shell (`shell: true` sur Windows) — refuse tout caractère qui pourrait être interprété par le
+  shell.
 
 ### 0.4 En-têtes (`apps/web/public/_headers`)
 
@@ -100,11 +151,13 @@ commentaires dans le fichier lui-même pour le détail de chaque directive) :
 
 ```
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; manifest-src 'self'; worker-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' __SUPABASE_CONNECT_SRC__; manifest-src 'self'; worker-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
-  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()
+  Cross-Origin-Opener-Policy: same-origin
   X-Frame-Options: DENY
+  X-Robots-Tag: noindex, nofollow
 
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
@@ -114,29 +167,69 @@ commentaires dans le fichier lui-même pour le détail de chaque directive) :
 
 /manifest.webmanifest
   Cache-Control: no-cache
-
-/index.html
-  Cache-Control: no-cache
 ```
 
-`connect-src` autorise `https://*.supabase.co` et `wss://*.supabase.co` (API REST/Auth/Storage et
-canal realtime de supabase-js) — jamais un domaine plus large. `script-src`/`style-src` gardent
-`'unsafe-inline'` pour le script anti-flash d'`index.html` et les styles posés dynamiquement
-(React/Radix, graphiques) : à retirer en M9 (CSP stricte) via un hash ou un nonce pour le script,
-à réévaluer pour les styles.
+`__SUPABASE_CONNECT_SRC__` est un placeholder : `scripts/generate-web-headers.mjs` (appelé par
+`scripts/deploy-web.mjs` après le build, voir §0.3) le remplace dans `apps/web/dist/_headers` par
+le host exact du projet Supabase (`https://<host> wss://<host>`, ou `http://<host> ws://<host>`
+pour une URL locale non-https, jamais un joker `*.supabase.co`), lu depuis `VITE_SUPABASE_URL`
+(via `loadEnv('production', apps/web, 'VITE_')`, même priorité de fichiers que le build réel :
+`.env`, `.env.local`, `.env.production`, `.env.production.local`, puis l'environnement du
+processus) — jamais la clé associée, jamais affichée. Ce host n'est pas secret (il est de toute
+façon embarqué en clair dans le bundle JS) : le choix de le générer plutôt que de l'écrire en dur
+dans le fichier source évite seulement qu'il diffère d'un poste de développement à l'autre sans
+que quiconque y pense.
+
+Deux modes : par défaut, si l'URL est introuvable ou invalide, le script retombe sur le joker
+`*.supabase.co`/`wss://*.supabase.co`, avec un avertissement — le build ne doit jamais échouer
+pour cette seule raison (cas de la CI, où aucune variable Supabase n'est fournie, voir
+`.github/workflows/ci.yml`, ADR-020). En mode **`--strict`** (utilisé par `scripts/deploy-web.mjs`
+avant tout déploiement réel), le script **échoue** au contraire si l'URL est introuvable ou
+invalide : le joker n'est acceptable qu'en CI, jamais sur un build qui part réellement en ligne.
+
+`script-src 'self'` (plus de `'unsafe-inline'`) : le script anti-flash est servi depuis
+`/theme-init.js` (fichier statique same-origin) depuis la revue sécurité W-10. `style-src`
+garde `'unsafe-inline'` (Sonner, `react-remove-scroll` — styles posés en ligne via la CSSOM,
+aucun hash/nonce praticable) : à réévaluer en M9. `X-Robots-Tag: noindex, nofollow` et
+`public/robots.txt` (`Disallow: /`) : app privée tant qu'elle n'est pas ouverte publiquement,
+à retirer à ce moment-là.
 
 ### 0.5 Supabase — redirections d'auth
 
 **Manuel, tableau de bord Supabase, jamais `supabase config push` (ADR-020)** : ajouter, en
-**liste exacte** (jamais de joker `/**` sur un domaine public) :
-- `http://localhost:5173/**` (serveur de dev Vite) ;
-- l'URL fixe de préproduction Cloudflare Pages une fois le premier déploiement fait depuis
-  `wip/m1-m3` (ex. `https://wip-m1-m3.edgebook.pages.dev/**`) — **jamais** une URL d'aperçu par
-  commit.
+**liste exacte** (jamais de joker `/**` sur un domaine public — y compris sur l'URL de
+préproduction, qui est un domaine public même si l'accès n'est pas diffusé) :
+- `http://localhost:5173/**` (serveur de dev Vite — wildcard toléré ici uniquement car c'est un
+  host local, jamais un domaine public) ;
+- l'URL exacte de préproduction Cloudflare Pages, **sans wildcard** :
+  `https://wip-m1-m3.edgebook-bs9.pages.dev` — **jamais** une URL d'aperçu par commit, et jamais
+  suffixée de `/**`.
+
+Les **chemins de retour d'auth exacts** (ex. `/auth/callback`, page de confirmation e-mail, reset
+mot de passe) ne sont pas encore listés ici : l'écran/le flux d'auth n'existe pas encore dans
+`apps/web` à ce stade de M1-web. Cette liste exacte (host + chemin, sans wildcard sur le chemin
+non plus) sera renseignée en **M2-9** (phase d'implémentation de l'auth), avant qu'un vrai flux de
+connexion ne soit testé contre le projet Supabase de dev.
 
 ### 0.6 Accès et vérification
 
 - **Accès** : privé tant qu'ADR-018 option B s'applique (URL non diffusée, utilisateurs invités).
+  Deux protections supplémentaires en place depuis la revue sécurité W-10 : `X-Robots-Tag:
+  noindex, nofollow` (§0.4) et `public/robots.txt` — ni l'une ni l'autre ne remplacent un vrai
+  contrôle d'accès (voir Cloudflare Access ci-dessous), elles empêchent seulement l'indexation par
+  des robots qui les respectent.
+- **Désactiver l'inscription libre et inviter les testeurs** (tant qu'ADR-018 option B
+  s'applique) : tableau de bord Supabase → **Authentication → Sign In / Providers** → décocher
+  **« Allow new users to sign up »**. Inviter ensuite chaque testeur individuellement
+  (**Authentication → Users → Invite user**, ou création manuelle de compte) : plus personne ne
+  peut créer de compte de son propre chef tant que cette case reste décochée.
+- **Cloudflare Access (recommandé avant M2)** : Cloudflare propose un contrôle d'accès au niveau
+  du domaine Pages (`Zero Trust → Access → Applications`), qui exige une authentification
+  Cloudflare (ou e-mail à usage unique) **avant même de charger la page** — protection
+  indépendante de Supabase Auth, utile tant que l'app n'est pas prête à être exposée publiquement.
+  Non mis en place à ce jour (nécessite un compte Cloudflare Zero Trust, gratuit jusqu'à 50
+  utilisateurs) : à considérer avant d'élargir l'accès au-delà des testeurs invités par e-mail,
+  et en tout cas avant M2.
 - **Vérification** : la CI exécute `check:secrets` sur `apps/web/dist` (job `quality`) ; après
   déploiement, contrôler les en-têtes (`curl -I <url>`, doit renvoyer les en-têtes de §0.4) et
   l'installabilité (Lighthouse, ou « Ajouter à l'écran d'accueil » sur téléphone).
@@ -268,6 +361,20 @@ db:types:local` (`--local`) régénère depuis la base Supabase locale (Docker) 
 `packages/db/src/database.types.ts` (job `quality`, ARCHITECTURE §7) — à préférer localement
 si l'on veut reproduire exactement le résultat de cette vérification CI sans dépendre du
 projet cloud.
+
+### 5.1 Version de la CLI Supabase en CI (job `db`)
+
+L'étape « Setup Supabase CLI » (`.github/workflows/ci.yml`, job `db`) épingle explicitement
+`version: 2.117.0` sur l'action `supabase/setup-cli`. **Ne pas retirer ce champ** : sans lui,
+l'action tente de déduire la version depuis `pnpm-lock.yaml`, mais ce lockfile contient deux
+documents YAML (workspaces pnpm, séparateur `---`) — l'action ne lit que le premier document et
+retombe silencieusement sur `latest`, ce qui a déjà cassé ce job une fois (une CLI plus récente
+avait changé le format de sortie de `gen types`, sans aucune dérive réelle de schéma en cause,
+diagnostiqué par l'agent `database`).
+
+**Garder ce numéro synchronisé à la main** avec la devDependency `supabase` de `package.json`
+racine (actuellement `^2.117.0`) : à chaque montée de version des deux côtés, relancer
+`pnpm db:types` (le format généré peut changer) et vérifier que le job `db` reste vert.
 
 ## 6. Vérifications faites sans compte (T11) — `apps/app`, gelé
 

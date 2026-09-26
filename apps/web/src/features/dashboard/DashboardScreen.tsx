@@ -1,4 +1,4 @@
-import { Decimal, formatAmount, formatDayNumber } from '@repo/core';
+import { Decimal, formatAmount, formatDayNumber, formatWeekdayShort } from '@repo/core';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { CalendarDays, LayoutDashboard, NotebookPen, Plus } from 'lucide-react';
@@ -36,6 +36,19 @@ export function DashboardScreen() {
 
   const filters = { accountId: search.account, from: search.from, to: search.to };
   const query = useQuery(dashboardQueryOptions(filters));
+
+  // Tuile « P&L du jour » (revue W-10) : `recentDayTradingDay` n'est plus
+  // forcément le dernier jour de la période (multi-comptes, voir
+  // `computeLastDayPnl`) — le libellé affiche le jour retenu pour que la
+  // valeur ne soit jamais ambiguë. `null` (aucun compte tradé sur la
+  // période) retombe sur le libellé générique.
+  const recentDayTradingDay = query.data?.recentDayTradingDay ?? null;
+  const pnlTodayLabel = recentDayTradingDay
+    ? t('dashboard.pnlTodayWithDay', {
+        weekday: formatWeekdayShort(recentDayTradingDay, { locale }),
+        day: formatDayNumber(recentDayTradingDay, { locale }),
+      })
+    : t('dashboard.pnlToday');
 
   const equityPoints = useMemo(
     () => toEquitySeriesPoints(query.data?.equityPoints ?? []),
@@ -124,7 +137,7 @@ export function DashboardScreen() {
       <div className="flex flex-wrap gap-3">
         <StatTile
           testId="dashboard-stat-pnl-today"
-          label={t('dashboard.pnlToday')}
+          label={pnlTodayLabel}
           kind="signedAmount"
           value={data.recentDayPnl}
           currency={currency}

@@ -59,6 +59,36 @@ describe('getDashboardSummary — filtre période', () => {
   });
 });
 
+describe('getDashboardSummary — P&L du jour en mode « Tous les comptes » (revue W-10)', () => {
+  it('prend le netPnl du même jour civil pour tous les comptes, pas le dernier jour tradé de chaque compte séparément', async () => {
+    // `acc-demo-prop` n'a aucun trade le 2026-09-10 (seul `acc-demo-main` en a
+    // un) : avant la correction, `recentDayPnl` sommait le dernier jour tradé
+    // *de chaque compte* dans la période — ici 09-10 pour `acc-demo-main` et
+    // 09-09 pour `acc-demo-prop` (son dernier jour tradé <= 09-10) — un total
+    // qui ne correspondait à aucun jour réel. `computeLastDayPnl` retient un
+    // seul jour (le plus récent où au moins un compte a tradé, 09-10) et
+    // somme le netPnl de ce même jour pour tous les comptes (`0` pour
+    // `acc-demo-prop`, qui n'a pas tradé ce jour-là).
+    const range = { from: toTradingDay('2026-09-01'), to: toTradingDay('2026-09-10') };
+    const all = await getDashboardSummary({ accountId: 'all', ...range });
+    const main = await getDashboardSummary({ accountId: 'acc-demo-main', ...range });
+
+    expect(all.recentDayTradingDay).toBe(toTradingDay('2026-09-10'));
+    expect(all.recentDayPnl.equals(main.recentDayPnl)).toBe(true);
+    expect(all.recentDayPnl.toFixed(2)).toBe('156.60');
+  });
+
+  it('aucun trade sur la période -> `recentDayTradingDay` est `null` et `recentDayPnl` est `0`', async () => {
+    const summary = await getDashboardSummary({
+      accountId: 'acc-demo-main',
+      from: toTradingDay('2020-01-01'),
+      to: toTradingDay('2020-01-05'),
+    });
+    expect(summary.recentDayTradingDay).toBeNull();
+    expect(summary.recentDayPnl.toFixed(2)).toBe('0.00');
+  });
+});
+
 describe("getDashboardSummary — cohérence avec @repo/core (aucun recalcul dans l'écran)", () => {
   it('le P&L de période et le rendement affichés égalent ceux calculés directement par @repo/core sur les mêmes trades', async () => {
     const meta = SAMPLE_ACCOUNTS_META['acc-demo-main'];

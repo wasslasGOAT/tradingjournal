@@ -1,24 +1,26 @@
 import {
   aggregateByTradingDay,
-  computeMonthStats,
-  computeReturnRate,
-  Decimal,
+  assertSingleCurrency,
+  computeLastDayPnl,
+  equityCurveByDayMultiAccount,
   parseAmount,
-  toTradingDay,
+  summarizeAccountsOverPeriod,
 } from '@repo/core';
-import type { DayAggregate, TradingDay } from '@repo/core';
+import type { AccountDaySeries, Decimal, MultiAccountEquityPoint, TradingDay } from '@repo/core';
 
+import { resolveAccountIds } from './accounts';
+import { dataQueryKeys } from './queryKeys';
 import { SAMPLE_ACCOUNTS_META } from './sample/accountsSampleData';
 import { sampleTradeRecordsForAccount } from './sample/tradesSampleData';
 import type { SampleAccountId } from './sample/accountsSampleData';
-import { resolveAccountIds } from './accounts';
-import { dataQueryKeys } from './queryKeys';
 
 /**
- * Couche données du Dashboard (W-6, ADR-016/ADR-023) : lit les trades
- * factices (`sample/tradesSampleData.ts`) filtrés par compte, les agrège via
- * `@repo/core` (jamais de calcul métier ici au-delà de la composition
- * d'agrégats déjà purs), retourne des `Decimal` prêts à formater par
+ * Couche données du Dashboard (W-6, revue W-10, ADR-016/ADR-023) : lit les
+ * trades factices (`sample/tradesSampleData.ts`) filtrés par compte, les
+ * agrège via `@repo/core` (`aggregateByTradingDay`, puis composition pure via
+ * `summarizeAccountsOverPeriod`/`equityCurveByDayMultiAccount`/`computeLastDayPnl` —
+ * **aucun calcul de date ni de montant ici**, seulement lecture, filtrage et
+ * assemblage), retourne des `Decimal` prêts à formater par
  * `@repo/core/format`. Aucune dépendance au DOM — remplaçable par une lecture
  * Supabase (M4/M5) sans changer la forme du résultat.
  */
@@ -28,10 +30,8 @@ export interface DashboardFilters {
   readonly to: TradingDay;
 }
 
-export interface DashboardEquityPoint {
-  readonly tradingDay: TradingDay;
-  readonly balance: Decimal;
-}
+/** Un point de la courbe d'equity (Dashboard) — voir `@repo/core` `MultiAccountEquityPoint`. */
+export type DashboardEquityPoint = MultiAccountEquityPoint;
 
 export interface DashboardSummary {
   readonly currency: string;
@@ -39,13 +39,15 @@ export interface DashboardSummary {
   /** P&L net cumulé sur la période sélectionnée (bornes incluses). */
   readonly periodPnl: Decimal;
   /**
-   * P&L net du jour de trading le plus récent **dans la période sélectionnée**
-   * (et non du jour civil réel) : ancré sur la période plutôt que sur
-   * l'horloge système pour rester déterministe (données factices figées en
-   * 2026) — le vrai Dashboard (M4/M5) ancrera cette tuile sur le jour de
-   * trading réel du compte (`tradingDayOf`, fuseau + heure de bascule).
+   * P&L net du **même** jour de trading pour tous les comptes sélectionnés —
+   * le plus récent jour de `[from, to]` où au moins un compte a tradé (voir
+   * `computeLastDayPnl`, revue W-10 : corrige le bug précédent qui sommait,
+   * en mode « Tous les comptes », le dernier jour tradé *de chaque compte*,
+   * potentiellement des jours différents d'un compte à l'autre).
    */
   readonly recentDayPnl: Decimal;
+  /** Jour de trading retenu pour {@link recentDayPnl} ; `null` si aucun compte n'a tradé sur la période (tuile affichée sans date). */
+  readonly recentDayTradingDay: TradingDay | null;
   /** Rendement (fraction) sur la période sélectionnée — voir `computeReturnRate`. */
   readonly returnRate: Decimal;
   readonly equityPoints: readonly DashboardEquityPoint[];
@@ -53,43 +55,9 @@ export interface DashboardSummary {
   readonly hasActivity: boolean;
 }
 
-/** Solde de clôture d'un compte au jour `day` inclus (dernier `endBalance` connu, sinon le solde initial). `daysAll` doit être trié par `tradingDay` croissant (voir `aggregateByTradingDay`). */
-function balanceAtOrBefore(
-  daysAll: readonly DayAggregate[],
-  startingBalance: Decimal,
-  day: TradingDay,
-): Decimal {
-  let result = startingBalance;
-  for (const entry of daysAll) {
-    if (entry.tradingDay > day) break;
-    result = entry.endBalance;
-  }
-  return result;
-}
-
-/** Énumère les jours civils de `[from, to]` (bornes incluses) en `TradingDay`, arithmétique `Date` UTC pure. */
-function enumerateTradingDays(from: TradingDay, to: TradingDay): TradingDay[] {
-  const [fromYear = 0, fromMonth = 1, fromDay = 1] = from.split('-').map(Number);
-  const start = new Date(Date.UTC(fromYear, fromMonth - 1, fromDay));
-  const days: TradingDay[] = [];
-  const cursor = new Date(start);
-  while (true) {
-    const y = String(cursor.getUTCFullYear()).padStart(4, '0');
-    const m = String(cursor.getUTCMonth() + 1).padStart(2, '0');
-    const d = String(cursor.getUTCDate()).padStart(2, '0');
-    const tradingDay = toTradingDay(`${y}-${m}-${d}`);
-    days.push(tradingDay);
-    if (tradingDay >= to) break;
-    cursor.setUTCDate(cursor.getUTCDate() + 1);
-  }
-  return days;
-}
-
-interface PerAccountComputation {
-  readonly meta: (typeof SAMPLE_ACCOUNTS_META)[SampleAccountId];
+interface PerAccountComputation extends AccountDaySeries {
   readonly startingBalance: Decimal;
-  readonly daysAll: readonly DayAggregate[];
-  readonly daysInRange: readonly DayAggregate[];
+  readonly daysInRange: AccountDaySeries['days'];
 }
 
 function computeForAccount(
@@ -99,11 +67,11 @@ function computeForAccount(
   const meta = SAMPLE_ACCOUNTS_META[accountId];
   const startingBalance = parseAmount(meta.startingBalance);
   const trades = sampleTradeRecordsForAccount(accountId);
-  const daysAll = aggregateByTradingDay(startingBalance, trades);
-  const daysInRange = daysAll.filter(
+  const days = aggregateByTradingDay(startingBalance, trades);
+  const daysInRange = days.filter(
     (day) => day.tradingDay >= filters.from && day.tradingDay <= filters.to,
   );
-  return { meta, startingBalance, daysAll, daysInRange };
+  return { accountId, currency: meta.currency, startingBalance, days, daysInRange };
 }
 
 /**
@@ -112,6 +80,11 @@ function computeForAccount(
  * `USD`) sur une période. Fonction pure synchrone enveloppée en `Promise`
  * (même forme que le futur appel Supabase, `useQuery` ne voit pas la
  * différence).
+ *
+ * @throws {MixedCurrencyAggregationError} si les comptes sélectionnés ne
+ * partagent pas la même devise (ADR-019 — ne devrait pas arriver avec les
+ * comptes factices actuels, tous `USD` ; état d'erreur propre affiché par
+ * l'écran sinon, comme toute autre erreur de requête).
  */
 export async function getDashboardSummary(filters: DashboardFilters): Promise<DashboardSummary> {
   // `await` volontaire (même s'il ne fait qu'attendre un micro-tick) : `async function` garantit
@@ -121,42 +94,22 @@ export async function getDashboardSummary(filters: DashboardFilters): Promise<Da
   const accountIds = resolveAccountIds(filters.accountId);
   const perAccount = accountIds.map((id) => computeForAccount(id, filters));
 
-  const currencies = new Set(perAccount.map((a) => a.meta.currency));
-  if (currencies.size > 1) {
-    // ADR-019 : pas de conversion pendant le MVP — ne devrait pas arriver avec les comptes factices actuels (tous `USD`).
-    throw new Error('Agrégation multi-devises non prise en charge pendant le MVP (ADR-019).');
-  }
-  const currency = [...currencies][0] ?? 'USD';
+  // ADR-019 : pas de conversion pendant le MVP — ne devrait pas arriver avec les comptes factices actuels (tous `USD`).
+  assertSingleCurrency(perAccount);
+  const currency = perAccount[0]?.currency ?? 'USD';
 
-  const balance = perAccount.reduce(
-    (acc, a) => acc.plus(balanceAtOrBefore(a.daysAll, a.startingBalance, filters.to)),
-    new Decimal(0),
+  const { balance, periodPnl, returnRate } = summarizeAccountsOverPeriod(
+    perAccount,
+    filters.from,
+    filters.to,
   );
-  const totalStartingBalance = perAccount.reduce(
-    (acc, a) => acc.plus(a.startingBalance),
-    new Decimal(0),
+  const { tradingDay: recentDayTradingDay, netPnl: recentDayPnl } = computeLastDayPnl(
+    perAccount,
+    filters.from,
+    filters.to,
   );
-  const periodPnl = perAccount.reduce(
-    (acc, a) => acc.plus(computeMonthStats(a.daysInRange).netPnl),
-    new Decimal(0),
-  );
-  const recentDayPnl = perAccount.reduce((acc, a) => {
-    const lastDay = a.daysInRange[a.daysInRange.length - 1];
-    return acc.plus(lastDay ? lastDay.netPnl : new Decimal(0));
-  }, new Decimal(0));
-  const returnRate = totalStartingBalance.greaterThan(0)
-    ? computeReturnRate(totalStartingBalance, [periodPnl])
-    : new Decimal(0);
 
-  const equityPoints: DashboardEquityPoint[] = enumerateTradingDays(filters.from, filters.to).map(
-    (tradingDay) => ({
-      tradingDay,
-      balance: perAccount.reduce(
-        (acc, a) => acc.plus(balanceAtOrBefore(a.daysAll, a.startingBalance, tradingDay)),
-        new Decimal(0),
-      ),
-    }),
-  );
+  const equityPoints = equityCurveByDayMultiAccount(perAccount, filters.from, filters.to);
 
   const hasActivity = perAccount.some((a) => a.daysInRange.length > 0);
 
@@ -165,6 +118,7 @@ export async function getDashboardSummary(filters: DashboardFilters): Promise<Da
     balance,
     periodPnl,
     recentDayPnl,
+    recentDayTradingDay,
     returnRate,
     equityPoints,
     hasActivity,

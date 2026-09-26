@@ -33,9 +33,13 @@ export function isNarrowCalendarLayout(width: number): boolean {
  * précis. Les chiffres 0-9 sont identiques en `fr`/`en` (calendrier
  * grégorien) : pas de dépendance à la locale ici, contrairement à
  * `formatWeekdayShort`/`formatMonthLabel` (toujours via `@repo/core`).
- * Piste `packages/core` (hors zone `app-ui`, voir rapport) : mémoïser
- * l'`Intl.DateTimeFormat` construit par `formatInTimeZone` réglerait la
- * même cause à la source, pour tous les appelants.
+ * `packages/core` a depuis mémoïsé l'équivalent pour `tradingDayOf` et les
+ * agrégats (`getLocalTimeParts`/`getCachedFormatter`,
+ * `packages/core/src/time/localTimeCache.ts`), mais pas encore pour
+ * `formatDayNumber`/`formatWeekdayShort`/`formatMonthLabel` elles-mêmes
+ * (`packages/core/src/format/index.ts` appelle toujours `formatInTimeZone`
+ * sans cache) : ce contournement reste donc nécessaire ici tant que
+ * `core-engine` n'a pas étendu `localTimeCache` à ces fonctions de format.
  */
 export function dayNumberFromTradingDay(tradingDay: string): string {
   const day = tradingDay.slice(8, 10);

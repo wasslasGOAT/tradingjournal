@@ -69,6 +69,40 @@ export function toTradingDay(value: string): TradingDay {
   return value as TradingDay;
 }
 
+/** Composants calendaires d'un {@link TradingDay} — voir {@link tradingDayParts}. */
+export interface TradingDayParts {
+  readonly year: number;
+  readonly month: number; // 1-12
+  readonly day: number;
+}
+
+/**
+ * Découpe un {@link TradingDay} (`YYYY-MM-DD`) en ses composants calendaires
+ * `{ year, month, day }` (`month` 1-12). Pure arithmétique sur la chaîne, pas
+ * de fuseau à réappliquer (un `TradingDay` est déjà résolu, voir {@link tradingDayOf}).
+ *
+ * @param tradingDay jour de trading à décomposer
+ */
+export function tradingDayParts(tradingDay: TradingDay): TradingDayParts {
+  const [year = 0, month = 0, day = 0] = tradingDay.split('-').map(Number);
+  return { year, month, day };
+}
+
+/**
+ * Prédicat « `tradingDay` appartient au mois civil `year`/`month` » (Calendrier,
+ * ARCHITECTURE §5.5) — remplace le filtrage `isInMonth` fait à la main dans la
+ * couche web (`apps/web/src/data/calendar.ts`) par une fonction pure et testée
+ * de `packages/core`.
+ *
+ * @param tradingDay jour de trading à tester
+ * @param year année civile (ex. `2026`)
+ * @param month mois civil, 1-12
+ */
+export function isTradingDayInMonth(tradingDay: TradingDay, year: number, month: number): boolean {
+  const parts = tradingDayParts(tradingDay);
+  return parts.year === year && parts.month === month;
+}
+
 /** Nombre de secondes écoulées depuis minuit pour une heure `HH:mm[:ss]`. */
 function parseRolloverTime(rolloverTime: string): number {
   const match = ROLLOVER_TIME_PATTERN.exec(rolloverTime);

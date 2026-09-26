@@ -1,69 +1,67 @@
 # Point de reprise
 
-> À lire en premier pour reprendre le travail. Mis à jour le **2026-09-25**, au changement de cap vers le web (ADR-023).
-> Le détail fait foi dans `ROADMAP.md` (cases à cocher) et `DECISIONS.md` (ADR).
+> À lire en premier pour reprendre le travail. Mis à jour le **2026-09-26** (clôture de M1-web).
+> Le détail fait foi dans `ROADMAP.md` (cases à cocher, dettes) et `DECISIONS.md` (ADR).
 
-## Arrêt du 2026-09-25 (nuit) — M1-web : revue W-10 faite, corrections à lancer
+## État au 2026-09-26 — M1-web `Terminée` ; prochaine phase : M2
 
-Arrêt propre demandé par l'utilisateur. Dernier commit poussé : `a779a71` (W-1…W-7). **Non commité** depuis : corrections boucles 1 et 2 (navigation, fluidité calendrier), optimisation `packages/core/time` (`localTimeCache`, ×6), W-8 (CI, `_headers`, `_redirects`, `scripts/deploy-web.mjs`), tests W-9 mis à jour, amendement ADR-017 (thème hors seuil fps, < 200 ms). À l'arrêt : `lint`, `typecheck`, `test` (787), `build`, `check:secrets` **verts** ; `format:check` rouge (style d'`apps/web` ≠ config Prettier racine).
-- **En ligne** : preview Cloudflare Pages https://wip-m1-m3.edgebook-bs9.pages.dev (déployée depuis l'arbre non commité). Wrangler connecté sur ce PC ; projet Pages `edgebook` (classique, créé avec `--force` — ne plus jamais le repasser) ; `pnpm dlx wrangler` exige `--allow-build=esbuild --allow-build=workerd` (déjà dans le script).
-- **Fluidité** (poste de dev chargé, CPU ×4, `--workers=1`) : mois 54–57 fps, Sheet 48–54 fps, Segmented (masquage) 42–46 fps, thème < 1 ms. Décision utilisateur en attente : clôturer avec cette dette (mesure CI non bloquante) + ressenti sur téléphone.
-- **Corrections à relancer** (4 agents stoppés avant toute modification) :
-  - `app-ui` : bloquants revue n°1 (`weekStartsOn` absent de la clé `calendarMonth`) et n°2 (retirer `keepPreviousData`, ADR-017) ; `aria-label` qui expose le montant masqué (`CalendarScreen.tsx:399`) ; titre de Sheet i18n ; script anti-flash → `public/theme-init.js` ; `env.ts` refuse les JWT `role≠anon` ; message d'erreur `client.ts:51` ; commentaires périmés.
-  - `core-engine` : `enumerateTradingDays`, `balanceAt`, `equitySeries`, `lastDayPnl` (bug : P&L du jour multi-comptes additionne des jours différents), helper « jours du mois » ; test d'indépendance au fuseau hôte + script `test:tz` ; puis `app-ui` rebranche `dashboard.ts`/`calendar.ts`.
-  - `release` : garde-fous de `deploy-web.mjs` (check:secrets, type de clé, refus de `main` sans `--prod`, arbre propre, wrangler épinglé, nom de branche validé, `--dry-run`) ; `_headers` (connect-src hôte exact, sans `unsafe-inline` en script, `X-Robots-Tag`, COOP) ; `robots.txt` ; `.wrangler/` ignoré ; `check-secrets` étendu ; CI (`persist-credentials: false`, `pnpm audit`, `test:tz`) ; RELEASE §0.
-  - `qa-tests` : le test « thème < 200 ms » s'arrête avant la peinture (double rAF).
-  - `architect` : précision ADR-017 (job perf CI non bloquant + condition de retrait), ROADMAP (W-8 coché, dette), ADR-020/025 (inscription désactivée).
-  - Fin : `pnpm format` (commit `style:` séparé), puis re-revue et clôture.
-- **Action utilisateur (audit sécurité, Élevé)** : désactiver l'inscription sur le projet Supabase de dev (Authentication → « Allow new users to sign up ») — l'URL et la clé anon sont publiques dans la preview.
+- **Phases terminées** : M0 (2026-09-18), M3 (2026-09-24), M1 Expo (2026-09-25, gelée depuis ADR-023), **M1-web (2026-09-26, avec dette DW1 à DW6)**.
+- **Application du MVP** : `apps/web` (React + Vite + shadcn/ui, PWA, ADR-023/024). Shell, Dashboard et Calendrier sur **données factices**, thèmes sombre/clair, FR/EN, PWA installable. `apps/app` (Expo) et `packages/ui` sont gelés.
+- **Préproduction** : Cloudflare Pages, https://wip-m1-m3.edgebook-bs9.pages.dev (ADR-025), à redéployer après le commit de clôture.
+- **Branche** : `wip/m1-m3` (PR #1 vers `main`). Commit de clôture de M1-web à faire par la session principale, puis push.
+- **Vérifié le 2026-09-26** : `lint`, `typecheck`, `test` (853 tests), `test:tz`, `build`, `check:secrets`, `format:check` verts ; `e2e:web` 32 passés, 3 échecs de fluidité seulement (DW1).
+- **M3 (moteur de calcul)** : conventions dans `DATA_MODEL.md` § « Conventions de calcul (M3) », toute évolution exige un ADR. Dette reportée en M4 : colonne `sequence`, scission lors d'une inversion, seed issu du fixture golden.
 
-## Arrêt du 2026-09-25 (soir) — M1-web en cours, stoppé pendant W-6
+### Dettes ouvertes de M1-web (détail : ROADMAP § Phase M1-web)
+| # | Quoi | Quand |
+|---|---|---|
+| DW1 | Fluidité sous le seuil (`Segmented`, `Sheet`, changement de mois) ; job CI `e2e-web-perf` non bloquant (ADR-017) | 3 runs CI au seuil, ou décision utilisateur |
+| DW2 | Cloudflare Access sur la préproduction | Avant M2 (auth) |
+| DW3 / DW4 | CSP stricte ; propagation de la CSP aux PWA installées | M9 |
+| DW5 | **Désactiver l'inscription Supabase** (action utilisateur) | Avant tout partage du lien et avant M2 |
+| DW6 | **Confirmer la CI verte** sur GitHub (causes corrigées, pas encore vues par un run) | Push du commit de clôture ; si rouge, M1-web repasse `En cours` |
 
-Arrêt propre demandé par l'utilisateur. **Rien n'est commité depuis `36ec42c`** (docs du changement de cap) : tout le travail W-1…W-6 est dans l'arbre de travail de `wip/m1-m3`.
-- **Faits et vérifiés** : W-1 (scripts racine, `apps/app` exclu), W-6b (`buildCalendarGrid` dans `packages/core`), W-2 (création d'`apps/web`), W-3 (tokens/thèmes générés depuis `@repo/ui/tokens-data`), W-4 (primitives shadcn, `Chart`, catalogue `/dev/catalog` réservé au dev), W-5 (shell : onglets, sidebar, header, Réglages, compte+période dans l'URL).
-- **W-6 (Dashboard + Calendrier) interrompu en fin de tâche** : code présent (`apps/web/src/data/**`, `features/dashboard`, `features/calendar`), écrans affichés avec les données factices, mais **pas encore validé** : comparer les chiffres avec `apps/app`, vérifier les totaux hebdo du calendrier, captures 390/1280 px clair/sombre FR/EN.
-- Au moment de l'arrêt : `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm check:secrets` **verts** (774 tests).
-- **Reste** : finir/valider W-6, W-7 (PWA), W-8 (CI + Cloudflare — compte à créer par l'utilisateur), W-9 (Playwright + fluidité), W-10 (revue), clôture ; puis commit (message proposé : `feat(web): scaffold web app shell, theme, primitives, dashboard and calendar (M1-web W-1..W-6)`). Cases W-1…W-6 à cocher dans `ROADMAP.md`.
-- Lancer : `pnpm dev:web` → http://localhost:5173 (catalogue : `/dev/catalog`). `apps/web/.env` existe sur ce PC (copie des clés publiques de `apps/app/.env`, préfixe `VITE_`).
-- Pièges vus : après un changement de `vite.config.ts`, **redémarrer** le serveur de dev ; ne jamais nommer des tokens `--spacing-*` (collision avec l'échelle Tailwind v4, utiliser `--space-*`).
+### Actions de l'utilisateur
+1. **Désactiver l'inscription** sur le projet Supabase de dev : tableau de bord → Authentication → « Allow new users to sign up » → désactivé (audit sécurité E1, élevé). L'URL et la clé anon sont publiques dans la preview.
+2. **Tester sur téléphone** : ouvrir l'URL de préproduction une fois redéployée, parcourir Dashboard et Calendrier, puis « Ajouter à l'écran d'accueil » (PWA). Donner le ressenti de fluidité (il décide de DW1).
+3. Recommandé avant M2 : activer **Cloudflare Access** sur la préproduction (DW2, avec `release`).
 
-## État au 2026-09-25 — M0, M1 (Expo) et M3 `Terminées` ; **M1-web `En cours`** ; M2 `En cours` (aucun code livré)
+## Prochaine phase : M2 — Auth, onboarding et comptes
 
-**Changement de cap (décision utilisateur du 2026-09-25, ADR-023/024/025)** : le MVP devient d'abord une **application web** — nouvelle app `apps/web` en React + Vite + TypeScript strict + Tailwind v4 + shadcn/ui + recharts, routeur TanStack Router, responsive mobile-first et **installable (PWA)**. iOS/Android viendront en **P6** en emballant ce même code avec **Capacitor**. Hébergement : **Cloudflare Pages** (compte à créer par l'utilisateur, nécessaire seulement à la tâche W-8).
-- **`apps/app` (Expo) est gelé** : conservé, plus développé, exclu des commandes par défaut et de la CI (une fois W-1 fait). Même chose pour **`packages/ui`** (primitives React Native), dont seules les données de tokens (`tokens.data.cjs`) servent encore.
-- Réutilisés tels quels : `packages/core`, `packages/schemas`, `packages/i18n`, `packages/db`, `packages/config`, `supabase/`.
-- Raison : la chaîne mobile (Metro sous Windows, Expo Go, EAS, fluidité de react-native-web) freinait ; l'utilisateur veut voir l'app avancer à l'écran.
+Plan complet et critères : ROADMAP § Phase M2. Décisions déjà actées (ADR-018 option B, ADR-020, ADR-022) : ne pas les rouvrir sans nouvel ADR.
+- **Prérequis** : DW5 et DW6 soldées ; DW2 recommandée.
+- **Vague 1** (`database`, séquentiel) : M2-1 migration des 4 tables → M2-2 RLS → M2-3 trigger de création de profil → M2-4 tests RLS. En parallèle, M2-5 (`release`) : réglages d'auth du projet cloud, redirections en liste exacte (`localhost` Vite + URL fixe de préproduction).
+- **Vague 2** (`core-engine`, en parallèle de la vague 1) : M2-7 valeurs par défaut déduites de la locale, M2-8 schémas zod.
+- **Vague 3** (`app-ui`, dans `apps/web`) : M2-9 client auth PKCE et liste blanche des routes de retour → M2-10 écrans d'auth et M2-11 sécurité de session (en parallèle) → M2-12 garde de navigation (`beforeLoad` de TanStack Router).
+- **Vague 4** (`app-ui`, séquentiel) : M2-13 onboarding → M2-14 comptes → M2-15 dépôts/retraits → M2-16 sélecteur de compte sur vraies données (`sampleAccounts` supprimé) → M2-17 préférences en base → M2-18 Réglages.
+- **Vague 5** : M2-19, E2E web + vérification sur téléphone + revues `code-reviewer` et `security-auditor`.
 
-Le travail est sur la branche **`wip/m1-m3`** (PR #1 ouverte vers `main`, jamais poussée depuis M1 : la CI n'a jamais vu ce code). Pour reprendre : `git checkout wip/m1-m3`.
-
-**Phase en cours : M1-web** (tâches W-0 à W-10, `ROADMAP.md`). W-0 (décisions et docs) est fait. Suite : W-1 (`release` : scripts racine, lint, secrets) → W-2 (`app-ui` : création d'`apps/web`, **fenêtre d'installation unique**) → W-3…W-7 (tokens, primitives shadcn, shell, Dashboard + Calendrier sur données factices, PWA) ; W-8 (CI + Cloudflare) en parallèle ; W-9 (Playwright) ; W-10 (revue).
-**M2** (auth, onboarding, comptes) : les vagues 1 (`database`) et 2 (`core-engine`) peuvent avancer **en parallèle** de M1-web ; les vagues 3 à 5 (écrans) se font dans `apps/web` après M1-web. Les 5 décisions M2 du 2026-09-25 restent valables (ADR-018 option B, ADR-020 confirmation d'e-mail, ADR-022).
-
-**M3 (moteur de calcul)** — `Terminée` le 2026-09-24 : `packages/core` et `packages/schemas`, couverture 98,24 %, chiffres golden au centime. Conventions dans `DATA_MODEL.md` § « Conventions de calcul (M3) » — toute évolution exige un ADR. Dette reportée en M4 (colonne `sequence`, scission lors d'une inversion, seed issu du fixture golden).
-
-**M1 (Expo)** — `Terminée` le 2026-09-25, désormais gelée. Dettes réaffectées par ADR-023 : D1 (mesure native) → **P6** (Capacitor Android) ; D2 → sans objet ; D4 → couverte par le `Select` shadcn (W-4) ; D6 → sans objet ; D7 (CI jamais exécutée) → **W-8**.
-
-Point de vigilance technique du schéma M2 : **`cash_movements.user_id` est dénormalisé** et la création du profil passe par un trigger `security definer` à `search_path` figé (`DATA_MODEL.md` § « Précisions M2 »).
+**Ce qui change par rapport au plan d'origine** (ADR-023) :
+- **M2-9** vise des **routes web** (`apps/web/src/lib/supabase`, routes de retour en liste blanche) et plus le scheme `edgebook://`, qui reviendra avec Capacitor en P6.
+- **M2-6** (installation de `react-hook-form`, `@hookform/resolvers`, `zustand`) est **absorbée par W-2** : pas de fenêtre d'installation en M2 sauf besoin nouveau.
+- Toutes les vérifications « sur téléphone » se font sur navigateur mobile ou PWA via la préproduction, plus via Expo Go.
+- **Point à trancher avant M2-16** : les agrégats multi-comptes à série unique lèvent `MixedCurrencyAggregationError` si les devises diffèrent (précision ADR-019 du 2026-09-26). Il faut décider de l'affichage de « Tous les comptes » en multi-devise avant le code.
+- Point de vigilance du schéma : **`cash_movements.user_id` est dénormalisé**, et le trigger de profil est `security definer` avec un `search_path` figé (`DATA_MODEL.md` § « Précisions M2 »).
 
 ## Lancer l'app
 
-**Web (MVP)** — disponible une fois W-2 fait :
+**Web (MVP)** :
 ```bash
-pnpm dev:web          # serveur Vite ; ouvrir l'URL affichée dans le navigateur
+pnpm dev:web          # serveur Vite → http://localhost:5173 (catalogue de composants : /dev/catalog)
 ```
 - Tester en largeur mobile : outils de développement du navigateur (mode appareil).
-- Sur le téléphone : via l'URL de préproduction Cloudflare Pages (W-8), puis « Ajouter à l'écran d'accueil » pour installer la PWA (HTTPS obligatoire pour le service worker). Plus d'Expo Go, plus d'IP à recopier.
-- Variables : `apps/web/.env` (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`), à créer depuis `apps/web/.env.example` — **jamais la clé `service_role`**.
+- Sur le téléphone : via l'URL de préproduction Cloudflare Pages, puis « Ajouter à l'écran d'accueil » pour installer la PWA (HTTPS obligatoire pour le service worker).
+- Variables : `apps/web/.env` (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`), existe sur ce PC ; ailleurs, à créer depuis `apps/web/.env.example` — **jamais la clé `service_role`** (`env.ts` refuse une clé dont le rôle n'est pas `anon`).
+- Pièges : après un changement de `vite.config.ts`, redémarrer le serveur de dev ; ne jamais nommer des tokens `--spacing-*` (collision avec Tailwind v4, utiliser `--space-*`).
 
-**Ancienne app Expo (gelée)** : `pnpm dev:app-legacy` (nom donné en W-1 ; avant W-1 : `pnpm dev:app`). Pièges connus conservés pour mémoire : Metro plafonné à 4 workers sous Windows (`EMFILE`) ; `packages/ui/node_modules/@repo/core` peut redevenir une copie physique → supprimer le dossier puis `pnpm install`.
+**Ancienne app Expo (gelée)** : `pnpm dev:app-legacy`. Pièges connus conservés pour mémoire : Metro plafonné à 4 workers sous Windows (`EMFILE`) ; `packages/ui/node_modules/@repo/core` peut redevenir une copie physique → supprimer le dossier puis `pnpm install`.
 
 ## Où on en est
 
 - **Périmètre** : MVP (phases M0 → M9, ARCHITECTURE §0), web d'abord. Pas de serveur, pas de broker, pas d'import CSV, pas de coach IA (ADR-015/016).
-- **M0** `Terminée` (2026-09-18) — dérive encore ouverte : script `db:reset:linked` (ROADMAP M2). La dérive `expo-updates` est sans objet (ADR-023).
-- **M1** (Expo) et **M3** `Terminées` ; **M1-web** `En cours` ; **M2** `En cours`.
-- **Décisions en vigueur** : ADR-023 (web d'abord, Expo gelé), ADR-024 (stack UI web), ADR-025 (Cloudflare Pages), ADR-011 (onglets + ajout rapide), ADR-017 révisée (mesure web qui fait foi et bloquante), ADR-018 (option B), ADR-019, ADR-020, ADR-022. ADR-001 et ADR-021 sont remplacées.
-- **CI** : `gh` installé et authentifié (`gh run list`, `gh run view`). Dernier run : `35389707958` sur `main` (2026-09-18).
+- **Dérive ouverte** héritée de M0 : script `db:reset:linked` (ROADMAP § Phase M2).
+- **Décisions en vigueur** : ADR-023 (web d'abord, Expo gelé), ADR-024 (stack UI web), ADR-025 (Cloudflare Pages), ADR-011 (onglets + ajout rapide), ADR-017 révisée (mesure web qui fait foi ; job CI de fluidité non bloquant jusqu'au retrait, DW1), ADR-018 (option B), ADR-019 (+ précision du 2026-09-26), ADR-020, ADR-022. ADR-001 et ADR-021 sont remplacées.
+- **CI** : `gh` installé et authentifié (`gh run list --branch wip/m1-m3`, `gh run view <id>`). Jobs : `quality`, `e2e-web`, `e2e-web-perf` (non bloquant), `db` (CLI Supabase épinglée en 2.117.0, RELEASE §5.1).
 
 ## Comptes et ressources
 
@@ -71,34 +69,40 @@ pnpm dev:web          # serveur Vite ; ouvrir l'URL affichée dans le navigateur
 |---|---|
 | Dépôt GitHub (privé) | `wasslasGOAT/tradingjournal` — `main` (état M0), travail sur `wip/m1-m3`, PR #1 ouverte vers `main` |
 | Supabase (base de dev, UE) | projet `vgqgalksrbprdslhegde`, lié via `npx supabase link` |
-| Hébergement web | Cloudflare Pages (ADR-025) — **compte à créer par l'utilisateur** (W-8) |
+| Hébergement web | Cloudflare Pages (ADR-025), projet `edgebook` (hôte `edgebook-bs9.pages.dev` ; ne **jamais** repasser `--force`) ; wrangler connecté sur ce PC — RELEASE §0 |
 | Expo / EAS (gelé) | projet `@wassimaha/edgebook` (id `dd23ce8e-9296-4435-b7a9-d94b4ae3147b`) |
 | Migrations appliquées | `20260917172440_app_meta`, `20260918090000_harden_rls_guard` |
 
 ## Reprendre sur ce PC
 
-Les fichiers `.env` **ne sont pas dans git** (volontairement) : `apps/web/.env` (à créer en W-2), `apps/app/.env` (gelé), `supabase/tests/.env`. Sur un autre PC, les recréer depuis les `.env.example` (tableau de bord Supabase → Project Settings → API ; **jamais la clé `service_role`**), puis `pnpm install`, `npx supabase login` + `npx supabase link --project-ref vgqgalksrbprdslhegde`.
+Les fichiers `.env` **ne sont pas dans git** (volontairement) : `apps/web/.env`, `apps/app/.env` (gelé), `supabase/tests/.env`. Sur un autre PC, les recréer depuis les `.env.example` (tableau de bord Supabase → Project Settings → API ; **jamais la clé `service_role`**), puis `pnpm install`, `npx supabase login` + `npx supabase link --project-ref vgqgalksrbprdslhegde`.
 
 **Terminal Windows** : si PowerShell ne trouve pas `pnpm`, ajouter `C:\Users\wasst\AppData\Roaming\npm` (et `C:\Program Files\nodejs`) au `Path` de l'utilisateur, puis rouvrir le terminal.
 
 ## Commandes utiles
 
 ```bash
-pnpm dev:web          # app web (Vite)
+pnpm dev:web                      # app web (Vite)
 pnpm lint && pnpm typecheck && pnpm test
-pnpm test:rls         # tests d'isolation RLS contre la base de dev
-pnpm e2e:web          # Playwright (apps/web à partir de W-9)
-pnpm db:push          # applique les nouvelles migrations sur la base de dev
-pnpm db:types         # régénère packages/db depuis la base de dev
+pnpm --filter @repo/core test:tz  # tests core sous plusieurs fuseaux hôtes
+pnpm e2e:web                      # Playwright (apps/web) ; les 3 tests de fluidité peuvent échouer (DW1)
+pnpm deploy:web                   # build + en-têtes + scan anti-secrets + déploiement preview (branche courante)
+pnpm deploy:web --dry-run         # affiche ce qui serait fait, sans build ni déploiement
+pnpm deploy:web --allow-dirty     # autorise un arbre non commité (visible dans l'historique Cloudflare)
+pnpm deploy:web --prod            # seul moyen de déployer depuis main ; confirmation « DEPLOY PRODUCTION »
+pnpm test:rls                     # tests d'isolation RLS contre la base de dev
+pnpm db:push                      # applique les nouvelles migrations sur la base de dev
+pnpm db:types                     # régénère packages/db depuis la base de dev
 ```
+`deploy:web` refuse un arbre non propre (sauf `--allow-dirty`) et échoue si `VITE_SUPABASE_URL` ou `VITE_SUPABASE_ANON_KEY` manquent ; détail en RELEASE §0.3.
 
 ## Décisions en attente
 
-Voir la section « Décisions mises de côté » de `ROADMAP.md`. Restent ouvertes : **n° 3** (écritures atomiques, M4), **n° 4** (règle `max_total_loss`, M8), **n° 7** (nom et logo, avant P6), **n° 8** (pondération du score, P2).
+Voir la section « Décisions mises de côté » de `ROADMAP.md`. Restent ouvertes : **n° 3** (écritures atomiques, M4), **n° 4** (règle `max_total_loss`, M8), **n° 7** (nom et logo, avant P6), **n° 8** (pondération du score, P2). S'y ajoute l'affichage multi-devise des agrégats à série unique (précision ADR-019, avant M2-16).
 
 ## Leçons d'orchestration
 
-- Une seule installation de dépendances à la fois : quand plusieurs agents tournent en parallèle, un seul a le droit de lancer `pnpm add` (W-2 est la fenêtre d'installation de M1-web).
+- Une seule installation de dépendances à la fois : quand plusieurs agents tournent en parallèle, un seul a le droit de lancer `pnpm add` (W-2 a été celle de M1-web ; aucune n'est prévue en M2).
 - Les agents ne sortent pas de leur zone (`.claude/agents/*.md`) : les fichiers sans propriétaire sont faits par la session principale.
 - Toujours faire relire (`code-reviewer`) : la revue a déjà trouvé un vrai bug de jour de trading et une règle ESLint qui s'annulait sans erreur.
 - Une migration appliquée sur la base de dev ne se modifie plus : créer une nouvelle migration.

@@ -2,6 +2,7 @@ import {
   Decimal,
   formatDayNumber,
   formatMonthLabel,
+  formatSignedAmount,
   formatWeekdayShort,
   sumAmountStrings,
   toAmountString,
@@ -400,7 +401,11 @@ export function CalendarScreen() {
         }}
         title={
           selectedDay
-            ? `${formatWeekdayShort(selectedDay, { locale })} ${formatDayNumber(selectedDay, { locale })} ${formatMonthLabel(selectedDay, { locale })}`
+            ? t('calendar.detail.sheetTitle', {
+                weekday: formatWeekdayShort(selectedDay, { locale }),
+                day: formatDayNumber(selectedDay, { locale }),
+                month: formatMonthLabel(selectedDay, { locale }),
+              })
             : ''
         }
         closeLabel={t('close')}
@@ -423,7 +428,13 @@ export function CalendarScreen() {
                   currency={query.data?.currency ?? 'USD'}
                   locale={locale}
                   hideAmounts={hideAmounts}
-                  aria-label={`${trade.symbol} ${trade.netPnl.toString()}`}
+                  aria-label={t('calendar.detail.tradeAccessibility', {
+                    symbol: trade.symbol,
+                    pnl: formatSignedAmount(trade.netPnl, query.data?.currency ?? 'USD', {
+                      locale,
+                      hideAmounts,
+                    }),
+                  })}
                 />
               ))}
             </div>

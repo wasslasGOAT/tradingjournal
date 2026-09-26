@@ -95,11 +95,11 @@ Agents : `app-ui`, `release` (CI), `code-reviewer` — lancer avec `/phase M1`
 | D4 | Navigation clavier du `Select` web — couverte par le `Select` shadcn/Radix | M1-web (W-4), vérifiée en M2-18 | `app-ui` |
 | D5 | Libellés d'accessibilité du `DateRangePicker` | M5 | `app-ui` |
 | D6 | ~~Graphiques natifs multi-séries sans infobulle~~ — **sans objet** (`apps/app` gelé) ; infobulles multi-séries exigées dans `Chart` web | M7 | `app-ui` |
-| D7 | CI jamais exécutée sur le code M1/M3 (branche non poussée) | M1-web (W-8) | `release` |
+| D7 | ~~CI jamais exécutée sur le code M1/M3 (branche non poussée)~~ — **soldée** en W-8 (branche poussée, CI exécutée sur la PR #1) ; confirmation de la CI verte suivie en **DW6** | M1-web (W-8) | `release` |
 
 ---
 
-## Phase M1-web — Application web : shell, Dashboard, Calendrier · `En cours` (démarrée le 2026-09-25)
+## Phase M1-web — Application web : shell, Dashboard, Calendrier · `Terminée` (2026-09-26, avec dette DW1–DW6)
 Réf. : ADR-023, ADR-024, ADR-025, ADR-011, ADR-012, ADR-017 ; ARCHITECTURE §0, §3, §4, §6
 Agents : `architect`, `release`, `app-ui`, `core-engine`, `qa-tests`, `code-reviewer` — lancer avec `/phase M1-web`
 Dépend de : M0, M1 (tokens), M3
@@ -116,7 +116,7 @@ Dépend de : M0, M1 (tokens), M3
 | W-6b | Examen de `buildCalendarGrid` / `calendarLayout` (`apps/app`) : logique de dates → `packages/core` (testée), sinon copie dans `apps/web` | `core-engine` | — (parallèle à W-4) | Tests portés verts |
 | W-7 | PWA : manifeste, icônes, service worker précachant **uniquement** le shell | `app-ui` | W-5 | Lighthouse « installable » ; aucune réponse Supabase en cache |
 | W-8 | CI (`quality` + `e2e-web` sur `apps/web`), branche poussée (solde D7) ; préproduction Cloudflare Pages à URL fixe + `_headers` (CSP de base) — **compte à créer par l'utilisateur** | `release` | W-2 (parallèle à W-3…W-7) | CI verte sur GitHub ; l'utilisateur ouvre l'URL sur son téléphone et installe la PWA |
-| W-9 | Playwright sur `apps/web` : navigation, préférences, calendrier, graphiques ; fluidité **bloquante** sur `vite preview` (CPU ×4, ≥ 55 fps, aucune image > 50 ms) — `Segmented` mesuré sur un usage sans changement de thème (ex. $/%/R) ; le **changement de thème** est hors seuil fps : sans rechargement, < 200 ms (ADR-017, amendement du 2026-09-25) | `qa-tests` | W-6 | `pnpm e2e:web` vert |
+| W-9 | Playwright sur `apps/web` : navigation, préférences, calendrier, graphiques ; fluidité **bloquante** sur `vite preview` (CPU ×4, ≥ 55 fps, aucune image > 50 ms) — `Segmented` mesuré sur un usage sans changement de thème (ex. $/%/R) ; le **changement de thème** est hors seuil fps : sans rechargement, < 200 ms (ADR-017, amendement du 2026-09-25). **En CI, job `e2e-web-perf` temporairement non bloquant** (`continue-on-error`) ; retrait après 3 runs CI consécutifs au seuil ou sur décision de l'utilisateur (ADR-017, précision du 2026-09-25) | `qa-tests` | W-6 | `pnpm e2e:web` vert |
 | W-10 | Revue | `code-reviewer` | W-9 | Aucun point bloquant |
 
 **Parallélisation** : W-8 en parallèle de W-3…W-7 ; W-6b en parallèle de W-4 ; W-9 démarre dès W-5 (tests de navigation). Vagues 1–2 de M2 possibles en parallèle.
@@ -129,18 +129,30 @@ Dépend de : M0, M1 (tokens), M3
 - [x] **W-5** Shell (onglets, sidebar, header, préférences)
 - [x] **W-6** Dashboard + Calendrier (données factices) · **W-6b** grille du calendrier
 - [x] **W-7** PWA (W-1…W-7 committés en `a779a71`)
-- [ ] **W-8** CI + préproduction Cloudflare Pages
-- [ ] **W-9** Playwright (parcours + fluidité) — tests écrits, fluidité en cours
-- [ ] **W-10** Revue `code-reviewer`
+- [x] **W-8** CI + préproduction Cloudflare Pages — preview en ligne le 2026-09-25 (`https://wip-m1-m3.edgebook-bs9.pages.dev`), CI mise à jour (solde D7)
+- [x] **W-9** Playwright (parcours + fluidité) — parcours fonctionnels verts (32/32, 2026-09-26) ; les 3 tests de fluidité restent sous le seuil (**dette DW1**) ; job perf CI non bloquant jusqu'à 3 runs consécutifs au seuil (ADR-017)
+- [x] **W-10** Revue `code-reviewer` + audit `security-auditor` (2026-09-25) ; corrections faites le 2026-09-26 (`core-engine` : agrégation multi-comptes dans `packages/core`, `test:tz` ; `app-ui` ; `release` : garde-fous de `deploy-web.mjs`, `_headers` durcis, `generate-web-headers.mjs --strict`) ; re-revue `code-reviewer` : « prêt pour la clôture », aucun point bloquant. Audit : E2 corrigé, E1 = action utilisateur (**DW5**)
 
-**Critères de fin** :
-- [ ] `pnpm dev:web` ouvre le shell ; Dashboard et Calendrier affichent les données factices avec les mêmes chiffres que l'app Expo.
-- [ ] Thème sombre/clair et FR/EN basculables sans rechargement, persistés ; « réduire les animations » respecté.
-- [ ] PWA installable ; service worker sans données Supabase en cache.
-- [ ] `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e:web` verts, `apps/app` exclu ; CI verte sur GitHub.
-- [ ] Fluidité web ADR-017 (révision et amendement du 2026-09-25) atteinte sur l'export de production.
-- [ ] Vérification par l'utilisateur sur téléphone (navigateur ou PWA) — via la préproduction si le compte Cloudflare existe, sinon reportée à W-8.
-- [ ] Aucun point bloquant de `code-reviewer`.
+**Dette M1-web** — à traiter aux échéances indiquées :
+| # | Élément | Échéance | Propriétaire |
+|---|---|---|---|
+| DW1 | Fluidité sous le seuil sur le poste de dev — **décision utilisateur du 2026-09-26 : clôture de M1-web avec dette de fluidité (`Segmented`, `Sheet`, mois à confirmer en CI) ; suivi via le job CI `e2e-web-perf` et le ressenti sur téléphone** (ADR-017 : précision du 2026-09-25, décision de clôture du 2026-09-26) | 3 runs CI au seuil, sinon décision utilisateur | `qa-tests` / `app-ui` |
+| DW2 | **Cloudflare Access** (accès restreint) sur la préproduction — recommandé par l'audit | Avant M2 (auth) | utilisateur + `release` |
+| DW3 | CSP stricte : `style-src` sans `unsafe-inline`, Trusted Types | M9 | `release` / `app-ui` |
+| DW4 | Propagation d'une CSP modifiée aux PWA déjà installées (mise à jour du service worker) | M9 | `release` / `app-ui` |
+| DW5 | **Désactiver l'inscription** sur le projet Supabase de dev (Authentication → « Allow new users to sign up ») — audit sécurité E1, élevé : l'URL et la clé anon sont publiques dans la preview (ADR-020/025) | **Avant tout partage du lien de preview et avant le début de M2** | utilisateur |
+| DW6 | **Confirmer la CI verte** sur GitHub : les deux causes du rouge sont corrigées localement (`routeTree.gen.ts` versionné, CLI Supabase épinglée en 2.117.0) mais aucun run ne l'a encore confirmé. Si le run est rouge sur `quality`, `e2e-web` ou `db` : M1-web repasse `En cours` | Push du commit de clôture, avant toute tâche M2 | `release` |
+
+**Critères de fin** (vérifiés le 2026-09-26) :
+- [x] `pnpm dev:web` ouvre le shell ; Dashboard et Calendrier affichent les données factices avec les mêmes chiffres que l'app Expo (vérifié en W-6). Seul écart voulu : le P&L du dernier jour multi-comptes, faux dans `apps/app` (il additionnait des jours différents), corrigé dans `packages/core` (`computeLastDayPnl`).
+- [x] Thème sombre/clair et FR/EN basculables sans rechargement, persistés ; « réduire les animations » respecté (`preferences.spec.ts`, `reducedMotion.spec.ts` ; thème appliqué en 20 ms pour un seuil de 200 ms).
+- [x] PWA installable ; service worker sans données Supabase en cache (`prod/pwa.spec.ts` ; `runtimeCaching: []`).
+- [ ] `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e:web` verts, `apps/app` exclu ; CI verte sur GitHub. **Local : atteint** (853 tests, `test:tz`, `build`, `check:secrets`, `format:check` verts ; `e2e:web` : 32 passés, les 3 échecs sont les tests de fluidité, dette **DW1**). **CI : à confirmer au prochain push (DW6).**
+- [ ] Fluidité web ADR-017 atteinte sur l'export de production — **non atteinte, dette DW1** acceptée par l'utilisateur le 2026-09-26. Dernier run (poste chargé) : `Segmented` 32 fps, `Sheet` 45 fps, changement de mois 25 fps, pour un seuil de 55 fps.
+- [ ] Vérification par l'utilisateur sur téléphone (navigateur ou PWA) via la préproduction (en ligne depuis le 2026-09-25) — **pas encore faite** : action utilisateur, sur la preview redéployée après le commit de clôture. Elle nourrit DW1 (ressenti de fluidité) et est de toute façon exigée par M2-19.
+- [x] Aucun point bloquant de `code-reviewer` (re-revue du 2026-09-26).
+
+**Bilan (2026-09-26)** : `apps/web` remplace `apps/app` comme application du MVP : shell, Dashboard et Calendrier sur données factices, PWA, préproduction Cloudflare Pages, CI web. Pendant la phase, `packages/core` a gagné le cache d'heure locale (`time/localTimeCache`), les plages de jours de trading (`time/tradingDayRange`), l'index mensuel (`aggregates/monthIndex`) et l'agrégation multi-comptes à devise unique (`summarizeAccountsOverPeriod`, `assertSingleCurrency`, précision ADR-019 du 2026-09-26). Phase close avec les dettes DW1 à DW6 ; DW5 et DW6 doivent être soldées avant de commencer M2.
 
 ---
 
@@ -191,7 +203,7 @@ Dépend de : M0, M1, M3 ; **vagues 3 à 5 : M1-web** (implémentées dans `apps/
 | M2-13 | Onboarding animé : prénom, marchés, style, fuseau, **premier jour de semaine et devise d'affichage pré-remplis depuis la locale et modifiables** (M2-7), premier compte manuel ; écrit `profiles`, `preferences` et `accounts` | `app-ui` | M2-7, M2-12 | Un nouvel utilisateur termine l'onboarding sur téléphone (PWA) et retrouve tout sur le navigateur de bureau |
 | M2-14 | Gestion des comptes : créer / éditer / archiver ; `kind` (`personal`, `demo`, `backtest`, `prop_challenge`, `prop_funded`, `paper`), devise, solde initial, fuseau, heure de bascule, méthode de regroupement ; **mises à jour optimistes** | `app-ui` | M2-13 | Création visible immédiatement puis confirmée ; retour arrière propre en cas d'erreur |
 | M2-15 | Dépôts et retraits (`cash_movements`) : saisie, liste, suppression ; signes selon DATA_MODEL § Conventions de calcul, point 7 | `app-ui` | M2-14 | Le solde suit `solde initial + Σ P&L net + mouvements` calculé par `packages/core` |
-| M2-16 | Sélecteur de compte global branché sur les **vraies** données (**`sampleAccounts` supprimé**), « Tous les comptes » groupé par devise (ADR-019), persisté (Zustand + URL web). Les **trades** factices du dashboard et du calendrier **restent** jusqu'à M4/M5 | `app-ui` | M2-14 | `sampleAccounts` absent du dépôt ; le compte choisi survit à un rechargement |
+| M2-16 | Sélecteur de compte global branché sur les **vraies** données (**`sampleAccounts` supprimé**), « Tous les comptes » groupé par devise (ADR-019 ; les agrégats à série unique lèvent `MixedCurrencyAggregationError` en multi-devise : trancher avant le code, précision ADR-019 du 2026-09-26), persisté (Zustand + URL web). Les **trades** factices du dashboard et du calendrier **restent** jusqu'à M4/M5 | `app-ui` | M2-14 | `sampleAccounts` absent du dépôt ; le compte choisi survit à un rechargement |
 | M2-17 | Préférences en base (langue, thème, couleurs P&L, premier jour de semaine, masquage des montants) : lecture au démarrage, écriture optimiste, repli local si la requête échoue (garde-fou M1 conservé) | `app-ui` | M2-13 | Un changement de préférence sur téléphone se retrouve sur le bureau après reconnexion |
 | M2-18 | Réglages : déconnexion, **lien « demander la suppression de mon compte »** (ADR-018, option B) ; splash « Bon retour, {prénom} » < 1 s avec préchargement des requêtes du dashboard ; **dette M1 D4** : vérifier la navigation clavier du `Select` (shadcn/Radix, W-4) | `app-ui` | M2-17 | Splash mesuré < 1 s ; `Select` pilotable au clavier (Tab, flèches, Entrée, Échap) |
 

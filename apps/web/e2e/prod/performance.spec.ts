@@ -171,18 +171,28 @@ test.describe('Fluidité — build de production, CPU ralenti ×4 (ADR-017, bloq
 
       // Radix `Tabs` déclenche la sélection sur `mousedown` (pas `click`,
       // voir `@radix-ui/react-tabs`) : on chronomètre donc depuis un
-      // `mousedown` posé en phase de capture (avant le gestionnaire React),
-      // jusqu'au `MutationObserver` qui détecte `data-theme` posé. Le clic
-      // réel vient ensuite de Playwright (`locator.click()`, séquence
-      // souris complète), pas d'un `HTMLElement.click()` synthétique qui ne
-      // déclenche pas `mousedown`.
+      // `mousedown` posé en phase de capture (avant le gestionnaire React).
+      // Correctif revue (2026-09-26) : le `MutationObserver` détecte la pose
+      // de `data-theme`, mais à cet instant le style n'est ni recalculé ni
+      // peint — un double `requestAnimationFrame` **après** la mutation
+      // laisse le navigateur recalculer le style et peindre avant d'arrêter
+      // le chrono (le premier rAF est planifié avant le recalcul de style de
+      // cette frame ; le second garantit qu'une frame complète — recalcul +
+      // peinture — s'est bien écoulée après la mutation). On capture aussi
+      // `--background` à ce même instant (pas après, dans un `evaluate`
+      // séparé) pour prouver que la variable CSS a bien été recalculée au
+      // moment où le chrono s'arrête. Le clic réel vient de Playwright
+      // (`locator.click()`, séquence souris complète), pas d'un
+      // `HTMLElement.click()` synthétique qui ne déclenche pas `mousedown`.
       await page.evaluate(() => {
         const win = window as unknown as {
           __themeMousedownTs: number | null;
           __themeDeltaMs: number | null;
+          __themeBackgroundAtStop: string | null;
         };
         win.__themeMousedownTs = null;
         win.__themeDeltaMs = null;
+        win.__themeBackgroundAtStop = null;
         const button = document.querySelector('[data-testid="settings-theme-option-light"]');
         if (!button) throw new Error('bouton de thème introuvable');
         button.addEventListener(
@@ -194,8 +204,15 @@ test.describe('Fluidité — build de production, CPU ralenti ×4 (ADR-017, bloq
         );
         const observer = new MutationObserver(() => {
           if (win.__themeMousedownTs != null && win.__themeDeltaMs == null) {
-            win.__themeDeltaMs = performance.now() - win.__themeMousedownTs;
             observer.disconnect();
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => {
+                win.__themeDeltaMs = performance.now() - win.__themeMousedownTs!;
+                win.__themeBackgroundAtStop = getComputedStyle(document.documentElement)
+                  .getPropertyValue('--background')
+                  .trim();
+              });
+            });
           }
         });
         observer.observe(document.documentElement, {
@@ -213,8 +230,8 @@ test.describe('Fluidité — build de production, CPU ralenti ×4 (ADR-017, bloq
         () => (window as unknown as { __themeDeltaMs: number }).__themeDeltaMs,
       );
 
-      const backgroundAfter = await page.evaluate(() =>
-        getComputedStyle(document.documentElement).getPropertyValue('--background').trim(),
+      const backgroundAfter = await page.evaluate(
+        () => (window as unknown as { __themeBackgroundAtStop: string }).__themeBackgroundAtStop,
       );
       const noReload = await page.evaluate(
         () => (window as unknown as { __noReloadMarker?: boolean }).__noReloadMarker === true,

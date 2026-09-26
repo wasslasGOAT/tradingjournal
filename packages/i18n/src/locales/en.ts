@@ -219,6 +219,10 @@ export const en = {
     dashboard: {
       balance: 'Account balance',
       pnlToday: "Today's P&L",
+      // Day actually retained (revue W-10): may differ from "today" in "All
+      // accounts" mode (most recent day any account traded, see
+      // `computeLastDayPnl`) — the label shows it to avoid ambiguity.
+      pnlTodayWithDay: 'P&L · {{weekday}} {{day}}',
       pnlMonth: "This month's P&L",
       returnRate: 'Return',
       shortcuts: {
@@ -282,10 +286,12 @@ export const en = {
       },
       detail: {
         titleWithJournal: '{{day}} · Journal',
+        sheetTitle: '{{weekday}} {{day}} {{month}}',
         tradesTitle: "Day's trades",
         noTrades: 'No trades on this day.',
         journalNote: 'A journal entry exists for this day (preview coming soon).',
         direction: { long: 'Long', short: 'Short' },
+        tradeAccessibility: '{{symbol}}, {{pnl}}',
       },
     },
     trades: {

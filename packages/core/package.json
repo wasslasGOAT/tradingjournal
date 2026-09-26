@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "test:tz": "node scripts/test-with-tz.mjs"
   },
   "dependencies": {
     "@repo/schemas": "workspace:*",

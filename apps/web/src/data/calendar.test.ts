@@ -1,7 +1,7 @@
 import { toTradingDay } from '@repo/core';
 import { describe, expect, it } from 'vitest';
 
-import { getCalendarMonthSummary } from './calendar';
+import { calendarMonthQueryOptions, getCalendarMonthSummary } from './calendar';
 
 const SEPTEMBER = { year: 2026, month: 9, weekStartsOn: 1 as const };
 
@@ -20,6 +20,19 @@ describe('getCalendarMonthSummary — filtre compte', () => {
     await expect(
       getCalendarMonthSummary({ accountId: 'acc-inconnu', ...SEPTEMBER }),
     ).rejects.toThrow(/Compte inconnu/);
+  });
+
+  it('« Tous les comptes » somme correctement le netPnl du jour entre comptes partageant ce jour', async () => {
+    // Les deux comptes factices tradent tous les deux le 2026-09-01
+    // (`acc-demo-main` : 312.40, `acc-demo-prop` : 620.00). `getCalendarMonthSummary`
+    // agrège l'union des trades des deux comptes en un seul appel
+    // `aggregateByTradingDay` (revue W-10) plutôt que d'agréger chaque compte
+    // séparément puis de fusionner les résultats — le total du jour partagé
+    // est donc calculé une seule fois par `packages/core`.
+    const all = await getCalendarMonthSummary({ accountId: 'all', ...SEPTEMBER });
+    const day = all.dayByTradingDay.get(toTradingDay('2026-09-01'));
+    expect(day?.pnl?.toFixed(2)).toBe('932.40');
+    expect(day?.trades).toHaveLength(2);
   });
 });
 
@@ -60,5 +73,43 @@ describe('getCalendarMonthSummary — cohérence avec @repo/core', () => {
     const summary = await getCalendarMonthSummary({ accountId: 'acc-demo-main', ...SEPTEMBER });
     const inMonthCount = summary.weeks.flat().filter((cell) => cell.inCurrentMonth).length;
     expect(inMonthCount).toBe(30);
+  });
+});
+
+describe('calendarMonthQueryOptions — clé de requête (revue W-10)', () => {
+  it('inclut `weekStartsOn` dans la clé de requête', () => {
+    const { queryKey } = calendarMonthQueryOptions({
+      accountId: 'acc-demo-main',
+      year: 2026,
+      month: 9,
+      weekStartsOn: 1,
+    });
+    expect(queryKey).toEqual(['calendar', 'acc-demo-main', 2026, 9, 1]);
+  });
+
+  it('une clé de requête différente pour `weekStartsOn` différent (FR vs EN) : pas de grille périmée en cache', () => {
+    const frOptions = calendarMonthQueryOptions({
+      accountId: 'acc-demo-main',
+      year: 2026,
+      month: 9,
+      weekStartsOn: 1,
+    });
+    const enOptions = calendarMonthQueryOptions({
+      accountId: 'acc-demo-main',
+      year: 2026,
+      month: 9,
+      weekStartsOn: 0,
+    });
+    expect(frOptions.queryKey).not.toEqual(enOptions.queryKey);
+  });
+
+  it("n'a pas de `placeholderData` (ADR-017 : aucune donnée périmée visible)", () => {
+    const options = calendarMonthQueryOptions({
+      accountId: 'acc-demo-main',
+      year: 2026,
+      month: 9,
+      weekStartsOn: 1,
+    });
+    expect('placeholderData' in options).toBe(false);
   });
 });

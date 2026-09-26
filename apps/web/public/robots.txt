@@ -1,0 +1,6 @@
+# App privée tant qu'elle n'est pas ouverte publiquement (docs/RELEASE.md §0) : aucun
+# robot ne doit indexer quoi que ce soit. Voir aussi l'en-tête `X-Robots-Tag` dans
+# `_headers` (double protection : ce fichier ne couvre que les robots qui le respectent).
+# À retirer (ou assouplir) à l'ouverture publique de l'app.
+User-agent: *
+Disallow: /

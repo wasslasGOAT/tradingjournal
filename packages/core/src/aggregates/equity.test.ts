@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import { buildTrade, d } from '../stats/testHelpers';
+import { toTradingDay } from '../time';
 import { aggregateByTradingDay } from './day';
-import { equityCurveByDay, equityCurveByTrade } from './equity';
+import { balanceAtDay, equityCurveByDay, equityCurveByTrade } from './equity';
 
 describe('equityCurveByTrade', () => {
   it('0 trade : un seul point, le solde initial', () => {
@@ -65,5 +66,44 @@ describe('equityCurveByDay', () => {
     const point = curve[1];
     expect(point?.tradingEquity.toString()).toBe('1100'); // 1000 + 100, sans le dépôt
     expect(point?.balance.toString()).toBe('6100'); // 1000 + 100 + 5000, solde réel
+  });
+});
+
+describe('balanceAtDay', () => {
+  it('0 jour : renvoie le solde initial pour n’importe quelle date', () => {
+    expect(balanceAtDay(d('1000'), [], toTradingDay('2026-03-02'))).toEqual(d('1000'));
+  });
+
+  it('renvoie le solde initial pour une date antérieure au premier jour', () => {
+    const trades = [buildTrade({ netPnl: d('100'), tradingDay: '2026-03-05' })];
+    const days = aggregateByTradingDay(d('1000'), trades);
+    expect(balanceAtDay(d('1000'), days, toTradingDay('2026-03-01'))).toEqual(d('1000'));
+  });
+
+  it('renvoie le solde du dernier jour connu à la date exacte', () => {
+    const trades = [
+      buildTrade({ id: 't1', netPnl: d('100'), tradingDay: '2026-03-02' }),
+      buildTrade({ id: 't2', netPnl: d('-30'), tradingDay: '2026-03-05' }),
+    ];
+    const days = aggregateByTradingDay(d('1000'), trades);
+    expect(balanceAtDay(d('1000'), days, toTradingDay('2026-03-02'))).toEqual(d('1100'));
+    expect(balanceAtDay(d('1000'), days, toTradingDay('2026-03-05'))).toEqual(d('1070'));
+  });
+
+  it('reporte (« or before ») le solde à travers un jour sans trade', () => {
+    const trades = [
+      buildTrade({ id: 't1', netPnl: d('100'), tradingDay: '2026-03-02' }),
+      buildTrade({ id: 't2', netPnl: d('-30'), tradingDay: '2026-03-05' }),
+    ];
+    const days = aggregateByTradingDay(d('1000'), trades);
+    // 2026-03-03 et 2026-03-04 n'ont aucun trade : le solde reste celui du 03-02.
+    expect(balanceAtDay(d('1000'), days, toTradingDay('2026-03-03'))).toEqual(d('1100'));
+    expect(balanceAtDay(d('1000'), days, toTradingDay('2026-03-04'))).toEqual(d('1100'));
+  });
+
+  it('renvoie le solde le plus récent pour une date postérieure au dernier jour', () => {
+    const trades = [buildTrade({ netPnl: d('100'), tradingDay: '2026-03-02' })];
+    const days = aggregateByTradingDay(d('1000'), trades);
+    expect(balanceAtDay(d('1000'), days, toTradingDay('2026-12-31'))).toEqual(d('1100'));
   });
 });

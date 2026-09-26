@@ -1,6 +1,7 @@
 import type { Decimal } from '../money';
 import { filterClosedTrades, sortTradesChronologically } from '../stats';
 import type { TradeRecord } from '../stats';
+import type { TradingDay } from '../time';
 import type { DayAggregate } from './day';
 
 /**
@@ -87,4 +88,31 @@ export function equityCurveByDay(
       return { tradingDay: day.tradingDay, tradingEquity, balance: day.endBalance };
     }),
   ];
+}
+
+/**
+ * Solde de clôture d'un compte à `day` inclus (ARCHITECTURE §5.4/§5.7,
+ * Dashboard) : le `endBalance` du dernier {@link DayAggregate} dont
+ * `tradingDay <= day`, ou `startingBalance` si aucun jour ne précède `day`
+ * (avant tout trade/mouvement de trésorerie).
+ *
+ * `days` doit être trié par `tradingDay` croissant (garanti par
+ * {@link aggregateByTradingDay}) : la comparaison s'appuie sur l'ordre
+ * lexicographique de `YYYY-MM-DD`, qui coïncide avec l'ordre chronologique.
+ *
+ * @param startingBalance solde initial du compte
+ * @param days agrégats journaliers du compte, triés par `tradingDay` croissant
+ * @param day jour de trading auquel lire le solde (inclus)
+ */
+export function balanceAtDay(
+  startingBalance: Decimal,
+  days: readonly DayAggregate[],
+  day: TradingDay,
+): Decimal {
+  let result = startingBalance;
+  for (const entry of days) {
+    if (entry.tradingDay > day) break;
+    result = entry.endBalance;
+  }
+  return result;
 }

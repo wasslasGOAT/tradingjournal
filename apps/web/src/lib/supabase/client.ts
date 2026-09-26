@@ -8,7 +8,8 @@ import type { SupabaseEnvField, SupabaseEnvInvalidIssue } from './env';
 export type SupabaseClientState =
   | { status: 'ready'; client: SupabaseClient<Database> }
   | { status: 'missing-env'; missing: SupabaseEnvField[] }
-  | { status: 'invalid-env'; invalid: SupabaseEnvInvalidIssue[] };
+  | { status: 'invalid-env'; invalid: SupabaseEnvInvalidIssue[] }
+  | { status: 'storage-unavailable' };
 
 let cachedState: SupabaseClientState | undefined;
 
@@ -26,8 +27,13 @@ let cachedState: SupabaseClientState | undefined;
  * Ne lève jamais d'exception : si la configuration est absente ou laissée à
  * sa valeur d'exemple (`apps/web/.env.example`), renvoie `{ status:
  * 'missing-env' }` ; si elle est présente mais mal formée, renvoie `{ status:
- * 'invalid-env' }`. Dans les deux cas, l'UI affiche un état d'erreur explicite
- * et localisé plutôt qu'un écran blanc (CLAUDE.md, ADR-017).
+ * 'invalid-env' }` ; si `localStorage` est inaccessible (ex. navigation
+ * privée stricte, cookies/stockage tiers bloqués — accéder à la propriété
+ * peut lever une `SecurityError`, revue sécurité W-10), renvoie `{ status:
+ * 'storage-unavailable' }` plutôt que le message trompeur « invalid-env url »
+ * d'avant (le lever venait de l'accès à `window.localStorage`, pas de l'URL).
+ * Dans tous les cas, l'UI affiche un état d'erreur explicite et localisé
+ * plutôt qu'un écran blanc (CLAUDE.md, ADR-017).
  */
 export function getSupabaseClientState(): SupabaseClientState {
   if (cachedState) return cachedState;
@@ -45,10 +51,18 @@ export function getSupabaseClientState(): SupabaseClientState {
     return cachedState;
   }
 
+  let storage: Storage;
+  try {
+    storage = window.localStorage;
+  } catch {
+    cachedState = { status: 'storage-unavailable' };
+    return cachedState;
+  }
+
   try {
     const client = createClient<Database>(envResult.env.url, envResult.env.anonKey, {
       auth: {
-        storage: window.localStorage,
+        storage,
         autoRefreshToken: true,
         persistSession: true,
         flowType: 'pkce',
@@ -61,4 +75,9 @@ export function getSupabaseClientState(): SupabaseClientState {
   }
 
   return cachedState;
+}
+
+/** Réservé aux tests : vide le cache mémoïsé pour rejouer `getSupabaseClientState`. */
+export function resetSupabaseClientStateForTests(): void {
+  cachedState = undefined;
 }

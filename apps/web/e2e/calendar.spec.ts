@@ -178,3 +178,113 @@ test.describe('Calendrier — repli mobile de la colonne "Total"', () => {
     }
   });
 });
+
+/**
+ * Alignement des en-têtes de jour avec les dates, FR ↔ EN (revue W-10 :
+ * `WEEK_STARTS_ON` — FR commence le lundi, EN le dimanche,
+ * `CalendarScreen.tsx`). Pour chaque colonne de la grille, le jour de
+ * semaine réel de chaque date affichée doit rester le même d'une semaine à
+ * l'autre et correspondre à la convention de la locale — sinon l'en-tête de
+ * colonne ment sur les dates qu'il surplombe. Langue posée par
+ * `localStorage` via `addInitScript` (même clé que `preferences.spec.ts`,
+ * `features/preferences/*-store.ts`) **avant** la navigation, pour un
+ * premier rendu déjà dans la bonne langue (pas de bascule depuis Réglages
+ * ici, hors sujet du test).
+ */
+test.describe('Calendrier — alignement des en-têtes de jour avec les dates (FR ↔ EN)', () => {
+  test.use({ viewport: { width: 1280, height: 800 } });
+
+  const CASES = [
+    // FR : semaine commençant le lundi (`getDay()` : 0=dimanche…6=samedi).
+    { language: 'fr', columnWeekdays: [1, 2, 3, 4, 5, 6, 0] },
+    // EN : semaine commençant le dimanche.
+    { language: 'en', columnWeekdays: [0, 1, 2, 3, 4, 5, 6] },
+  ] as const;
+
+  for (const { language, columnWeekdays } of CASES) {
+    test(`chaque cellule correspond au jour de semaine de sa colonne d'en-tête (${language})`, async ({
+      page,
+    }) => {
+      await freezeClock(page);
+      await page.addInitScript((lang) => {
+        window.localStorage.setItem('edgebook.web.preferences.language', lang);
+      }, language);
+      await page.goto(CALENDAR_URL_SEPT_2026);
+      await expect(page.getByTestId('calendar-grid')).toBeVisible();
+
+      // Une colonne par semaine (0..6), lue dans l'ordre du DOM — même ordre que les
+      // libellés d'en-tête (`weekdayHeaderLabels`, `CalendarScreen.tsx`).
+      const columnsByWeek = await page.evaluate(() => {
+        const grid = document.querySelector('[data-testid="calendar-grid"]');
+        if (!grid) throw new Error('grille introuvable');
+        // Premier enfant = ligne d'en-tête (labels de jour + "Total") : ignorée ici.
+        const weekRows = Array.from(grid.children).slice(1);
+        return weekRows.map((weekRow) => {
+          const dayRow = weekRow.firstElementChild;
+          if (!dayRow) throw new Error('ligne de semaine vide');
+          return Array.from(dayRow.children)
+            .map((wrapper) => wrapper.querySelector('[data-testid^="calendar-day-"]'))
+            .filter((el): el is Element => el !== null)
+            .map((el) => el.getAttribute('data-testid') ?? '');
+        });
+      });
+
+      expect(columnsByWeek.length).toBeGreaterThan(0);
+      for (const week of columnsByWeek) {
+        expect(week).toHaveLength(7);
+        week.forEach((testId, columnIndex) => {
+          const isoDate = testId.replace('calendar-day-', '');
+          const actualWeekday = new Date(`${isoDate}T12:00:00Z`).getUTCDay();
+          expect(
+            actualWeekday,
+            `colonne ${columnIndex} (${language}) : ${isoDate} est un jour ${actualWeekday}, attendu ${columnWeekdays[columnIndex]}`,
+          ).toBe(columnWeekdays[columnIndex]);
+        });
+      }
+    });
+  }
+});
+
+/**
+ * Montants masqués (revue : masquage global) : quand `hideAmounts` est
+ * actif, aucun `aria-label` de la Sheet détail du jour ne doit exposer un
+ * montant en clair — `calendar.detail.tradeAccessibility` interpole
+ * `formatSignedAmount(..., { hideAmounts })`, qui remplace tout le montant
+ * par `HIDDEN_VALUE_PLACEHOLDER` (`•••••`, `packages/core/src/format`)
+ * plutôt que de le masquer partiellement. Vérifié en cherchant un motif de
+ * montant (un chiffre, potentiellement précédé d'un signe/symbole monétaire)
+ * dans chaque `aria-label` de la Sheet.
+ */
+test.describe('Calendrier — montants masqués dans la Sheet détail du jour', () => {
+  test.use({ viewport: { width: 1280, height: 800 } });
+
+  test('aucun aria-label de la Sheet ne contient de montant en clair quand le masquage est actif', async ({
+    page,
+  }) => {
+    await freezeClock(page);
+    await page.addInitScript(() => {
+      window.localStorage.setItem('edgebook.web.preferences.hideAmounts', 'true');
+    });
+    await page.goto(CALENDAR_URL_SEPT_2026);
+    await page.getByTestId('calendar-day-2026-09-14').click();
+
+    const sheet = page.getByTestId('calendar-day-sheet');
+    await expect(sheet).toBeVisible();
+    await expect(page.getByTestId('calendar-detail-trade-m-0914')).toBeVisible();
+    // Confirme que le masquage est bien actif (sinon le test ne prouverait rien) : le motif
+    // masqué doit apparaître au moins une fois dans le contenu visible de la Sheet.
+    await expect(sheet).toContainText('•••••');
+
+    const ariaLabels = await sheet.evaluate((el) =>
+      Array.from(el.querySelectorAll('[aria-label]')).map(
+        (node) => node.getAttribute('aria-label') ?? '',
+      ),
+    );
+    expect(ariaLabels.length).toBeGreaterThan(0);
+    const leaking = ariaLabels.filter((label) => /\d/.test(label));
+    expect(
+      leaking,
+      `aria-label(s) contenant un montant en clair malgré le masquage : ${JSON.stringify(leaking)}`,
+    ).toEqual([]);
+  });
+});

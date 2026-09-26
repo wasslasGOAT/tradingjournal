@@ -1,9 +1,13 @@
 import {
   aggregateByTradingDay,
+  assertSingleCurrency,
   buildCalendarGrid,
+  buildMonthDayIndex,
   computeMonthStats,
   Decimal,
-  parseAmount,
+  groupTradesByTradingDay,
+  isTradingDayInMonth,
+  toTradingDay,
 } from '@repo/core';
 import type {
   CalendarGridCell,
@@ -12,7 +16,6 @@ import type {
   TradingDay,
   WeekStartsOn,
 } from '@repo/core';
-import { keepPreviousData } from '@tanstack/react-query';
 
 import { resolveAccountIds } from './accounts';
 import { dataQueryKeys } from './queryKeys';
@@ -23,11 +26,16 @@ import {
 } from './sample/tradesSampleData';
 
 /**
- * Couche données du Calendrier (W-6, ADR-016/ADR-023) : agrège les trades
- * factices du mois demandé via `@repo/core/aggregates` (`aggregateByTradingDay`,
- * `computeMonthStats`, `buildCalendarGrid`, W-6b) — jamais de calcul de date
- * ni de P&L ici au-delà de la lecture/composition. Filtré par compte et par
- * mois (année + mois civils) : clé de requête dédiée (`dataQueryKeys.calendarMonth`).
+ * Couche données du Calendrier (W-6, revue W-10, ADR-016/ADR-023) : agrège
+ * les trades factices du mois demandé via `@repo/core/aggregates`
+ * (`aggregateByTradingDay` **une seule fois** sur l'union des trades de tous
+ * les comptes sélectionnés, puis `buildMonthDayIndex`/`groupTradesByTradingDay`/
+ * `computeMonthStats`/`buildCalendarGrid`) — jamais de calcul de date ni de
+ * P&L ici au-delà de la lecture/composition (refactor revue W-10 : une seule
+ * agrégation sur l'union des trades plutôt qu'une fusion manuelle par compte,
+ * et filtrage par mois via `isTradingDayInMonth`, `packages/core`, plutôt
+ * qu'un `isInMonth` local). Filtré par compte et par mois (année + mois
+ * civils) : clé de requête dédiée (`dataQueryKeys.calendarMonth`).
  */
 export interface CalendarFilters {
   readonly accountId: string;
@@ -51,11 +59,6 @@ export interface CalendarMonthSummary {
   readonly monthStats: MonthStats;
 }
 
-function isInMonth(tradingDay: string, year: number, month: number): boolean {
-  const [y = 0, m = 0] = tradingDay.split('-').map(Number);
-  return y === year && m === month;
-}
-
 /**
  * Résumé du calendrier pour un compte (ou `'all'`) et un mois civil.
  * Fonction pure synchrone enveloppée en `Promise` (même forme que le futur
@@ -67,51 +70,42 @@ export async function getCalendarMonthSummary(
   // Voir le commentaire équivalent dans `dashboard.ts#getDashboardSummary`.
   await Promise.resolve();
   const accountIds = resolveAccountIds(filters.accountId);
-  const currencies = new Set(accountIds.map((id) => SAMPLE_ACCOUNTS_META[id].currency));
-  if (currencies.size > 1) {
-    throw new Error('Agrégation multi-devises non prise en charge pendant le MVP (ADR-019).');
-  }
-  const currency = [...currencies][0] ?? 'USD';
+  const accountsMeta = accountIds.map((id) => SAMPLE_ACCOUNTS_META[id]);
+  // ADR-019 : pas de conversion pendant le MVP — ne devrait pas arriver avec les comptes factices actuels (tous `USD`).
+  assertSingleCurrency(accountsMeta);
+  const currency = accountsMeta[0]?.currency ?? 'USD';
 
-  const dayByTradingDay = new Map<TradingDay, CalendarDayData>();
-
-  for (const accountId of accountIds) {
-    const trades = sampleTradeRecordsForAccount(accountId).filter((trade) =>
-      isInMonth(trade.tradingDay, filters.year, filters.month),
-    );
-    const journalDays = SAMPLE_JOURNAL_TRADING_DAYS[accountId].filter((day) =>
-      isInMonth(day, filters.year, filters.month),
-    );
-    const days = aggregateByTradingDay(new Decimal(0), trades);
-
-    for (const day of days) {
-      const tradingDay = day.tradingDay as TradingDay;
-      const existing = dayByTradingDay.get(tradingDay);
-      const dayTrades = trades.filter((trade) => trade.tradingDay === tradingDay);
-      const hasJournalEntry = existing?.hasJournalEntry || journalDays.includes(tradingDay);
-      const pnl =
-        day.tradesCount > 0
-          ? day.netPnl.plus(existing?.pnl ?? new Decimal(0))
-          : (existing?.pnl ?? null);
-      dayByTradingDay.set(tradingDay, {
-        tradingDay,
-        pnl,
-        hasJournalEntry,
-        trades: [...(existing?.trades ?? []), ...dayTrades],
-      });
-    }
-    for (const journalDay of journalDays) {
-      const tradingDay = journalDay as TradingDay;
-      if (dayByTradingDay.has(tradingDay)) continue;
-      dayByTradingDay.set(tradingDay, { tradingDay, pnl: null, hasJournalEntry: true, trades: [] });
-    }
-  }
-
-  const daysForStats = aggregateByTradingDay(
-    parseAmount('0'),
-    [...dayByTradingDay.values()].flatMap((day) => day.trades),
+  // Union des trades/jours de journal de tous les comptes sélectionnés, un
+  // seul appel `aggregateByTradingDay` (voir le commentaire de tête de
+  // fichier, et celui de `buildMonthDayIndex`, `@repo/core`).
+  const trades = accountIds.flatMap((accountId) =>
+    sampleTradeRecordsForAccount(accountId).filter((trade) =>
+      isTradingDayInMonth(toTradingDay(trade.tradingDay), filters.year, filters.month),
+    ),
   );
-  const monthStats = computeMonthStats(daysForStats);
+  const journalTradingDays = accountIds.flatMap((accountId) =>
+    SAMPLE_JOURNAL_TRADING_DAYS[accountId]
+      .map((day) => toTradingDay(day))
+      .filter((day) => isTradingDayInMonth(day, filters.year, filters.month)),
+  );
+
+  const days = aggregateByTradingDay(new Decimal(0), trades);
+  const monthDayIndex = buildMonthDayIndex(days, journalTradingDays);
+  const tradesByDay = groupTradesByTradingDay(trades);
+
+  const dayByTradingDay = new Map<TradingDay, CalendarDayData>(
+    monthDayIndex.map((entry) => [
+      entry.tradingDay,
+      {
+        tradingDay: entry.tradingDay,
+        pnl: entry.netPnl,
+        hasJournalEntry: entry.hasJournalEntry,
+        trades: tradesByDay.get(entry.tradingDay) ?? [],
+      },
+    ]),
+  );
+
+  const monthStats = computeMonthStats(days);
   const weeks = buildCalendarGrid(filters.year, filters.month, filters.weekStartsOn);
 
   return { currency, weeks, dayByTradingDay, monthStats };
@@ -125,23 +119,29 @@ export async function getCalendarMonthSummary(
  * `computeMonthStats`, `buildCalendarGrid`) — à chaque clic, alors que les
  * données factices de ce mois n'ont pas changé. Mesuré au profil CPU comme
  * un doublement inutile du travail sur les allers-retours du test de
- * fluidité. `staleTime` garde le résultat en cache tel quel pour toute la
- * session (les données factices ne changent jamais pendant le MVP,
- * ADR-016) ; un vrai backend (M4/M5, Supabase) reviendra sur ce réglage
- * avec `database`/`backend` selon la fraîcheur réellement requise.
+ * fluidité. `staleTime` garde le résultat en cache tel quel pendant 5
+ * minutes (pas « toute la session », corrigé revue W-10) ; un vrai backend
+ * (M4/M5, Supabase) reviendra sur ce réglage avec `database`/`backend`
+ * selon la fraîcheur réellement requise.
  */
 const CALENDAR_MONTH_STALE_TIME_MS = 5 * 60 * 1000;
 
 export function calendarMonthQueryOptions(filters: CalendarFilters) {
   return {
-    queryKey: dataQueryKeys.calendarMonth(filters.accountId, filters.year, filters.month),
+    queryKey: dataQueryKeys.calendarMonth(
+      filters.accountId,
+      filters.year,
+      filters.month,
+      filters.weekStartsOn,
+    ),
     queryFn: () => getCalendarMonthSummary(filters),
-    // Changement de mois (W-9, ADR-017) : garde le mois précédent affiché pendant la
-    // résolution du suivant plutôt que de démonter la grille vers le squelette — évite
-    // le remontage complet de ~35 `DayCell` à chaque clic (cause de saccades sous CPU
-    // ralenti). Ne redonne jamais de données périmées d'un *autre* compte/période :
-    // la clé de requête reste filtrée par compte + année + mois (règle du projet).
-    placeholderData: keepPreviousData,
+    // Pas de `placeholderData: keepPreviousData` (corrigé revue W-10, ADR-017 :
+    // « aucune donnée périmée visible ») : ça s'appliquait aussi au changement de
+    // *compte*, pas seulement de mois, et le libellé du mois affiché ne
+    // correspondait plus à la grille pendant la résolution de la nouvelle requête.
+    // Le préchargement des mois voisins (`CalendarScreen`) et `staleTime`
+    // ci-dessus suffisent à éviter le squelette sur un mois déjà visité ; un mois
+    // jamais visité affiche le squelette le temps du premier fetch, comme voulu.
     staleTime: CALENDAR_MONTH_STALE_TIME_MS,
   };
 }

@@ -39,6 +39,20 @@ export interface LocalTimeParts {
  * n'est ajoutée qu'après construction réussie de l'`Intl.DateTimeFormat`
  * correspondant : un fuseau invalide n'est **jamais** mis en cache comme
  * valide (il lève à chaque appel, voir {@link getCachedFormatter}).
+ *
+ * Pas de borne de taille ni d'éviction sur cette `Map` : la clé est le fuseau
+ * IANA du **compte** (`accounts.timezone`), pas une valeur dérivée de la
+ * donnée utilisateur (montant, symbole, id...) — l'ensemble des fuseaux IANA
+ * existants est fixe et de taille modeste (~450 identifiants dans la base
+ * `tz`), et en pratique un utilisateur n'en traverse qu'une poignée (un ou
+ * deux comptes, plus les fenêtres de session fixes de `classifySession`). Le
+ * pire cas (un process qui interrogerait volontairement tous les fuseaux
+ * IANA connus) reste de l'ordre de quelques centaines d'entrées, donc de
+ * quelques centaines de `Intl.DateTimeFormat` — négligeable, et sans risque
+ * de croissance non bornée puisque l'univers des clés est fini et ne dépend
+ * d'aucune entrée utilisateur libre. Une entrée invalide n'est jamais
+ * ajoutée (voir la note ci-dessus), donc pas non plus de fuite via des
+ * fuseaux malformés répétés.
  */
 const formatterCache = new Map<string, Intl.DateTimeFormat>();
 

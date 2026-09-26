@@ -193,7 +193,8 @@ Choix structurants retenus en M0 (versions exactes : `package.json` / lockfile, 
 ```
 .
 ├── CLAUDE.md
-├── docs/                         # ARCHITECTURE, DATA_MODEL, ROADMAP, DECISIONS, RELEASE
+├── docs/                         # ARCHITECTURE, DATA_MODEL, ROADMAP, DECISIONS, RELEASE, REPRISE
+├── scripts/                      # check-secrets, deploy-web, generate-web-headers (propriétaire `release`)
 ├── apps/
 │   ├── web/                      # React + Vite + PWA (MVP ; Capacitor en P6) — ADR-023
 │   │   ├── src/
@@ -207,6 +208,9 @@ Choix structurants retenus en M0 (versions exactes : `package.json` / lockfile, 
 │   │   │   ├── components/ui/    # composants shadcn thémés + Chart
 │   │   │   ├── data/             # requêtes/mutations Supabase + clés TanStack Query, sans DOM
 │   │   │   └── lib/              # supabase client, i18n, stockage, flags
+│   │   ├── public/               # _headers (CSP), _redirects, robots.txt, icônes PWA,
+│   │   │                         # theme-init.js (anti-flash du thème, same-origin)
+│   │   ├── e2e/                  # Playwright ; e2e/prod = export de production (PWA, fluidité)
 │   │   └── vite.config.ts
 │   ├── app/                      # Expo — GELÉ (ADR-023), conservé, plus développé
 │   └── server/
@@ -403,7 +407,7 @@ Le CRUD simple (journal, tags, règles, préférences, notes) passe par Supabase
 - Rate limiting par utilisateur sur l'API (surtout `/coach/chat`, `/imports`).
 - Validation zod de toutes les entrées ; taille max d'upload ; parsing CSV en streaming.
 - Identifiants broker : lecture seule exigée quand la plateforme le permet, chiffrés, rotation de clé documentée.
-- Stockage de session : web = `localStorage` (risque XSS assumé faute de serveur, ADR-016) → CSP stricte via `_headers` Cloudflare Pages (ROADMAP M9) ; le service worker de la PWA ne met jamais en cache les réponses Supabase. Natif (P6, Capacitor) : stockage sécurisé à choisir (l'implémentation SecureStore + AES-256-GCM d'`apps/app` est gelée).
+- Stockage de session : web = `localStorage` (risque XSS assumé faute de serveur, ADR-016) → CSP via `_headers` Cloudflare Pages : de base depuis M1-web (`script-src 'self'`, `connect-src` limité à l'hôte Supabase exact, injecté au déploiement par `scripts/generate-web-headers.mjs`), stricte en M9 (ROADMAP DW3) ; le service worker de la PWA ne met jamais en cache les réponses Supabase. Natif (P6, Capacitor) : stockage sécurisé à choisir (l'implémentation SecureStore + AES-256-GCM d'`apps/app` est gelée).
 - Anti-secrets : hook `.githooks/pre-commit` (`check:secrets --staged`) ; scan de tout l'historique en CI.
 - Journal d'audit pour les actions sensibles (connexion broker, suppression, export).
 
@@ -428,6 +432,7 @@ Le CRUD simple (journal, tags, règles, préférences, notes) passe par Supabase
 
 - CI (chaque PR) : lint, typecheck, tests unitaires, tests RLS, build web (`apps/web`), Playwright. `apps/app` (gelé) est exclu des commandes par défaut et de la CI.
 - Merge sur `main` → déploiement staging automatique ; tag `v*` → production.
+- Préproduction web (MVP) : `pnpm deploy:web` depuis le poste (build, en-têtes générés, scan anti-secrets, `wrangler pages deploy`, URL fixe par branche) — `docs/RELEASE.md` §0.
 - Mobile (P6) : Capacitor ; la chaîne EAS (`apps/app/eas.json`) est gelée. Procédure détaillée : `docs/RELEASE.md`.
 - Migrations DB appliquées par la CI avant le déploiement du serveur.
 

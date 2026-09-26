@@ -57,4 +57,13 @@ describe('getLocalTimeParts', () => {
     const midnight = getLocalTimeParts(new Date('2026-01-15T00:00:00Z'), 'UTC');
     expect(midnight.hour).toBe(0);
   });
+
+  it("indépendance au fuseau de la machine hôte : timeZone: 'UTC' explicite ignore `TZ` du process (voir aussi `pnpm test:tz`)", () => {
+    // `Intl.DateTimeFormat` avec `timeZone` explicite ne retombe jamais sur le
+    // fuseau du process (`TZ` d'environnement) : ce test doit donner le même
+    // résultat quel que soit le `TZ` sous lequel Vitest tourne (CI, Windows
+    // local sans `TZ`, ou `pnpm test:tz` avec `TZ=Europe/Paris`).
+    const parts = getLocalTimeParts(new Date('2026-03-29T01:30:00Z'), 'UTC');
+    expect(parts).toEqual({ year: 2026, month: 3, day: 29, hour: 1, minute: 30, second: 0 });
+  });
 });

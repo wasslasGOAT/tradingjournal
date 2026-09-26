@@ -383,16 +383,17 @@ export function toSampleTradeRecord(
 
 /**
  * Cache mémoire par compte (W-9 boucle 2, ADR-017) : `toSampleTradeRecord`
- * appelle `tradingDayOf` (`@repo/core/time`), qui reconstruit un
- * `Intl.DateTimeFormat` et reformate l'horodatage via `date-fns-tz` à
- * *chaque* trade — mesuré au profil CPU comme le premier poste de coût du
- * changement de mois du Calendrier (~30 % du temps total, cumul
- * `assertValidTimezone`/`toLocalDateTimeParts`). `SAMPLE_TRADE_SEEDS` est une
- * constante figée au chargement du module : recalculer les mêmes
+ * appelle `tradingDayOf` (`@repo/core/time`), qui formate l'horodatage via un
+ * `Intl.DateTimeFormat` par fuseau ; ce formateur est lui-même mémoïsé
+ * (`getCachedFormatter`/`getLocalTimeParts`, `packages/core/src/time/localTimeCache.ts`,
+ * corrigé depuis — il ne reconstruit plus un formateur ni ne repasse par
+ * `date-fns-tz` à chaque trade). Reste néanmoins un travail non nul par
+ * trade (appel `Intl.DateTimeFormat#format`) : `SAMPLE_TRADE_SEEDS` est une
+ * constante figée au chargement du module, donc recalculer les mêmes
  * `TradeRecord` à chaque appel (Dashboard *et* Calendrier, `staleTime` par
- * défaut à `0` → un refetch par navigation) est un travail pur perdu, jamais
- * observable par l'appelant (résultat identique, comparé par valeur dans les
- * tests). Calculé une fois par compte, au premier appel.
+ * défaut à `0` → un refetch par navigation) reste un travail pur perdu,
+ * jamais observable par l'appelant (résultat identique, comparé par valeur
+ * dans les tests). Calculé une fois par compte, au premier appel.
  */
 const sampleTradeRecordsCache = new Map<SampleAccountId, readonly TradeRecord[]>();
 

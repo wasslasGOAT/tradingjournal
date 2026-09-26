@@ -75,6 +75,33 @@ test.describe('Dashboard — chiffres clés', () => {
   });
 });
 
+/**
+ * « Tous les comptes » (revue W-10 : `computeLastDayPnl`, `DashboardScreen.tsx`) : sur la
+ * période 2026-09-01 → 2026-09-10, seul le compte `acc-demo-main` a tradé le 10 (jeudi,
+ * `m-0910`, +156,60 — `src/data/sample/tradesSampleData.ts`) ; `acc-demo-prop` s'est arrêté au
+ * 9. Le jour le plus récent tradé par au moins un compte sur la période est donc le 10 : la
+ * tuile doit afficher un libellé daté (« P&L · Thu 10 » en EN) et un montant cohérent avec ce
+ * jour, pas un libellé générique ni le montant d'un autre jour.
+ */
+test.describe('Dashboard — "Tous les comptes", libellé et montant du P&L du jour', () => {
+  test.use({ viewport: { width: 1280, height: 800 } });
+
+  test('affiche "P&L · Thu 10" (EN) avec un montant cohérent (+$156.60)', async ({ page }) => {
+    await freezeClock(page);
+    await page.addInitScript(() => {
+      window.localStorage.setItem('edgebook.web.preferences.language', 'en');
+    });
+    await page.goto('/?account=all&from=2026-09-01&to=2026-09-10&shortcut=custom');
+    await expect(page.getByTestId('screen-dashboard')).toBeVisible();
+
+    const label = page.getByTestId('dashboard-stat-pnl-today');
+    await expect(label).toContainText('P&L · Thu 10');
+
+    const value = page.getByTestId('dashboard-stat-pnl-today-value');
+    await expect(value).toHaveText('+$156.60');
+  });
+});
+
 test.describe('Dashboard — aucun débordement horizontal (390 px)', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 

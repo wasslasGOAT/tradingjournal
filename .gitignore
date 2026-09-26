@@ -26,6 +26,9 @@ apps/app/android/
 supabase/.temp/
 supabase/.branches/
 
+# wrangler (Cloudflare Pages, `pnpm deploy:web`) : cache/config locale, jamais versionnée.
+.wrangler/
+
 # tests
 playwright-report/
 test-results/

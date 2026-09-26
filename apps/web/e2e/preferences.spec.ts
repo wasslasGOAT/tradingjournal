@@ -79,7 +79,9 @@ test.describe('Réglages — couleurs P&L et masquage des montants', () => {
       'rgb(55, 201, 126)',
     );
     await expect
-      .poll(() => page.evaluate(() => localStorage.getItem('edgebook.web.preferences.pnlColorScheme')))
+      .poll(() =>
+        page.evaluate(() => localStorage.getItem('edgebook.web.preferences.pnlColorScheme')),
+      )
       .toBe('greenRed');
 
     await page.reload();
@@ -135,9 +137,7 @@ test.describe('Réglages — langue', () => {
       .poll(() => page.evaluate(() => localStorage.getItem('edgebook.web.preferences.language')))
       .toBe('en');
     // `<html lang>` réconcilié (accessibilité, W-5).
-    await expect
-      .poll(() => page.evaluate(() => document.documentElement.lang))
-      .toBe('en');
+    await expect.poll(() => page.evaluate(() => document.documentElement.lang)).toBe('en');
 
     await page.reload();
     await expect(page.getByTestId('settings-title')).toHaveText('Settings');

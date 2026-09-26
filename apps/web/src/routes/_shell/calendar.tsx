@@ -1,7 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router"
+import { createFileRoute } from '@tanstack/react-router';
 
-import { CalendarScreen } from "@/features/calendar/CalendarScreen"
+import { CalendarScreen } from '@/features/calendar/CalendarScreen';
 
-export const Route = createFileRoute("/_shell/calendar")({
+export const Route = createFileRoute('/_shell/calendar')({
   component: CalendarScreen,
-})
+});

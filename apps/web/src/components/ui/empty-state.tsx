@@ -1,20 +1,20 @@
-import type { LucideIcon } from "lucide-react"
+import type { LucideIcon } from 'lucide-react';
 
-import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 export interface EmptyStateAction {
-  readonly label: string
-  readonly onClick: () => void
+  readonly label: string;
+  readonly onClick: () => void;
 }
 
 export interface EmptyStateProps {
-  readonly icon: LucideIcon
-  readonly title: string
-  readonly description: string
-  readonly action?: EmptyStateAction
-  readonly className?: string
-  readonly testId?: string
+  readonly icon: LucideIcon;
+  readonly title: string;
+  readonly description: string;
+  readonly action?: EmptyStateAction;
+  readonly className?: string;
+  readonly testId?: string;
 }
 
 /**
@@ -35,7 +35,7 @@ export function EmptyState({
       data-testid={testId}
       role="status"
       className={cn(
-        "mx-auto flex w-full max-w-sm flex-col items-center gap-2 px-6 py-10 text-center",
+        'mx-auto flex w-full max-w-sm flex-col items-center gap-2 px-6 py-10 text-center',
         className,
       )}
     >
@@ -52,5 +52,5 @@ export function EmptyState({
         </Button>
       ) : null}
     </div>
-  )
+  );
 }

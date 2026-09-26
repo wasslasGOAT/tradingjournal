@@ -1,8 +1,8 @@
-import { Skeleton } from "@/components/ui/skeleton"
+import { Skeleton } from '@/components/ui/skeleton';
 
 export interface ChartSkeletonProps {
-  readonly height: number
-  readonly testId?: string
+  readonly height: number;
+  readonly testId?: string;
 }
 
 /**
@@ -12,7 +12,7 @@ export interface ChartSkeletonProps {
  * `packages/ui/src/chart/ChartSkeleton.tsx` (gelé).
  */
 export function ChartSkeleton({ height, testId }: ChartSkeletonProps) {
-  const barHeights = [0.4, 0.65, 0.5, 0.85, 0.6, 0.95, 0.7]
+  const barHeights = [0.4, 0.65, 0.5, 0.85, 0.6, 0.95, 0.7];
 
   return (
     <div
@@ -29,5 +29,5 @@ export function ChartSkeleton({ height, testId }: ChartSkeletonProps) {
         />
       ))}
     </div>
-  )
+  );
 }

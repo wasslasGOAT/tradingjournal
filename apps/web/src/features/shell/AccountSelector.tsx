@@ -1,12 +1,18 @@
-import { useTranslation } from "react-i18next"
+import { useTranslation } from 'react-i18next';
 
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
-import { SAMPLE_ACCOUNTS } from "./sampleAccounts"
+import { SAMPLE_ACCOUNTS } from './sampleAccounts';
 
 export interface AccountSelectorProps {
-  readonly accountId: string
-  readonly onChange: (accountId: string) => void
+  readonly accountId: string;
+  readonly onChange: (accountId: string) => void;
 }
 
 /**
@@ -15,20 +21,20 @@ export interface AccountSelectorProps {
  * comptes Supabase en M2) — `Select` shadcn (`components/ui/select`).
  */
 export function AccountSelector({ accountId, onChange }: AccountSelectorProps) {
-  const { t } = useTranslation()
+  const { t } = useTranslation();
 
   return (
     <Select value={accountId} onValueChange={onChange}>
       <SelectTrigger
         data-testid="header-account-trigger"
         size="sm"
-        aria-label={t("header.accounts.triggerAccessibility")}
+        aria-label={t('header.accounts.triggerAccessibility')}
         className="min-h-11"
       >
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="all">{t("header.accounts.all")}</SelectItem>
+        <SelectItem value="all">{t('header.accounts.all')}</SelectItem>
         {SAMPLE_ACCOUNTS.map((account) => (
           <SelectItem key={account.id} value={account.id}>
             {t(`header.accounts.sample.${account.nameKey}`)}
@@ -36,5 +42,5 @@ export function AccountSelector({ accountId, onChange }: AccountSelectorProps) {
         ))}
       </SelectContent>
     </Select>
-  )
+  );
 }

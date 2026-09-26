@@ -5,13 +5,13 @@
  * identifiants et clés i18n (`header.accounts.sample.*`), pas d'import direct.
  */
 export interface SampleAccount {
-  readonly id: string
+  readonly id: string;
   /** Clé i18n (`header.accounts.sample.<key>`) plutôt qu'un libellé en dur. */
-  readonly nameKey: "main" | "prop"
-  readonly currency: string
+  readonly nameKey: 'main' | 'prop';
+  readonly currency: string;
 }
 
 export const SAMPLE_ACCOUNTS: readonly SampleAccount[] = [
-  { id: "acc-demo-main", nameKey: "main", currency: "USD" },
-  { id: "acc-demo-prop", nameKey: "prop", currency: "USD" },
-]
+  { id: 'acc-demo-main', nameKey: 'main', currency: 'USD' },
+  { id: 'acc-demo-prop', nameKey: 'prop', currency: 'USD' },
+];

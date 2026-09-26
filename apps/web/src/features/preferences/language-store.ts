@@ -1,12 +1,12 @@
-import { create } from "zustand"
+import { create } from 'zustand';
 
-import { webLocalStorage } from "./storage"
-import type { LanguagePreference } from "./language"
-import { LANGUAGE_PREFERENCE_STORAGE_KEY, parseLanguagePreference } from "./language"
+import { webLocalStorage } from './storage';
+import type { LanguagePreference } from './language';
+import { LANGUAGE_PREFERENCE_STORAGE_KEY, parseLanguagePreference } from './language';
 
 interface LanguagePreferenceState {
-  preference: LanguagePreference
-  setPreference: (preference: LanguagePreference) => void
+  preference: LanguagePreference;
+  setPreference: (preference: LanguagePreference) => void;
 }
 
 /**
@@ -18,7 +18,7 @@ interface LanguagePreferenceState {
 export const useLanguagePreferenceStore = create<LanguagePreferenceState>((set) => ({
   preference: parseLanguagePreference(webLocalStorage.getItem(LANGUAGE_PREFERENCE_STORAGE_KEY)),
   setPreference: (preference) => {
-    webLocalStorage.setItem(LANGUAGE_PREFERENCE_STORAGE_KEY, preference)
-    set({ preference })
+    webLocalStorage.setItem(LANGUAGE_PREFERENCE_STORAGE_KEY, preference);
+    set({ preference });
   },
-}))
+}));

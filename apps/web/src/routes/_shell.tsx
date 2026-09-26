@@ -1,8 +1,8 @@
-import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router"
+import { createFileRoute, Outlet, useNavigate } from '@tanstack/react-router';
 
-import { AppShell } from "@/features/shell/AppShell"
-import { shellSearchToRange, validateShellSearch } from "@/features/shell/filters"
-import type { ShellSearch } from "@/features/shell/filters"
+import { AppShell } from '@/features/shell/AppShell';
+import { shellSearchToRange, validateShellSearch } from '@/features/shell/filters';
+import type { ShellSearch } from '@/features/shell/filters';
 
 /**
  * Disposition connectée (W-5, ADR-011, ADR-024) : route pathless
@@ -24,32 +24,32 @@ import type { ShellSearch } from "@/features/shell/filters"
  * sur `/calendar`. Un rechargement sur une route profonde conserve donc le
  * compte et la période choisis.
  */
-export const Route = createFileRoute("/_shell")({
+export const Route = createFileRoute('/_shell')({
   validateSearch: (search: Record<string, unknown>): ShellSearch => validateShellSearch(search),
   component: ShellLayout,
-})
+});
 
 function ShellLayout() {
-  const search = Route.useSearch()
-  const navigate = useNavigate()
+  const search = Route.useSearch();
+  const navigate = useNavigate();
 
   return (
     <AppShell
       accountId={search.account}
       onAccountChange={(account) => {
-        void navigate({ to: ".", search: (prev) => ({ ...prev, account }), replace: true })
+        void navigate({ to: '.', search: (prev) => ({ ...prev, account }), replace: true });
       }}
       dateRange={shellSearchToRange(search)}
       dateRangeShortcut={search.shortcut}
       onPeriodChange={(range, shortcut) => {
         void navigate({
-          to: ".",
+          to: '.',
           search: (prev) => ({ ...prev, from: range.start, to: range.end, shortcut }),
           replace: true,
-        })
+        });
       }}
     >
       <Outlet />
     </AppShell>
-  )
+  );
 }

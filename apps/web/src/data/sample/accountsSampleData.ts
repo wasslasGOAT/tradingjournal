@@ -13,27 +13,27 @@
  * `packages/core` (ADR-016 : calcul à la volée côté app pendant le MVP).
  */
 export interface SampleAccountMeta {
-  readonly startingBalance: string
-  readonly currency: string
+  readonly startingBalance: string;
+  readonly currency: string;
   /** Fuseau IANA utilisé pour résoudre le jour de trading des trades factices (`tradingDayOf`). */
-  readonly timezone: string
+  readonly timezone: string;
   /** Heure de bascule locale (`HH:mm`) — `"00:00"` : aucune bascule, jour de trading = date civile. */
-  readonly dayRolloverTime: string
+  readonly dayRolloverTime: string;
 }
 
 export const SAMPLE_ACCOUNTS_META = {
-  "acc-demo-main": {
-    startingBalance: "23200.00",
-    currency: "USD",
-    timezone: "UTC",
-    dayRolloverTime: "00:00",
+  'acc-demo-main': {
+    startingBalance: '23200.00',
+    currency: 'USD',
+    timezone: 'UTC',
+    dayRolloverTime: '00:00',
   },
-  "acc-demo-prop": {
-    startingBalance: "50000.00",
-    currency: "USD",
-    timezone: "UTC",
-    dayRolloverTime: "00:00",
+  'acc-demo-prop': {
+    startingBalance: '50000.00',
+    currency: 'USD',
+    timezone: 'UTC',
+    dayRolloverTime: '00:00',
   },
-} as const satisfies Record<string, SampleAccountMeta>
+} as const satisfies Record<string, SampleAccountMeta>;
 
-export type SampleAccountId = keyof typeof SAMPLE_ACCOUNTS_META
+export type SampleAccountId = keyof typeof SAMPLE_ACCOUNTS_META;

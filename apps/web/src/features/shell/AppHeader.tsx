@@ -1,16 +1,16 @@
-import type { DateRangeShortcut, TradingDayRange } from "@/components/ui/date-range-shortcuts"
+import type { DateRangeShortcut, TradingDayRange } from '@/components/ui/date-range-shortcuts';
 
-import { AccountSelector } from "./AccountSelector"
-import { HideAmountsToggle } from "./HideAmountsToggle"
-import { PeriodSelector } from "./PeriodSelector"
-import { QuickAddButton } from "./QuickAddButton"
+import { AccountSelector } from './AccountSelector';
+import { HideAmountsToggle } from './HideAmountsToggle';
+import { PeriodSelector } from './PeriodSelector';
+import { QuickAddButton } from './QuickAddButton';
 
 export interface AppHeaderProps {
-  readonly accountId: string
-  readonly onAccountChange: (accountId: string) => void
-  readonly dateRange: TradingDayRange
-  readonly dateRangeShortcut: DateRangeShortcut
-  readonly onPeriodChange: (range: TradingDayRange, shortcut: DateRangeShortcut) => void
+  readonly accountId: string;
+  readonly onAccountChange: (accountId: string) => void;
+  readonly dateRange: TradingDayRange;
+  readonly dateRangeShortcut: DateRangeShortcut;
+  readonly onPeriodChange: (range: TradingDayRange, shortcut: DateRangeShortcut) => void;
 }
 
 /**
@@ -27,10 +27,7 @@ export function AppHeader({
   onPeriodChange,
 }: AppHeaderProps) {
   return (
-    <header
-      data-testid="app-header"
-      className="z-10 border-b border-border bg-background"
-    >
+    <header data-testid="app-header" className="z-10 border-b border-border bg-background">
       <div className="flex items-center justify-between gap-2 px-4 py-2 sm:px-6">
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
           <AccountSelector accountId={accountId} onChange={onAccountChange} />
@@ -46,5 +43,5 @@ export function AppHeader({
         </div>
       </div>
     </header>
-  )
+  );
 }

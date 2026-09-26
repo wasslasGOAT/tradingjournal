@@ -1,4 +1,4 @@
-import type { ReactNode } from "react"
+import type { ReactNode } from 'react';
 
 import {
   Dialog,
@@ -6,31 +6,31 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
+} from '@/components/ui/dialog';
 import {
   Drawer,
   DrawerContent,
   DrawerDescription,
   DrawerHeader,
   DrawerTitle,
-} from "@/components/ui/drawer"
-import { useMediaQuery } from "@/lib/use-media-query"
+} from '@/components/ui/drawer';
+import { useMediaQuery } from '@/lib/use-media-query';
 
 export interface ResponsiveSheetProps {
-  readonly testId?: string
-  readonly open: boolean
-  readonly onOpenChange: (open: boolean) => void
+  readonly testId?: string;
+  readonly open: boolean;
+  readonly onOpenChange: (open: boolean) => void;
   /** Titre affiché dans l'en-tête — requis (`DialogTitle`/`DrawerTitle`, toujours besoin d'un libellé accessible). */
-  readonly title: string
-  readonly description?: string
+  readonly title: string;
+  readonly description?: string;
   /** Libellé accessible du bouton de fermeture (`Dialog`, bureau) — ex. `t('common.close')`. */
-  readonly closeLabel: string
-  readonly children: ReactNode
-  readonly contentClassName?: string
+  readonly closeLabel: string;
+  readonly children: ReactNode;
+  readonly contentClassName?: string;
 }
 
 /** À partir de cette largeur, la fenêtre s'ouvre en `Dialog` centré plutôt qu'en `Drawer` bas. */
-const DESKTOP_BREAKPOINT_QUERY = "(min-width: 768px)"
+const DESKTOP_BREAKPOINT_QUERY = '(min-width: 768px)';
 
 /**
  * Panneau responsive (W-4, ARCHITECTURE §6.1) : `Drawer` coulissant par le
@@ -50,7 +50,7 @@ export function ResponsiveSheet({
   children,
   contentClassName,
 }: ResponsiveSheetProps) {
-  const isDesktop = useMediaQuery(DESKTOP_BREAKPOINT_QUERY)
+  const isDesktop = useMediaQuery(DESKTOP_BREAKPOINT_QUERY);
 
   if (isDesktop) {
     return (
@@ -63,7 +63,7 @@ export function ResponsiveSheet({
           {children}
         </DialogContent>
       </Dialog>
-    )
+    );
   }
 
   return (
@@ -76,5 +76,5 @@ export function ResponsiveSheet({
         <div className="px-4 pb-6">{children}</div>
       </DrawerContent>
     </Drawer>
-  )
+  );
 }

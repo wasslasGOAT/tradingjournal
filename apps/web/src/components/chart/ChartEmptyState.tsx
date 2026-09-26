@@ -1,13 +1,13 @@
-import { ChartNoAxesCombined } from "lucide-react"
+import { ChartNoAxesCombined } from 'lucide-react';
 
-import { EmptyState } from "@/components/ui/empty-state"
+import { EmptyState } from '@/components/ui/empty-state';
 
-import type { ChartEmptyStateContent } from "./types"
+import type { ChartEmptyStateContent } from './types';
 
 export interface ChartEmptyStateProps {
-  readonly height: number
-  readonly content: ChartEmptyStateContent
-  readonly testId?: string
+  readonly height: number;
+  readonly content: ChartEmptyStateContent;
+  readonly testId?: string;
 }
 
 /**
@@ -18,8 +18,16 @@ export interface ChartEmptyStateProps {
  */
 export function ChartEmptyState({ height, content, testId }: ChartEmptyStateProps) {
   return (
-    <div data-testid={testId} className="flex w-full items-center justify-center" style={{ height }}>
-      <EmptyState icon={ChartNoAxesCombined} title={content.title} description={content.description} />
+    <div
+      data-testid={testId}
+      className="flex w-full items-center justify-center"
+      style={{ height }}
+    >
+      <EmptyState
+        icon={ChartNoAxesCombined}
+        title={content.title}
+        description={content.description}
+      />
     </div>
-  )
+  );
 }

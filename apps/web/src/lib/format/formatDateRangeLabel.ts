@@ -12,10 +12,7 @@ export interface TradingDayRangeLike {
  * le même mois, « 3 sept. – 2 oct. 2026 » sinon). Composé à partir des
  * formateurs `@repo/core/format` (jour/mois) — aucun calcul de date ici.
  */
-export function formatDateRangeLabel(
-  range: TradingDayRangeLike,
-  locale: SupportedLocale,
-): string {
+export function formatDateRangeLabel(range: TradingDayRangeLike, locale: SupportedLocale): string {
   if (range.start === range.end) {
     return `${formatDayNumber(range.start, { locale })} ${formatMonthLabel(range.start, { locale })}`;
   }

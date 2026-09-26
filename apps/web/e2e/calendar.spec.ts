@@ -167,7 +167,10 @@ test.describe('Calendrier — repli mobile de la colonne "Total"', () => {
         `montants de cellule(s) tronqués à ${width}px : ${JSON.stringify(truncatedDays)}`,
       ).toEqual([]);
 
-      const truncatedTotals = await truncatedLeafTexts(page, '[data-testid^="calendar-week-total-"]');
+      const truncatedTotals = await truncatedLeafTexts(
+        page,
+        '[data-testid^="calendar-week-total-"]',
+      );
       expect(
         truncatedTotals,
         `total(aux) hebdo tronqué(s) à ${width}px : ${JSON.stringify(truncatedTotals)}`,

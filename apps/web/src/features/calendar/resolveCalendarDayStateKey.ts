@@ -1,7 +1,7 @@
-import type { Decimal } from "@repo/core"
+import type { Decimal } from '@repo/core';
 
 /** Clé i18n (`calendar.dayState.<key>`) décrivant une cellule pour les lecteurs d'écran. */
-export type CalendarDayStateKey = "profit" | "loss" | "flat" | "journalOnly" | "today" | "empty"
+export type CalendarDayStateKey = 'profit' | 'loss' | 'flat' | 'journalOnly' | 'today' | 'empty';
 
 /**
  * Résout la clé d'état d'un jour de calendrier (W-6, copie de
@@ -15,9 +15,9 @@ export function resolveCalendarDayStateKey(
   hasJournalEntry: boolean,
   isToday: boolean,
 ): CalendarDayStateKey {
-  if (isToday) return "today"
-  if (pnl === null) return hasJournalEntry ? "journalOnly" : "empty"
+  if (isToday) return 'today';
+  if (pnl === null) return hasJournalEntry ? 'journalOnly' : 'empty';
 
-  if (pnl.isZero()) return "flat"
-  return pnl.isNegative() ? "loss" : "profit"
+  if (pnl.isZero()) return 'flat';
+  return pnl.isNegative() ? 'loss' : 'profit';
 }

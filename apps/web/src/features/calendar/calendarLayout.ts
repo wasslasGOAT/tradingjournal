@@ -14,10 +14,10 @@
  * du viewport plutôt que de se replier. `360` aurait laissé un iPhone
  * standard (390 px) déborder horizontalement.
  */
-export const NARROW_CALENDAR_BREAKPOINT = 400
+export const NARROW_CALENDAR_BREAKPOINT = 400;
 
 export function isNarrowCalendarLayout(width: number): boolean {
-  return width < NARROW_CALENDAR_BREAKPOINT
+  return width < NARROW_CALENDAR_BREAKPOINT;
 }
 
 /**
@@ -38,6 +38,6 @@ export function isNarrowCalendarLayout(width: number): boolean {
  * même cause à la source, pour tous les appelants.
  */
 export function dayNumberFromTradingDay(tradingDay: string): string {
-  const day = tradingDay.slice(8, 10)
-  return String(Number(day))
+  const day = tradingDay.slice(8, 10);
+  return String(Number(day));
 }

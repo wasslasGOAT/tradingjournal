@@ -1,15 +1,15 @@
-import { Link } from "@tanstack/react-router"
-import { ChevronRight } from "lucide-react"
-import type { LucideIcon } from "lucide-react"
+import { Link } from '@tanstack/react-router';
+import { ChevronRight } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 
-import { validateShellSearch } from "@/features/shell/filters"
+import { validateShellSearch } from '@/features/shell/filters';
 
 export interface MoreListItemProps {
-  readonly testId: string
-  readonly to: "/analytics" | "/rules" | "/settings"
-  readonly icon: LucideIcon
-  readonly label: string
-  readonly description: string
+  readonly testId: string;
+  readonly to: '/analytics' | '/rules' | '/settings';
+  readonly icon: LucideIcon;
+  readonly label: string;
+  readonly description: string;
 }
 
 /** Ligne de la liste « Plus » (W-5) : icône, libellé, description, chevron — cible tactile >= 44px. */
@@ -29,5 +29,5 @@ export function MoreListItem({ testId, to, icon: Icon, label, description }: Mor
       </div>
       <ChevronRight size={18} className="text-muted-foreground" aria-hidden="true" />
     </Link>
-  )
+  );
 }

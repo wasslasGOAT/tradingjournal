@@ -50,9 +50,10 @@ test.describe('Dashboard — chiffres clés', () => {
         .filter((el) => el.scrollWidth > el.clientWidth + 1)
         .map((el) => el.textContent);
     });
-    expect(truncated, `texte(s) tronqué(s) sur le Dashboard : ${JSON.stringify(truncated)}`).toEqual(
-      [],
-    );
+    expect(
+      truncated,
+      `texte(s) tronqué(s) sur le Dashboard : ${JSON.stringify(truncated)}`,
+    ).toEqual([]);
   });
 
   test('la courbe d’equity est réellement tracée (chemin SVG non vide)', async ({ page }) => {
@@ -62,7 +63,9 @@ test.describe('Dashboard — chiffres clés', () => {
     await expect(chart).toBeVisible();
 
     const pathLengths = await chart.evaluate((el) =>
-      Array.from(el.querySelectorAll('svg path')).map((path) => path.getAttribute('d')?.length ?? 0),
+      Array.from(el.querySelectorAll('svg path')).map(
+        (path) => path.getAttribute('d')?.length ?? 0,
+      ),
     );
     expect(pathLengths.length, 'aucun élément <path> trouvé dans le graphique').toBeGreaterThan(0);
     expect(

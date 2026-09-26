@@ -20,7 +20,9 @@ test.describe('Réduction des animations — Sheet (détail du jour, Calendrier)
     page,
   }) => {
     await freezeClock(page);
-    await page.goto('/calendar?account=acc-demo-main&from=2026-09-01&to=2026-09-14&shortcut=custom');
+    await page.goto(
+      '/calendar?account=acc-demo-main&from=2026-09-01&to=2026-09-14&shortcut=custom',
+    );
     await expect(page.getByTestId('screen-calendar')).toBeVisible();
 
     await page.getByTestId('calendar-day-2026-09-14').click();
@@ -52,13 +54,15 @@ test.describe('Réduction des animations — Sheet (détail du jour, Calendrier)
       return values;
     });
 
-    expect(samples.length, 'le panneau doit exister au DOM pour être échantillonné').toBeGreaterThan(
-      0,
-    );
+    expect(
+      samples.length,
+      'le panneau doit exister au DOM pour être échantillonné',
+    ).toBeGreaterThan(0);
     for (const y of samples) {
-      expect(Math.abs(y), `translateY observé sur les 12 images : ${samples.join(', ')}`).toBeLessThan(
-        2,
-      );
+      expect(
+        Math.abs(y),
+        `translateY observé sur les 12 images : ${samples.join(', ')}`,
+      ).toBeLessThan(2);
     }
   });
 });

@@ -1,5 +1,5 @@
-import type { DashboardEquityPoint } from "@/data/dashboard"
-import type { ChartPoint } from "@/components/chart/types"
+import type { DashboardEquityPoint } from '@/data/dashboard';
+import type { ChartPoint } from '@/components/chart/types';
 
 /**
  * Convertit les points d'equity (`Decimal`, `src/data/dashboard.ts`) en points
@@ -12,5 +12,5 @@ import type { ChartPoint } from "@/components/chart/types"
 export function toEquitySeriesPoints(
   equityPoints: readonly DashboardEquityPoint[],
 ): readonly ChartPoint[] {
-  return equityPoints.map((point, index) => ({ x: index, y: point.balance.toNumber() }))
+  return equityPoints.map((point, index) => ({ x: index, y: point.balance.toNumber() }));
 }

@@ -4,3 +4,6 @@ docs/
 *.md
 supabase/migrations/
 packages/db/src/database.types.ts
+
+# Généré par Expo (apps/app gelé, ADR-023)
+apps/app/expo-env.d.ts

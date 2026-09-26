@@ -1,71 +1,71 @@
-import { formatDayNumber, formatMonthLabel, formatWeekdayShort, toTradingDay } from "@repo/core"
-import type { SupportedLocale, TradingDay } from "@repo/core"
-import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react"
-import { useState } from "react"
+import { formatDayNumber, formatMonthLabel, formatWeekdayShort, toTradingDay } from '@repo/core';
+import type { SupportedLocale, TradingDay } from '@repo/core';
+import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useState } from 'react';
 
-import { Button } from "@/components/ui/button"
-import { IconButton } from "@/components/ui/icon-button"
-import { ResponsiveSheet } from "@/components/ui/sheet-responsive"
-import { cn } from "@/lib/utils"
+import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/icon-button';
+import { ResponsiveSheet } from '@/components/ui/sheet-responsive';
+import { cn } from '@/lib/utils';
 
-import type { DateRangeShortcut, TradingDayRange } from "./date-range-shortcuts"
+import type { DateRangeShortcut, TradingDayRange } from './date-range-shortcuts';
 import {
   buildDateRangeGrid,
   resolveDateRangeGridCellIntent,
   resolveDateRangeShortcut,
   resolveRangeSelection,
-} from "./date-range-shortcuts"
+} from './date-range-shortcuts';
 
-export type { DateRangeShortcut, TradingDayRange } from "./date-range-shortcuts"
+export type { DateRangeShortcut, TradingDayRange } from './date-range-shortcuts';
 
-const SHORTCUTS: readonly Exclude<DateRangeShortcut, "custom">[] = [
-  "today",
-  "last7Days",
-  "currentMonth",
-  "previousMonth",
-]
+const SHORTCUTS: readonly Exclude<DateRangeShortcut, 'custom'>[] = [
+  'today',
+  'last7Days',
+  'currentMonth',
+  'previousMonth',
+];
 
 export interface DateRangePickerLabels {
-  readonly today: string
-  readonly last7Days: string
-  readonly currentMonth: string
-  readonly previousMonth: string
-  readonly custom: string
-  readonly apply: string
-  readonly cancel: string
-  readonly close: string
-  readonly previousMonthNav: string
-  readonly nextMonthNav: string
+  readonly today: string;
+  readonly last7Days: string;
+  readonly currentMonth: string;
+  readonly previousMonth: string;
+  readonly custom: string;
+  readonly apply: string;
+  readonly cancel: string;
+  readonly close: string;
+  readonly previousMonthNav: string;
+  readonly nextMonthNav: string;
 }
 
 export interface DateRangePickerProps {
-  readonly testId?: string
-  readonly value: TradingDayRange
+  readonly testId?: string;
+  readonly value: TradingDayRange;
   /** Raccourci actif (`'custom'` si `value` vient d'une plage personnalisée). */
-  readonly shortcut: DateRangeShortcut
+  readonly shortcut: DateRangeShortcut;
   /** Jour de référence pour les raccourcis (« aujourd'hui ») — fourni par l'appelant. */
-  readonly today: TradingDay
-  readonly locale: SupportedLocale
+  readonly today: TradingDay;
+  readonly locale: SupportedLocale;
   /** `0` = dimanche, `1` = lundi. Défaut `1`. */
-  readonly weekStartsOn?: 0 | 1
-  readonly onChange: (range: TradingDayRange, shortcut: DateRangeShortcut) => void
+  readonly weekStartsOn?: 0 | 1;
+  readonly onChange: (range: TradingDayRange, shortcut: DateRangeShortcut) => void;
   /** Libellé déjà formaté du déclencheur (ex. « 1 – 15 sept. 2026 », `@repo/core/format`). */
-  readonly triggerLabel: string
+  readonly triggerLabel: string;
   /** Libellé du groupe — titre du panneau. */
-  readonly label: string
-  readonly triggerAriaLabel?: string
-  readonly labels: DateRangePickerLabels
+  readonly label: string;
+  readonly triggerAriaLabel?: string;
+  readonly labels: DateRangePickerLabels;
 }
 
 function addMonths(year: number, month: number, delta: number): { year: number; month: number } {
-  const zeroBased = (month - 1 + delta + 1200) % 12
-  const yearDelta = Math.floor((month - 1 + delta) / 12)
-  return { year: year + yearDelta, month: zeroBased + 1 }
+  const zeroBased = (month - 1 + delta + 1200) % 12;
+  const yearDelta = Math.floor((month - 1 + delta) / 12);
+  return { year: year + yearDelta, month: zeroBased + 1 };
 }
 
 function monthOf(day: TradingDay): { year: number; month: number } {
-  const [yearText = "1970", monthText = "01"] = day.split("-")
-  return { year: Number(yearText), month: Number(monthText) }
+  const [yearText = '1970', monthText = '01'] = day.split('-');
+  return { year: Number(yearText), month: Number(monthText) };
 }
 
 /**
@@ -87,50 +87,51 @@ export function DateRangePicker({
   triggerAriaLabel,
   labels,
 }: DateRangePickerProps) {
-  const [open, setOpen] = useState(false)
-  const [draftShortcut, setDraftShortcut] = useState<DateRangeShortcut>(shortcut)
+  const [open, setOpen] = useState(false);
+  const [draftShortcut, setDraftShortcut] = useState<DateRangeShortcut>(shortcut);
   const [draftRange, setDraftRange] = useState<{
-    readonly start: TradingDay
-    readonly end: TradingDay | null
-  }>({ start: value.start, end: value.end })
-  const [displayedMonth, setDisplayedMonth] = useState(() => monthOf(value.start))
+    readonly start: TradingDay;
+    readonly end: TradingDay | null;
+  }>({ start: value.start, end: value.end });
+  const [displayedMonth, setDisplayedMonth] = useState(() => monthOf(value.start));
 
   const handleOpenChange = (nextOpen: boolean) => {
-    setOpen(nextOpen)
+    setOpen(nextOpen);
     if (nextOpen) {
-      setDraftShortcut(shortcut)
-      setDraftRange({ start: value.start, end: value.end })
-      setDisplayedMonth(monthOf(value.start))
+      setDraftShortcut(shortcut);
+      setDraftRange({ start: value.start, end: value.end });
+      setDisplayedMonth(monthOf(value.start));
     }
-  }
+  };
 
-  const applyShortcut = (nextShortcut: Exclude<DateRangeShortcut, "custom">) => {
-    onChange(resolveDateRangeShortcut(nextShortcut, today), nextShortcut)
-    setOpen(false)
-  }
+  const applyShortcut = (nextShortcut: Exclude<DateRangeShortcut, 'custom'>) => {
+    onChange(resolveDateRangeShortcut(nextShortcut, today), nextShortcut);
+    setOpen(false);
+  };
 
-  const handleCustomPress = () => setDraftShortcut("custom")
+  const handleCustomPress = () => setDraftShortcut('custom');
 
   const handleDayPress = (day: TradingDay) => {
-    setDraftRange((current) => resolveRangeSelection(current, day))
-  }
+    setDraftRange((current) => resolveRangeSelection(current, day));
+  };
 
   const handleApply = () => {
-    if (draftRange.end === null) return
-    onChange({ start: draftRange.start, end: draftRange.end }, "custom")
-    setOpen(false)
-  }
+    if (draftRange.end === null) return;
+    onChange({ start: draftRange.start, end: draftRange.end }, 'custom');
+    setOpen(false);
+  };
 
-  const handleCancel = () => setOpen(false)
+  const handleCancel = () => setOpen(false);
 
-  const weeks = buildDateRangeGrid(displayedMonth.year, displayedMonth.month, weekStartsOn)
+  const weeks = buildDateRangeGrid(displayedMonth.year, displayedMonth.month, weekStartsOn);
   const monthLabel = formatMonthLabel(
     toTradingDay(
-      `${String(displayedMonth.year).padStart(4, "0")}-${String(displayedMonth.month).padStart(2, "0")}-01`,
+      `${String(displayedMonth.year).padStart(4, '0')}-${String(displayedMonth.month).padStart(2, '0')}-01`,
     ),
     { locale },
-  )
-  const weekdayLabels = weeks[0]?.map((cell) => formatWeekdayShort(cell.tradingDay, { locale })) ?? []
+  );
+  const weekdayLabels =
+    weeks[0]?.map((cell) => formatWeekdayShort(cell.tradingDay, { locale })) ?? [];
 
   return (
     <div data-testid={testId}>
@@ -159,7 +160,7 @@ export function DateRangePicker({
                 key={key}
                 type="button"
                 data-testid={testId ? `${testId}-shortcut-${key}` : undefined}
-                variant={draftShortcut === key ? "default" : "secondary"}
+                variant={draftShortcut === key ? 'default' : 'secondary'}
                 size="sm"
                 onClick={() => applyShortcut(key)}
               >
@@ -169,7 +170,7 @@ export function DateRangePicker({
             <Button
               type="button"
               data-testid={testId ? `${testId}-shortcut-custom` : undefined}
-              variant={draftShortcut === "custom" ? "default" : "secondary"}
+              variant={draftShortcut === 'custom' ? 'default' : 'secondary'}
               size="sm"
               onClick={handleCustomPress}
             >
@@ -177,19 +178,26 @@ export function DateRangePicker({
             </Button>
           </div>
 
-          {draftShortcut === "custom" ? (
-            <div data-testid={testId ? `${testId}-grid` : undefined} className="flex flex-col gap-2">
+          {draftShortcut === 'custom' ? (
+            <div
+              data-testid={testId ? `${testId}-grid` : undefined}
+              className="flex flex-col gap-2"
+            >
               <div className="flex items-center justify-between">
                 <IconButton
                   icon={ChevronLeft}
                   aria-label={labels.previousMonthNav}
-                  onClick={() => setDisplayedMonth((current) => addMonths(current.year, current.month, -1))}
+                  onClick={() =>
+                    setDisplayedMonth((current) => addMonths(current.year, current.month, -1))
+                  }
                 />
                 <span className="text-sm font-semibold text-foreground">{monthLabel}</span>
                 <IconButton
                   icon={ChevronRight}
                   aria-label={labels.nextMonthNav}
-                  onClick={() => setDisplayedMonth((current) => addMonths(current.year, current.month, 1))}
+                  onClick={() =>
+                    setDisplayedMonth((current) => addMonths(current.year, current.month, 1))
+                  }
                 />
               </div>
 
@@ -208,28 +216,28 @@ export function DateRangePicker({
                 {weeks.map((week, weekIndex) => (
                   <div key={`week-${weekIndex}`} className="flex gap-1">
                     {week.map((cell) => {
-                      const intent = resolveDateRangeGridCellIntent(cell.tradingDay, draftRange)
+                      const intent = resolveDateRangeGridCellIntent(cell.tradingDay, draftRange);
                       return (
                         <button
                           key={cell.tradingDay}
                           type="button"
                           data-testid={testId ? `${testId}-day-${cell.tradingDay}` : undefined}
-                          aria-pressed={intent !== "none"}
+                          aria-pressed={intent !== 'none'}
                           aria-label={formatDayNumber(cell.tradingDay, { locale })}
                           onClick={() => handleDayPress(cell.tradingDay)}
                           className={cn(
-                            "min-h-11 flex-1 rounded-md text-center text-sm tabular-nums transition-colors",
-                            intent === "edge"
-                              ? "bg-primary text-primary-foreground"
-                              : intent === "inRange"
-                                ? "bg-brand-muted text-foreground"
-                                : "bg-transparent text-foreground",
-                            cell.inCurrentMonth ? "" : "opacity-40",
+                            'min-h-11 flex-1 rounded-md text-center text-sm tabular-nums transition-colors',
+                            intent === 'edge'
+                              ? 'bg-primary text-primary-foreground'
+                              : intent === 'inRange'
+                                ? 'bg-brand-muted text-foreground'
+                                : 'bg-transparent text-foreground',
+                            cell.inCurrentMonth ? '' : 'opacity-40',
                           )}
                         >
                           {formatDayNumber(cell.tradingDay, { locale })}
                         </button>
-                      )
+                      );
                     })}
                   </div>
                 ))}
@@ -254,5 +262,5 @@ export function DateRangePicker({
         </div>
       </ResponsiveSheet>
     </div>
-  )
+  );
 }

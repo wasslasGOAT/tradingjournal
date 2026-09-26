@@ -1,19 +1,19 @@
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { cn } from "@/lib/utils"
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { cn } from '@/lib/utils';
 
 export interface SegmentedOption<T extends string = string> {
-  readonly value: T
-  readonly label: string
+  readonly value: T;
+  readonly label: string;
 }
 
 export interface SegmentedProps<T extends string = string> {
-  readonly testId?: string
-  readonly options: readonly SegmentedOption<T>[]
-  readonly value: T
-  readonly onChange: (value: T) => void
+  readonly testId?: string;
+  readonly options: readonly SegmentedOption<T>[];
+  readonly value: T;
+  readonly onChange: (value: T) => void;
   /** Libellé accessible du groupe (ex. `t('trades.viewMode.label')`) — requis. */
-  readonly "aria-label": string
-  readonly className?: string
+  readonly 'aria-label': string;
+  readonly className?: string;
 }
 
 /**
@@ -27,13 +27,13 @@ export function Segmented<T extends string = string>({
   options,
   value,
   onChange,
-  "aria-label": ariaLabel,
+  'aria-label': ariaLabel,
   className,
 }: SegmentedProps<T>) {
   const activeIndex = Math.max(
     0,
     options.findIndex((option) => option.value === value),
-  )
+  );
 
   return (
     <Tabs
@@ -65,12 +65,14 @@ export function Segmented<T extends string = string>({
             key={option.value}
             data-testid={testId ? `${testId}-option-${option.value}` : undefined}
             value={option.value}
-            className={cn("relative min-h-9 flex-1 bg-transparent shadow-none data-[state=active]:bg-transparent data-[state=active]:shadow-none dark:data-[state=active]:bg-transparent")}
+            className={cn(
+              'relative min-h-9 flex-1 bg-transparent shadow-none data-[state=active]:bg-transparent data-[state=active]:shadow-none dark:data-[state=active]:bg-transparent',
+            )}
           >
             {option.label}
           </TabsTrigger>
         ))}
       </TabsList>
     </Tabs>
-  )
+  );
 }

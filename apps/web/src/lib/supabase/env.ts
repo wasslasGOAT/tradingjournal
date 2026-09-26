@@ -21,8 +21,7 @@ export interface SupabaseEnv {
 }
 
 export type SupabaseEnvInvalidIssue =
-  | { field: 'url'; code: 'invalid-url' }
-  | { field: 'anonKey'; code: 'secret-key' };
+  { field: 'url'; code: 'invalid-url' } | { field: 'anonKey'; code: 'secret-key' };
 
 export type SupabaseEnvResult =
   | { ok: true; env: SupabaseEnv }

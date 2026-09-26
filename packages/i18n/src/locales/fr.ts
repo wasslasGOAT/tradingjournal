@@ -280,7 +280,8 @@ export const fr = {
       },
       empty: {
         title: 'Aucune donnée ce mois-ci',
-        description: 'Aucun trade ni entrée de journal pour ce mois — change de mois ou ajoute un trade.',
+        description:
+          'Aucun trade ni entrée de journal pour ce mois — change de mois ou ajoute un trade.',
         action: 'Ajouter un trade',
       },
       detail: {

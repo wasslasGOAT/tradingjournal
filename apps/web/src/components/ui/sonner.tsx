@@ -4,10 +4,10 @@ import {
   Loader2Icon,
   OctagonXIcon,
   TriangleAlertIcon,
-} from "lucide-react"
-import { Toaster as Sonner, type ToasterProps } from "sonner"
+} from 'lucide-react';
+import { Toaster as Sonner, type ToasterProps } from 'sonner';
 
-import { useThemeStore } from "@/features/preferences/theme-store"
+import { useThemeStore } from '@/features/preferences/theme-store';
 
 /**
  * Adapté de shadcn/ui (W-4) : thème piloté par notre store (`resolvedMode`,
@@ -15,7 +15,7 @@ import { useThemeStore } from "@/features/preferences/theme-store"
  * projet — un seul store de préférences, `features/preferences`).
  */
 const Toaster = ({ ...props }: ToasterProps) => {
-  const resolvedMode = useThemeStore((state) => state.resolvedMode)
+  const resolvedMode = useThemeStore((state) => state.resolvedMode);
 
   return (
     <Sonner
@@ -30,15 +30,15 @@ const Toaster = ({ ...props }: ToasterProps) => {
       }}
       style={
         {
-          "--normal-bg": "var(--popover)",
-          "--normal-text": "var(--popover-foreground)",
-          "--normal-border": "var(--border)",
-          "--border-radius": "var(--radius)",
+          '--normal-bg': 'var(--popover)',
+          '--normal-text': 'var(--popover-foreground)',
+          '--normal-border': 'var(--border)',
+          '--border-radius': 'var(--radius)',
         } as React.CSSProperties
       }
       {...props}
     />
-  )
-}
+  );
+};
 
-export { Toaster }
+export { Toaster };

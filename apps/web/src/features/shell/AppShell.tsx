@@ -1,18 +1,18 @@
-import type { ReactNode } from "react"
+import type { ReactNode } from 'react';
 
-import type { DateRangeShortcut, TradingDayRange } from "@/components/ui/date-range-shortcuts"
+import type { DateRangeShortcut, TradingDayRange } from '@/components/ui/date-range-shortcuts';
 
-import { AppHeader } from "./AppHeader"
-import { BottomTabBar } from "./BottomTabBar"
-import { Sidebar } from "./Sidebar"
+import { AppHeader } from './AppHeader';
+import { BottomTabBar } from './BottomTabBar';
+import { Sidebar } from './Sidebar';
 
 export interface AppShellProps {
-  readonly accountId: string
-  readonly onAccountChange: (accountId: string) => void
-  readonly dateRange: TradingDayRange
-  readonly dateRangeShortcut: DateRangeShortcut
-  readonly onPeriodChange: (range: TradingDayRange, shortcut: DateRangeShortcut) => void
-  readonly children: ReactNode
+  readonly accountId: string;
+  readonly onAccountChange: (accountId: string) => void;
+  readonly dateRange: TradingDayRange;
+  readonly dateRangeShortcut: DateRangeShortcut;
+  readonly onPeriodChange: (range: TradingDayRange, shortcut: DateRangeShortcut) => void;
+  readonly children: ReactNode;
 }
 
 /**
@@ -50,5 +50,5 @@ export function AppShell({
       </div>
       <BottomTabBar />
     </div>
-  )
+  );
 }

@@ -1,6 +1,6 @@
 export interface ChartTooltipBubbleProps {
-  readonly label: string
-  readonly value: string
+  readonly label: string;
+  readonly value: string;
 }
 
 /**
@@ -14,5 +14,5 @@ export function ChartTooltipBubble({ label, value }: ChartTooltipBubbleProps) {
       <p className="text-2xs text-muted-foreground">{label}</p>
       <p className="text-sm font-semibold text-foreground">{value}</p>
     </div>
-  )
+  );
 }

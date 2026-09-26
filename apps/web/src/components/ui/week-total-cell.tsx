@@ -1,35 +1,35 @@
-import { formatSignedAmount } from "@repo/core"
-import type { Decimal, SupportedLocale } from "@repo/core"
-import { clsx } from "clsx"
-import { memo } from "react"
+import { formatSignedAmount } from '@repo/core';
+import type { Decimal, SupportedLocale } from '@repo/core';
+import { clsx } from 'clsx';
+import { memo } from 'react';
 
-import { formatCompactSignedAmount } from "@/lib/format/compactAmount"
-import { resolvePnlIntent } from "./stat-tile-value"
-import type { PnlIntent } from "@/lib/theme/tokens"
+import { formatCompactSignedAmount } from '@/lib/format/compactAmount';
+import { resolvePnlIntent } from './stat-tile-value';
+import type { PnlIntent } from '@/lib/theme/tokens';
 
 export interface WeekTotalCellProps {
-  readonly testId?: string
-  readonly total: Decimal
-  readonly currency: string
-  readonly locale: SupportedLocale
-  readonly hideAmounts?: boolean
+  readonly testId?: string;
+  readonly total: Decimal;
+  readonly currency: string;
+  readonly locale: SupportedLocale;
+  readonly hideAmounts?: boolean;
   /** Libellé (ex. « Total »). Toujours utilisé pour l'accessibilité ; affiché
    * visuellement seulement en `variant="row"` (pas de répétition à côté d'une
    * colonne d'en-tête déjà libellée). */
-  readonly label: string
+  readonly label: string;
   /**
    * `'column'` (défaut) : 8ᵉ colonne étroite à largeur fixe, à côté des 7
    * `DayCell` de la semaine. `'row'` : ligne pleine largeur sous la semaine
    * (< 360 px, `calendarLayout.ts`).
    */
-  readonly variant?: "column" | "row"
+  readonly variant?: 'column' | 'row';
 }
 
 const PNL_TEXT_CLASS_NAME: Record<PnlIntent, string> = {
-  profit: "text-pnl-profit",
-  loss: "text-pnl-loss",
-  flat: "text-pnl-flat",
-}
+  profit: 'text-pnl-profit',
+  loss: 'text-pnl-loss',
+  flat: 'text-pnl-flat',
+};
 
 /**
  * Total hebdomadaire du calendrier (W-6, ARCHITECTURE §5.5 : « colonne total
@@ -44,16 +44,19 @@ function WeekTotalCellComponent({
   locale,
   hideAmounts,
   label,
-  variant = "column",
+  variant = 'column',
 }: WeekTotalCellProps) {
-  const fullFormatted = formatSignedAmount(total, currency, { locale, hideAmounts })
-  const compactFormatted = formatCompactSignedAmount(total, { locale, hideAmounts })
-  const intent = resolvePnlIntent(total)
+  const fullFormatted = formatSignedAmount(total, currency, { locale, hideAmounts });
+  const compactFormatted = formatCompactSignedAmount(total, { locale, hideAmounts });
+  const intent = resolvePnlIntent(total);
   // `clsx` (pas `cn`/`twMerge`, W-9 boucle 2, ADR-017) — voir le commentaire équivalent
   // dans `day-cell.tsx` : aucune classe en conflit réel ici.
-  const valueClassName = clsx("font-semibold tabular-nums text-2xs sm:text-sm", PNL_TEXT_CLASS_NAME[intent])
+  const valueClassName = clsx(
+    'font-semibold tabular-nums text-2xs sm:text-sm',
+    PNL_TEXT_CLASS_NAME[intent],
+  );
 
-  if (variant === "row") {
+  if (variant === 'row') {
     return (
       <div
         data-testid={testId}
@@ -65,7 +68,7 @@ function WeekTotalCellComponent({
           {compactFormatted}
         </span>
       </div>
-    )
+    );
   }
 
   return (
@@ -74,12 +77,15 @@ function WeekTotalCellComponent({
       aria-label={`${label} ${fullFormatted}`}
       className="flex min-h-11 w-12 shrink-0 items-center justify-center self-stretch rounded-md bg-muted p-1 sm:w-16 sm:p-2"
     >
-      <span data-testid={testId ? `${testId}-value` : undefined} className={clsx(valueClassName, "truncate")}>
+      <span
+        data-testid={testId ? `${testId}-value` : undefined}
+        className={clsx(valueClassName, 'truncate')}
+      >
         {compactFormatted}
       </span>
     </div>
-  )
+  );
 }
 
 /** Mémoïsé (W-9, ADR-017) — voir le commentaire équivalent sur `DayCell`. */
-export const WeekTotalCell = memo(WeekTotalCellComponent)
+export const WeekTotalCell = memo(WeekTotalCellComponent);

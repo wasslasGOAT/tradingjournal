@@ -1,42 +1,42 @@
-import { useVirtualizer } from "@tanstack/react-virtual"
-import type { LucideIcon } from "lucide-react"
-import { useMemo, useRef } from "react"
-import type { ReactElement } from "react"
+import { useVirtualizer } from '@tanstack/react-virtual';
+import type { LucideIcon } from 'lucide-react';
+import { useMemo, useRef } from 'react';
+import type { ReactElement } from 'react';
 
-import { EmptyState } from "@/components/ui/empty-state"
-import type { EmptyStateAction } from "@/components/ui/empty-state"
-import { Skeleton } from "@/components/ui/skeleton"
+import { EmptyState } from '@/components/ui/empty-state';
+import type { EmptyStateAction } from '@/components/ui/empty-state';
+import { Skeleton } from '@/components/ui/skeleton';
 
-import { buildSectionedRows, countItems } from "./list-sections"
-import type { ListSection } from "./list-sections"
+import { buildSectionedRows, countItems } from './list-sections';
+import type { ListSection } from './list-sections';
 
 export interface VirtualizedListEmptyState {
-  readonly icon: LucideIcon
-  readonly title: string
-  readonly description: string
-  readonly action?: EmptyStateAction
+  readonly icon: LucideIcon;
+  readonly title: string;
+  readonly description: string;
+  readonly action?: EmptyStateAction;
 }
 
 export interface VirtualizedListProps<TItem> {
-  readonly testId?: string
-  readonly sections: readonly ListSection<TItem>[]
-  readonly renderItem: (item: TItem, index: number) => ReactElement
+  readonly testId?: string;
+  readonly sections: readonly ListSection<TItem>[];
+  readonly renderItem: (item: TItem, index: number) => ReactElement;
   /** Doit être référentiellement stable d'un rendu à l'autre (mémoïsée par l'appelant). */
-  readonly keyExtractor: (item: TItem, index: number) => string
-  readonly loading?: boolean
-  readonly loadingRowCount?: number
+  readonly keyExtractor: (item: TItem, index: number) => string;
+  readonly loading?: boolean;
+  readonly loadingRowCount?: number;
   /** Requis (pas de texte par défaut) : icône/titre/description traduits par l'appelant. */
-  readonly emptyState: VirtualizedListEmptyState
+  readonly emptyState: VirtualizedListEmptyState;
   /** Texte de pied de liste (« fin de liste ») — omis -> aucun pied de liste. */
-  readonly endOfListLabel?: string
-  readonly separators?: boolean
+  readonly endOfListLabel?: string;
+  readonly separators?: boolean;
   /** Hauteur (px) du conteneur défilant. */
-  readonly height?: number
+  readonly height?: number;
 }
 
-const ITEM_HEIGHT = 60
-const HEADER_HEIGHT = 36
-const DEFAULT_LOADING_ROW_COUNT = 8
+const ITEM_HEIGHT = 60;
+const HEADER_HEIGHT = 36;
+const DEFAULT_LOADING_ROW_COUNT = 8;
 
 /**
  * Wrapper `@tanstack/react-virtual` (W-4, ADR-017 : « listes virtualisées
@@ -58,25 +58,31 @@ export function VirtualizedList<TItem>({
   separators = true,
   height = 420,
 }: VirtualizedListProps<TItem>) {
-  const parentRef = useRef<HTMLDivElement>(null)
+  const parentRef = useRef<HTMLDivElement>(null);
 
-  const { rows } = useMemo(() => buildSectionedRows(sections, keyExtractor), [sections, keyExtractor])
+  const { rows } = useMemo(
+    () => buildSectionedRows(sections, keyExtractor),
+    [sections, keyExtractor],
+  );
 
   const virtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: (index) => (rows[index]?.kind === "header" ? HEADER_HEIGHT : ITEM_HEIGHT),
+    estimateSize: (index) => (rows[index]?.kind === 'header' ? HEADER_HEIGHT : ITEM_HEIGHT),
     overscan: 8,
-  })
+  });
 
   if (loading) {
     return (
-      <div data-testid={testId ? `${testId}-skeleton` : undefined} className="flex flex-col gap-2 p-2">
+      <div
+        data-testid={testId ? `${testId}-skeleton` : undefined}
+        className="flex flex-col gap-2 p-2"
+      >
         {Array.from({ length: loadingRowCount }, (_, index) => (
           <Skeleton key={index} className="h-11 w-full rounded-md" />
         ))}
       </div>
-    )
+    );
   }
 
   if (countItems(sections) === 0) {
@@ -90,32 +96,37 @@ export function VirtualizedList<TItem>({
           action={emptyState.action}
         />
       </div>
-    )
+    );
   }
 
-  const virtualItems = virtualizer.getVirtualItems()
+  const virtualItems = virtualizer.getVirtualItems();
 
   return (
-    <div data-testid={testId} ref={parentRef} className="h-full w-full overflow-y-auto" style={{ height }}>
-      <div style={{ height: virtualizer.getTotalSize(), position: "relative", width: "100%" }}>
+    <div
+      data-testid={testId}
+      ref={parentRef}
+      className="h-full w-full overflow-y-auto"
+      style={{ height }}
+    >
+      <div style={{ height: virtualizer.getTotalSize(), position: 'relative', width: '100%' }}>
         {virtualItems.map((virtualRow) => {
-          const row = rows[virtualRow.index]
-          if (!row) return null
+          const row = rows[virtualRow.index];
+          if (!row) return null;
           return (
             <div
               key={row.key}
               data-index={virtualRow.index}
               ref={virtualizer.measureElement}
               style={{
-                position: "absolute",
+                position: 'absolute',
                 top: 0,
                 left: 0,
-                width: "100%",
+                width: '100%',
                 transform: `translateY(${virtualRow.start}px)`,
               }}
-              className={separators && row.kind === "item" ? "border-b border-border" : undefined}
+              className={separators && row.kind === 'item' ? 'border-b border-border' : undefined}
             >
-              {row.kind === "header" ? (
+              {row.kind === 'header' ? (
                 <div className="bg-background px-2 py-1.5">
                   <p className="text-sm font-semibold text-muted-foreground">{row.title}</p>
                 </div>
@@ -123,7 +134,7 @@ export function VirtualizedList<TItem>({
                 renderItem(row.item, row.index)
               )}
             </div>
-          )
+          );
         })}
       </div>
       {endOfListLabel !== undefined ? (
@@ -132,5 +143,5 @@ export function VirtualizedList<TItem>({
         </div>
       ) : null}
     </div>
-  )
+  );
 }

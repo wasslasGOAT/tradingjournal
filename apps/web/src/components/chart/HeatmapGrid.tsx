@@ -1,25 +1,25 @@
-import { useMemo, useState } from "react"
+import { useMemo, useState } from 'react';
 
-import { useThemeStore } from "@/features/preferences/theme-store"
-import { pnlColorSchemes, themes } from "@/lib/theme/tokens"
+import { useThemeStore } from '@/features/preferences/theme-store';
+import { pnlColorSchemes, themes } from '@/lib/theme/tokens';
 
 import {
   computeMaxAbsValue,
   resolveHeatmapCellBorderColor,
   resolveHeatmapCellColor,
-} from "./heatmapColor"
-import type { ChartActivePoint, ChartHeatmapCell } from "./types"
+} from './heatmapColor';
+import type { ChartActivePoint, ChartHeatmapCell } from './types';
 
 export interface HeatmapGridProps {
-  readonly testId?: string
-  readonly cells: readonly ChartHeatmapCell[]
-  readonly rows: number
-  readonly cols: number
-  readonly formatRowLabel?: (row: number) => string
-  readonly formatColLabel?: (col: number) => string
-  readonly formatTooltipValue?: (point: ChartActivePoint) => string
-  readonly legendLabels?: { readonly low: string; readonly high: string }
-  readonly onActivePointChange?: (point: ChartActivePoint | null) => void
+  readonly testId?: string;
+  readonly cells: readonly ChartHeatmapCell[];
+  readonly rows: number;
+  readonly cols: number;
+  readonly formatRowLabel?: (row: number) => string;
+  readonly formatColLabel?: (col: number) => string;
+  readonly formatTooltipValue?: (point: ChartActivePoint) => string;
+  readonly legendLabels?: { readonly low: string; readonly high: string };
+  readonly onActivePointChange?: (point: ChartActivePoint | null) => void;
 }
 
 /** Taille de cellule (px) — même valeur que `packages/ui/src/chart/HeatmapGrid.tsx`
@@ -27,8 +27,8 @@ export interface HeatmapGridProps {
  * colonnes, qu'aucune largeur d'écran mobile ne peut afficher à 44 px
  * chacune) — grille dans un conteneur défilant horizontalement.
  */
-const CELL_SIZE = 28
-const COLUMN_LABEL_STRIDE = 3
+const CELL_SIZE = 28;
+const COLUMN_LABEL_STRIDE = 3;
 
 /**
  * Heatmap sans bibliothèque de graphique (W-4) : grille de `div` colorées par
@@ -47,25 +47,25 @@ export function HeatmapGrid({
   legendLabels,
   onActivePointChange,
 }: HeatmapGridProps) {
-  const mode = useThemeStore((state) => state.resolvedMode)
-  const pnlColorScheme = useThemeStore((state) => state.pnlColorScheme)
-  const colors = themes[mode]
-  const pnl = pnlColorSchemes[mode][pnlColorScheme]
-  const [activeKey, setActiveKey] = useState<string | null>(null)
+  const mode = useThemeStore((state) => state.resolvedMode);
+  const pnlColorScheme = useThemeStore((state) => state.pnlColorScheme);
+  const colors = themes[mode];
+  const pnl = pnlColorSchemes[mode][pnlColorScheme];
+  const [activeKey, setActiveKey] = useState<string | null>(null);
 
   const cellByKey = useMemo(() => {
-    const map = new Map<string, ChartHeatmapCell>()
-    for (const cell of cells) map.set(`${cell.row}-${cell.col}`, cell)
-    return map
-  }, [cells])
-  const maxAbsValue = useMemo(() => computeMaxAbsValue(cells.map((cell) => cell.value)), [cells])
+    const map = new Map<string, ChartHeatmapCell>();
+    for (const cell of cells) map.set(`${cell.row}-${cell.col}`, cell);
+    return map;
+  }, [cells]);
+  const maxAbsValue = useMemo(() => computeMaxAbsValue(cells.map((cell) => cell.value)), [cells]);
 
   const handlePress = (row: number, col: number, value: number) => {
-    const key = `${row}-${col}`
-    const next = activeKey === key ? null : key
-    setActiveKey(next)
-    onActivePointChange?.(next === null ? null : { x: col, y: value, seriesId: `${row}` })
-  }
+    const key = `${row}-${col}`;
+    const next = activeKey === key ? null : key;
+    setActiveKey(next);
+    onActivePointChange?.(next === null ? null : { x: col, y: value, seriesId: `${row}` });
+  };
 
   return (
     <div data-testid={testId} className="flex flex-col gap-1">
@@ -74,22 +74,20 @@ export function HeatmapGrid({
           {Array.from({ length: rows }, (_, row) => (
             <div key={row} className="flex items-center gap-1">
               {formatRowLabel ? (
-                <span
-                  className="w-8 shrink-0 truncate text-right font-mono text-2xs text-muted-foreground"
-                >
+                <span className="w-8 shrink-0 truncate text-right font-mono text-2xs text-muted-foreground">
                   {formatRowLabel(row)}
                 </span>
               ) : null}
               {Array.from({ length: cols }, (_, col) => {
-                const cell = cellByKey.get(`${row}-${col}`)
-                const value = cell?.value ?? 0
-                const key = `${row}-${col}`
-                const isActive = activeKey === key
+                const cell = cellByKey.get(`${row}-${col}`);
+                const value = cell?.value ?? 0;
+                const key = `${row}-${col}`;
+                const isActive = activeKey === key;
                 const label = formatTooltipValue
                   ? formatTooltipValue({ x: col, y: value, seriesId: `${row}` })
-                  : `${value}`
-                const columnLabel = formatColLabel ? formatColLabel(col) : `${col}`
-                const rowLabel = formatRowLabel ? formatRowLabel(row) : `${row}`
+                  : `${value}`;
+                const columnLabel = formatColLabel ? formatColLabel(col) : `${col}`;
+                const rowLabel = formatRowLabel ? formatRowLabel(row) : `${row}`;
 
                 return (
                   <button
@@ -106,11 +104,11 @@ export function HeatmapGrid({
                       height: CELL_SIZE,
                       backgroundColor: resolveHeatmapCellColor(value, maxAbsValue, pnl),
                       borderWidth: isActive ? 2 : 1,
-                      borderStyle: "solid",
+                      borderStyle: 'solid',
                       borderColor: isActive ? colors.accent : resolveHeatmapCellBorderColor(colors),
                     }}
                   />
-                )
+                );
               })}
             </div>
           ))}
@@ -123,7 +121,7 @@ export function HeatmapGrid({
                   style={{ width: CELL_SIZE }}
                   className="shrink-0 text-center font-mono text-2xs text-muted-foreground"
                 >
-                  {col % COLUMN_LABEL_STRIDE === 0 ? formatColLabel(col) : ""}
+                  {col % COLUMN_LABEL_STRIDE === 0 ? formatColLabel(col) : ''}
                 </span>
               ))}
             </div>
@@ -139,5 +137,5 @@ export function HeatmapGrid({
         </div>
       ) : null}
     </div>
-  )
+  );
 }

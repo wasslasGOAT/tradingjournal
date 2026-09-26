@@ -92,14 +92,20 @@ function formatStats(stats: FrameStats): string {
 
 /** Bloquant (ADR-017 révision 2026-09-25) : contrairement à `apps/app/e2e/performance.spec.ts` (gelé). */
 function assertAdr017Thresholds(stats: FrameStats, label: string): void {
-  test.info().annotations.push({ type: `fluidité (ADR-017) — ${label}`, description: formatStats(stats) });
-  expect(stats.frameCount, `${label} — aucune image enregistrée (interaction cassée ?)`).toBeGreaterThan(
-    0,
+  test
+    .info()
+    .annotations.push({ type: `fluidité (ADR-017) — ${label}`, description: formatStats(stats) });
+  expect(
+    stats.frameCount,
+    `${label} — aucune image enregistrée (interaction cassée ?)`,
+  ).toBeGreaterThan(0);
+  expect(stats.avgFps, `${label} — fps moyen < 55 : ${formatStats(stats)}`).toBeGreaterThanOrEqual(
+    55,
   );
-  expect(stats.avgFps, `${label} — fps moyen < 55 : ${formatStats(stats)}`).toBeGreaterThanOrEqual(55);
-  expect(stats.maxFrameMs, `${label} — image la plus longue > 50 ms : ${formatStats(stats)}`).toBeLessThanOrEqual(
-    50,
-  );
+  expect(
+    stats.maxFrameMs,
+    `${label} — image la plus longue > 50 ms : ${formatStats(stats)}`,
+  ).toBeLessThanOrEqual(50);
 }
 
 test.describe('Fluidité — build de production, CPU ralenti ×4 (ADR-017, bloquant)', () => {
@@ -192,7 +198,10 @@ test.describe('Fluidité — build de production, CPU ralenti ×4 (ADR-017, bloq
             observer.disconnect();
           }
         });
-        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+        observer.observe(document.documentElement, {
+          attributes: true,
+          attributeFilter: ['data-theme'],
+        });
       });
 
       await page.getByTestId('settings-theme-option-light').click();
@@ -233,7 +242,9 @@ test.describe('Fluidité — build de production, CPU ralenti ×4 (ADR-017, bloq
 
     test('10 ouvertures/fermetures répétées sous CPU ×4', async ({ page }) => {
       test.setTimeout(120_000);
-      await page.goto('/calendar?account=acc-demo-main&from=2026-09-01&to=2026-09-14&shortcut=custom');
+      await page.goto(
+        '/calendar?account=acc-demo-main&from=2026-09-01&to=2026-09-14&shortcut=custom',
+      );
       await expect(page.getByTestId('screen-calendar')).toBeVisible();
 
       const client = await page.context().newCDPSession(page);
@@ -259,7 +270,9 @@ test.describe('Fluidité — build de production, CPU ralenti ×4 (ADR-017, bloq
 
     test('10 allers-retours mois suivant/précédent sous CPU ×4', async ({ page }) => {
       test.setTimeout(120_000);
-      await page.goto('/calendar?account=acc-demo-main&from=2026-09-01&to=2026-09-14&shortcut=custom');
+      await page.goto(
+        '/calendar?account=acc-demo-main&from=2026-09-01&to=2026-09-14&shortcut=custom',
+      );
       await expect(page.getByTestId('screen-calendar')).toBeVisible();
 
       const client = await page.context().newCDPSession(page);

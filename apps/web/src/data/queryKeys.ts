@@ -1,4 +1,4 @@
-import type { TradingDay } from "@repo/core"
+import type { TradingDay } from '@repo/core';
 
 /**
  * Clés de requête TanStack Query (W-6, ADR-017 : « aucune donnée périmée
@@ -8,7 +8,7 @@ import type { TradingDay } from "@repo/core"
  */
 export const dataQueryKeys = {
   dashboard: (accountId: string, from: TradingDay, to: TradingDay) =>
-    ["dashboard", accountId, from, to] as const,
+    ['dashboard', accountId, from, to] as const,
   calendarMonth: (accountId: string, year: number, month: number) =>
-    ["calendar", accountId, year, month] as const,
-}
+    ['calendar', accountId, year, month] as const,
+};

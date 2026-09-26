@@ -69,8 +69,9 @@ test.describe('PWA — export de production', () => {
     const precachedUrls = [...swSource.matchAll(/url:"([^"]+)"/g)].map((match) => match[1] ?? '');
     expect(precachedUrls.length).toBeGreaterThan(0);
     const unexpected = precachedUrls.filter((url) => /\.(json)(\?|$)/i.test(url));
-    expect(unexpected, `URL(s) de donnée précachée(s) inattendue(s) : ${JSON.stringify(unexpected)}`).toEqual(
-      [],
-    );
+    expect(
+      unexpected,
+      `URL(s) de donnée précachée(s) inattendue(s) : ${JSON.stringify(unexpected)}`,
+    ).toEqual([]);
   });
 });

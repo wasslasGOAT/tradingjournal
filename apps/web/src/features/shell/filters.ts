@@ -1,8 +1,8 @@
-import { toTradingDay } from "@repo/core"
-import type { TradingDay } from "@repo/core"
+import { toTradingDay } from '@repo/core';
+import type { TradingDay } from '@repo/core';
 
-import type { DateRangeShortcut, TradingDayRange } from "@/components/ui/date-range-shortcuts"
-import { resolveDateRangeShortcut } from "@/components/ui/date-range-shortcuts"
+import type { DateRangeShortcut, TradingDayRange } from '@/components/ui/date-range-shortcuts';
+import { resolveDateRangeShortcut } from '@/components/ui/date-range-shortcuts';
 
 /**
  * Filtres globaux du header (W-5, ARCHITECTURE §6.1) : compte sélectionné
@@ -14,26 +14,26 @@ import { resolveDateRangeShortcut } from "@/components/ui/date-range-shortcuts"
  * un store créerait deux sources de vérité à resynchroniser.
  */
 export interface ShellSearch {
-  readonly account: string
-  readonly from: TradingDay
-  readonly to: TradingDay
-  readonly shortcut: DateRangeShortcut
+  readonly account: string;
+  readonly from: TradingDay;
+  readonly to: TradingDay;
+  readonly shortcut: DateRangeShortcut;
 }
 
 const DATE_RANGE_SHORTCUTS: readonly DateRangeShortcut[] = [
-  "today",
-  "last7Days",
-  "currentMonth",
-  "previousMonth",
-  "custom",
-]
+  'today',
+  'last7Days',
+  'currentMonth',
+  'previousMonth',
+  'custom',
+];
 
 function isTradingDayLike(value: unknown): value is string {
-  return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)
+  return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
 }
 
 function isDateRangeShortcut(value: unknown): value is DateRangeShortcut {
-  return typeof value === "string" && (DATE_RANGE_SHORTCUTS as readonly string[]).includes(value)
+  return typeof value === 'string' && (DATE_RANGE_SHORTCUTS as readonly string[]).includes(value);
 }
 
 /**
@@ -44,11 +44,11 @@ function isDateRangeShortcut(value: unknown): value is DateRangeShortcut {
  * (gelé, ADR-023).
  */
 export function resolveApproximateToday(): TradingDay {
-  const now = new Date()
-  const year = String(now.getFullYear()).padStart(4, "0")
-  const month = String(now.getMonth() + 1).padStart(2, "0")
-  const day = String(now.getDate()).padStart(2, "0")
-  return toTradingDay(`${year}-${month}-${day}`)
+  const now = new Date();
+  const year = String(now.getFullYear()).padStart(4, '0');
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return toTradingDay(`${year}-${month}-${day}`);
 }
 
 /**
@@ -57,18 +57,18 @@ export function resolveApproximateToday(): TradingDay {
  * invalide retombe sur le mois en cours — jamais de plage indéfinie affichée.
  */
 export function validateShellSearch(search: Record<string, unknown>): ShellSearch {
-  const today = resolveApproximateToday()
-  const defaultRange = resolveDateRangeShortcut("currentMonth", today)
-  const shortcut = isDateRangeShortcut(search.shortcut) ? search.shortcut : "currentMonth"
-  const from = isTradingDayLike(search.from) ? toTradingDay(search.from) : defaultRange.start
-  const to = isTradingDayLike(search.to) ? toTradingDay(search.to) : defaultRange.end
+  const today = resolveApproximateToday();
+  const defaultRange = resolveDateRangeShortcut('currentMonth', today);
+  const shortcut = isDateRangeShortcut(search.shortcut) ? search.shortcut : 'currentMonth';
+  const from = isTradingDayLike(search.from) ? toTradingDay(search.from) : defaultRange.start;
+  const to = isTradingDayLike(search.to) ? toTradingDay(search.to) : defaultRange.end;
   const account =
-    typeof search.account === "string" && search.account.length > 0 ? search.account : "all"
+    typeof search.account === 'string' && search.account.length > 0 ? search.account : 'all';
 
-  return { account, from, to, shortcut }
+  return { account, from, to, shortcut };
 }
 
 /** Convertit les filtres de recherche en `TradingDayRange` (`DateRangePicker`). */
 export function shellSearchToRange(search: ShellSearch): TradingDayRange {
-  return { start: search.from, end: search.to }
+  return { start: search.from, end: search.to };
 }

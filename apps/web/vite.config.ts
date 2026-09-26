@@ -23,7 +23,10 @@ const BACKGROUND_COLOR = '#000000';
 // (ré)écrit à chaque chargement de cette config (dev/build/preview), depuis
 // la source de vérité des tokens (`@repo/ui/tokens-data`) — jamais modifié à
 // la main (voir `src/lib/theme/generate-theme-css.ts`).
-const themeCssPath = resolve(fileURLToPath(new URL('./src/styles', import.meta.url)), 'theme.generated.css');
+const themeCssPath = resolve(
+  fileURLToPath(new URL('./src/styles', import.meta.url)),
+  'theme.generated.css',
+);
 mkdirSync(dirname(themeCssPath), { recursive: true });
 writeFileSync(themeCssPath, buildThemeCss(), 'utf8');
 

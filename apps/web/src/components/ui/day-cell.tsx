@@ -1,45 +1,45 @@
-import { formatSignedAmount, parseAmount } from "@repo/core"
-import type { Decimal, SupportedLocale } from "@repo/core"
-import { clsx } from "clsx"
-import { NotebookPen } from "lucide-react"
-import { memo } from "react"
+import { formatSignedAmount, parseAmount } from '@repo/core';
+import type { Decimal, SupportedLocale } from '@repo/core';
+import { clsx } from 'clsx';
+import { NotebookPen } from 'lucide-react';
+import { memo } from 'react';
 
-import { formatCompactSignedAmount } from "@/lib/format/compactAmount"
+import { formatCompactSignedAmount } from '@/lib/format/compactAmount';
 
-import { resolveDayCellContentState, resolveDayCellPnlIntent } from "./day-cell-state"
-import type { PnlIntent } from "@/lib/theme/tokens"
+import { resolveDayCellContentState, resolveDayCellPnlIntent } from './day-cell-state';
+import type { PnlIntent } from '@/lib/theme/tokens';
 
 export interface DayCellProps {
-  readonly testId?: string
+  readonly testId?: string;
   /** Quantième déjà formaté (ex. `formatDayNumber` de `@repo/core`), ex. `"14"`. */
-  readonly dayLabel: string
+  readonly dayLabel: string;
   /** P&L net du jour, `null` si aucun trade. `Decimal` déjà calculé ou chaîne décimale brute. */
-  readonly pnl: Decimal | string | null
-  readonly hasJournalEntry?: boolean
-  readonly isToday?: boolean
+  readonly pnl: Decimal | string | null;
+  readonly hasJournalEntry?: boolean;
+  readonly isToday?: boolean;
   /** Requis dès qu'un P&L existe (ADR-005 : pas de montant sans devise). */
-  readonly currency?: string
-  readonly locale: SupportedLocale
-  readonly hideAmounts?: boolean
+  readonly currency?: string;
+  readonly locale: SupportedLocale;
+  readonly hideAmounts?: boolean;
   /**
    * `'compact'` : montant sans symbole de devise, notation compacte (ex.
    * `+1,3k`) — pour les grilles très étroites (calendrier). `'full'`
    * (défaut) : `formatSignedAmount`, montant complet avec devise.
    */
-  readonly amountVariant?: "full" | "compact"
-  readonly onClick?: () => void
-  readonly "aria-label": string
+  readonly amountVariant?: 'full' | 'compact';
+  readonly onClick?: () => void;
+  readonly 'aria-label': string;
 }
 
 const PNL_TEXT_CLASS_NAME: Record<PnlIntent, string> = {
-  profit: "text-pnl-profit",
-  loss: "text-pnl-loss",
-  flat: "text-pnl-flat",
-}
+  profit: 'text-pnl-profit',
+  loss: 'text-pnl-loss',
+  flat: 'text-pnl-flat',
+};
 
 function toDecimalOrNull(value: Decimal | string | null): Decimal | null {
-  if (value === null) return null
-  return typeof value === "string" ? parseAmount(value) : value
+  if (value === null) return null;
+  return typeof value === 'string' ? parseAmount(value) : value;
 }
 
 /**
@@ -57,19 +57,19 @@ function DayCellComponent({
   currency,
   locale,
   hideAmounts,
-  amountVariant = "full",
+  amountVariant = 'full',
   onClick,
-  "aria-label": ariaLabel,
+  'aria-label': ariaLabel,
 }: DayCellProps) {
-  const pnlDecimal = toDecimalOrNull(pnl)
-  const contentState = resolveDayCellContentState(pnlDecimal, hasJournalEntry)
-  const intent = resolveDayCellPnlIntent(pnlDecimal)
+  const pnlDecimal = toDecimalOrNull(pnl);
+  const contentState = resolveDayCellContentState(pnlDecimal, hasJournalEntry);
+  const intent = resolveDayCellPnlIntent(pnlDecimal);
 
-  const Comp = onClick ? "button" : "div"
+  const Comp = onClick ? 'button' : 'div';
 
   return (
     <Comp
-      type={onClick ? "button" : undefined}
+      type={onClick ? 'button' : undefined}
       data-testid={testId}
       onClick={onClick}
       aria-label={ariaLabel}
@@ -79,36 +79,36 @@ function DayCellComponent({
       // mesuré au profil CPU comme non négligeable répété sur ~42 cellules à chaque
       // changement de mois sous CPU ralenti.
       className={clsx(
-        "flex min-h-11 min-w-11 flex-1 flex-col rounded-md border p-1.5 text-left transition-colors sm:p-2",
-        contentState === "empty" ? "bg-card" : "bg-muted",
-        isToday ? "border-2 border-primary" : "border-border",
+        'flex min-h-11 min-w-11 flex-1 flex-col rounded-md border p-1.5 text-left transition-colors sm:p-2',
+        contentState === 'empty' ? 'bg-card' : 'bg-muted',
+        isToday ? 'border-2 border-primary' : 'border-border',
       )}
     >
       <span className="text-xs text-muted-foreground">{dayLabel}</span>
       {/* Numéro du jour épinglé en haut à gauche ; P&L/journal centrés dans le reste de la
           cellule (retour visuel : niveau TradeX, jamais deux petits carrés collés en haut). */}
       <div className="flex flex-1 items-center justify-center">
-        {contentState === "trades" && intent !== null && pnlDecimal !== null && currency ? (
+        {contentState === 'trades' && intent !== null && pnlDecimal !== null && currency ? (
           <span
             className={clsx(
-              "truncate text-center font-semibold tabular-nums",
+              'truncate text-center font-semibold tabular-nums',
               // `sm:` (bureau, colonnes larges) : remonte à `text-sm` (14px) — `2xs`/`xs` restent
               // réservés aux grilles denses (mobile, colonne « Total ») où la place manque.
-              amountVariant === "compact" ? "text-2xs sm:text-sm" : "text-xs sm:text-sm",
+              amountVariant === 'compact' ? 'text-2xs sm:text-sm' : 'text-xs sm:text-sm',
               PNL_TEXT_CLASS_NAME[intent],
             )}
           >
-            {amountVariant === "compact"
+            {amountVariant === 'compact'
               ? formatCompactSignedAmount(pnlDecimal, { locale, hideAmounts })
               : formatSignedAmount(pnlDecimal, currency, { locale, hideAmounts })}
           </span>
         ) : null}
-        {contentState === "journalOnly" ? (
+        {contentState === 'journalOnly' ? (
           <NotebookPen size={14} className="text-muted-foreground" aria-hidden="true" />
         ) : null}
       </div>
     </Comp>
-  )
+  );
 }
 
 /**
@@ -117,4 +117,4 @@ function DayCellComponent({
  * (ex. ouverture/fermeture de la `Sheet` de détail du jour, Calendrier) —
  * cause mesurée de saccades sous CPU ralenti.
  */
-export const DayCell = memo(DayCellComponent)
+export const DayCell = memo(DayCellComponent);

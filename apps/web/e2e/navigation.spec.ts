@@ -47,7 +47,15 @@ test.describe('Navigation — sidebar web large (1280 px)', () => {
     await expect(sidebar).toBeVisible();
     await expect(page.getByTestId('app-tab-bar')).toBeHidden();
 
-    for (const id of ['dashboard', 'calendar', 'trades', 'journal', 'analytics', 'rules', 'settings']) {
+    for (const id of [
+      'dashboard',
+      'calendar',
+      'trades',
+      'journal',
+      'analytics',
+      'rules',
+      'settings',
+    ]) {
       await expect(page.getByTestId(`sidebar-link-${id}`)).toBeVisible();
     }
     // Pas de "Plus" dans la sidebar (Analytics/Règles/Réglages y sont directs, ADR-011).
@@ -101,7 +109,9 @@ test.describe('Navigation — compte et période dans l’URL', () => {
   test('naviguer directement vers une URL profonde avec compte + période explicites les restaure', async ({
     page,
   }) => {
-    await page.goto('/calendar?account=acc-demo-main&from=2026-08-01&to=2026-08-31&shortcut=custom');
+    await page.goto(
+      '/calendar?account=acc-demo-main&from=2026-08-01&to=2026-08-31&shortcut=custom',
+    );
     await expect(page.getByTestId('screen-calendar')).toBeVisible();
     await expect(page).toHaveURL(/from=2026-08-01/);
     await expect(page).toHaveURL(/to=2026-08-31/);

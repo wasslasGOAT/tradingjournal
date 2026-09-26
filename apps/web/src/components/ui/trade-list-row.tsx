@@ -1,38 +1,38 @@
-import { formatSignedAmount, parseAmount } from "@repo/core"
-import type { Decimal, SupportedLocale } from "@repo/core"
-import { ArrowDownRight, ArrowUpRight } from "lucide-react"
+import { formatSignedAmount, parseAmount } from '@repo/core';
+import type { Decimal, SupportedLocale } from '@repo/core';
+import { ArrowDownRight, ArrowUpRight } from 'lucide-react';
 
-import { resolvePnlIntent } from "@/components/ui/stat-tile-value"
-import { cn } from "@/lib/utils"
-import type { PnlIntent } from "@/lib/theme/tokens"
+import { resolvePnlIntent } from '@/components/ui/stat-tile-value';
+import { cn } from '@/lib/utils';
+import type { PnlIntent } from '@/lib/theme/tokens';
 
-export type TradeListRowDirection = "long" | "short"
+export type TradeListRowDirection = 'long' | 'short';
 
 export interface TradeListRowProps {
-  readonly testId?: string
-  readonly symbol: string
-  readonly direction: TradeListRowDirection
+  readonly testId?: string;
+  readonly symbol: string;
+  readonly direction: TradeListRowDirection;
   /** Libellé de la direction déjà traduit (ex. `t('catalog.list.direction.long')`) — jamais de texte en dur ici (i18n). */
-  readonly directionLabel: string
+  readonly directionLabel: string;
   /** Date/heure déjà formatée (`@repo/core/format`). */
-  readonly dateLabel: string
-  readonly pnl: Decimal | string
+  readonly dateLabel: string;
+  readonly pnl: Decimal | string;
   /** Requis (ADR-005 : pas de montant sans devise). */
-  readonly currency: string
-  readonly locale: SupportedLocale
-  readonly hideAmounts?: boolean
-  readonly onClick?: () => void
-  readonly "aria-label": string
+  readonly currency: string;
+  readonly locale: SupportedLocale;
+  readonly hideAmounts?: boolean;
+  readonly onClick?: () => void;
+  readonly 'aria-label': string;
 }
 
 const PNL_TEXT_CLASS_NAME: Record<PnlIntent, string> = {
-  profit: "text-pnl-profit",
-  loss: "text-pnl-loss",
-  flat: "text-pnl-flat",
-}
+  profit: 'text-pnl-profit',
+  loss: 'text-pnl-loss',
+  flat: 'text-pnl-flat',
+};
 
 function toDecimal(value: Decimal | string): Decimal {
-  return typeof value === "string" ? parseAmount(value) : value
+  return typeof value === 'string' ? parseAmount(value) : value;
 }
 
 /**
@@ -51,16 +51,16 @@ export function TradeListRow({
   locale,
   hideAmounts,
   onClick,
-  "aria-label": ariaLabel,
+  'aria-label': ariaLabel,
 }: TradeListRowProps) {
-  const pnlDecimal = toDecimal(pnl)
-  const intent = resolvePnlIntent(pnlDecimal)
-  const DirectionIcon = direction === "long" ? ArrowUpRight : ArrowDownRight
-  const Comp = onClick ? "button" : "div"
+  const pnlDecimal = toDecimal(pnl);
+  const intent = resolvePnlIntent(pnlDecimal);
+  const DirectionIcon = direction === 'long' ? ArrowUpRight : ArrowDownRight;
+  const Comp = onClick ? 'button' : 'div';
 
   return (
     <Comp
-      type={onClick ? "button" : undefined}
+      type={onClick ? 'button' : undefined}
       data-testid={testId}
       onClick={onClick}
       aria-label={ariaLabel}
@@ -80,10 +80,13 @@ export function TradeListRow({
       </span>
       <span
         data-testid={testId ? `${testId}-pnl` : undefined}
-        className={cn("shrink-0 truncate text-sm font-semibold tabular-nums", PNL_TEXT_CLASS_NAME[intent])}
+        className={cn(
+          'shrink-0 truncate text-sm font-semibold tabular-nums',
+          PNL_TEXT_CLASS_NAME[intent],
+        )}
       >
         {formatSignedAmount(pnlDecimal, currency, { locale, hideAmounts })}
       </span>
     </Comp>
-  )
+  );
 }

@@ -4,3 +4,16 @@ docs/
 *.md
 supabase/migrations/
 packages/db/src/database.types.ts
+
+# Généré par Expo (apps/app gelé, ADR-023)
+apps/app/expo-env.d.ts
+
+# Généré par le plugin TanStack Router (versionné mais jamais édité/formaté à la main,
+# voir apps/web/.gitignore).
+apps/web/src/routeTree.gen.ts
+
+# Généré depuis @repo/ui/tokens-data à chaque chargement de apps/web/vite.config.ts (W-3) :
+# ignoré par git (apps/web/.gitignore), mais `prettier --check .` lancé depuis la racine ne
+# suit pas ce .gitignore imbriqué — sans cette entrée, ce fichier régénéré localement peut
+# faire échouer `pnpm format:check` sans rapport avec un changement réel.
+apps/web/src/styles/theme.generated.css

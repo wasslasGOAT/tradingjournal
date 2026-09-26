@@ -5,6 +5,11 @@ import { getSupabaseDevEnvStatus } from './helpers/env';
 /**
  * Parcours web de l'écran Hello (T10, ROADMAP M0).
  *
+ * Route `/hello` (M1-8) : l'écran Hello n'est plus la route racine depuis que
+ * le Dashboard s'ouvre en premier (`(app)/index.tsx`, ARCHITECTURE §6.1) —
+ * déplacé vers `app/(dev)/hello.tsx` (même statut que `(dev)/catalog`), testIDs
+ * inchangés.
+ *
  * `apps/app/.env` n'est pas encore renseigné avec un vrai projet Supabase cloud
  * de dev (ADR-020) au moment où ces tests sont écrits : les cas ci-dessous sont
  * donc écrits pour s'exécuter correctement dans les deux situations (déterminés
@@ -32,7 +37,7 @@ test.describe('Hello — configuration Supabase absente', () => {
     });
     page.on('pageerror', (error) => pageErrors.push(String(error)));
 
-    await page.goto('/');
+    await page.goto('/hello');
 
     // Pas d'écran blanc : la racine de l'écran Hello est montée.
     await expect(page.getByTestId('hello-screen')).toBeVisible();
@@ -54,7 +59,7 @@ test.describe('Hello — bascule FR/EN du titre (locale du navigateur)', () => {
     test('titre affiché en français', async ({ page }) => {
       test.skip(supabaseEnv.configured, NOT_CONFIGURED_SKIP_REASON);
 
-      await page.goto('/');
+      await page.goto('/hello');
 
       await expect(page.getByTestId('hello-heading')).toHaveText('Configuration manquante');
     });
@@ -66,7 +71,7 @@ test.describe('Hello — bascule FR/EN du titre (locale du navigateur)', () => {
     test('title displayed in English', async ({ page }) => {
       test.skip(supabaseEnv.configured, NOT_CONFIGURED_SKIP_REASON);
 
-      await page.goto('/');
+      await page.goto('/hello');
 
       await expect(page.getByTestId('hello-heading')).toHaveText('Missing configuration');
     });
@@ -86,7 +91,7 @@ test.describe('Hello — Supabase configuré', () => {
       await route.continue();
     });
 
-    await page.goto('/');
+    await page.goto('/hello');
 
     await expect(page.getByTestId('hello-skeleton')).toBeVisible();
 

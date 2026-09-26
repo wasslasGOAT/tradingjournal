@@ -1,0 +1,540 @@
+import { allocateProRata, Decimal } from '../money';
+import type {
+  ExecutionInput,
+  GroupedTrade,
+  GroupingMethod,
+  InstrumentContractInfo,
+  TradeDirection,
+  TradeStatus,
+} from './types';
+import {
+  InstrumentCurrencyMismatchError,
+  InvalidContractMultiplierError,
+  InvalidExecutionError,
+  UnknownInstrumentError,
+} from './types';
+
+/**
+ * Lot de coût : `totalCost` (jamais un prix divisé, voir en-tête du module)
+ * est la somme exacte `Σ quantité × prix` des entrées qui composent ce lot.
+ * FIFO : un lot par entrée ; moyenne pondérée : toujours un seul lot fusionné.
+ */
+interface Lot {
+  quantity: Decimal;
+  totalCost: Decimal;
+}
+
+/** État mutable interne du trade en cours de construction (détail d'implémentation, non exporté). */
+interface TradeBuilder {
+  accountId: string;
+  instrumentId: string;
+  direction: TradeDirection;
+  positionSign: 1 | -1;
+  contractMultiplier: Decimal;
+  openedAt: Date;
+  lots: Lot[];
+  openQuantity: Decimal;
+  totalEntryQty: Decimal;
+  totalEntryNotional: Decimal;
+  totalExitQty: Decimal;
+  totalExitNotional: Decimal;
+  realizedGrossPnl: Decimal;
+  commission: Decimal;
+  fees: Decimal;
+  executionIds: string[];
+}
+
+function assertValidExecution(exec: ExecutionInput): void {
+  if (!exec.quantity.greaterThan(0)) {
+    throw new InvalidExecutionError(exec.id, 'quantity doit être strictement positive');
+  }
+  if (!exec.price.greaterThan(0)) {
+    throw new InvalidExecutionError(exec.id, 'price doit être strictement positif');
+  }
+  if (exec.commission.lessThan(0)) {
+    throw new InvalidExecutionError(exec.id, 'commission ne peut pas être négative');
+  }
+  if (exec.fees.lessThan(0)) {
+    throw new InvalidExecutionError(exec.id, 'fees ne peut pas être négatif');
+  }
+}
+
+function createBuilder(
+  exec: ExecutionInput,
+  quantity: Decimal,
+  positionSign: 1 | -1,
+  contractMultiplier: Decimal,
+): TradeBuilder {
+  return {
+    accountId: exec.accountId,
+    instrumentId: exec.instrumentId,
+    direction: positionSign === 1 ? 'long' : 'short',
+    positionSign,
+    contractMultiplier,
+    openedAt: exec.executedAt,
+    lots: [{ quantity, totalCost: quantity.times(exec.price) }],
+    openQuantity: quantity,
+    totalEntryQty: quantity,
+    totalEntryNotional: quantity.times(exec.price),
+    totalExitQty: new Decimal(0),
+    totalExitNotional: new Decimal(0),
+    realizedGrossPnl: new Decimal(0),
+    commission: new Decimal(0),
+    fees: new Decimal(0),
+    executionIds: [],
+  };
+}
+
+/**
+ * Ajoute une entrée (exécution dans le sens de la position) au trade.
+ * FIFO : nouveau lot distinct, ajouté en fin de file. Moyenne pondérée :
+ * fusionne dans l'unique lot existant — **en additionnant les coûts totaux**
+ * (`existing.totalCost + quantity * price`, une multiplication et une
+ * addition, jamais de division) plutôt qu'en recalculant un prix moyen
+ * divisé à chaque fusion : diviser à chaque entrée introduirait un résidu
+ * d'arrondi (précision 40 chiffres significatifs) qui ne s'annule pas
+ * forcément exactement à la sortie, même quand le résultat économique attendu
+ * est `0` — c'est cette fusion qui distingue les deux méthodes : une sortie
+ * partielle ultérieure consommera soit les lots les plus anciens (FIFO),
+ * soit une tranche du lot mélangé, inchangé (moyenne).
+ */
+function addEntry(
+  builder: TradeBuilder,
+  method: GroupingMethod,
+  quantity: Decimal,
+  price: Decimal,
+): void {
+  const cost = quantity.times(price);
+  if (method === 'fifo') {
+    builder.lots.push({ quantity, totalCost: cost });
+  } else {
+    const [existing] = builder.lots;
+    if (existing) {
+      builder.lots = [
+        { quantity: existing.quantity.plus(quantity), totalCost: existing.totalCost.plus(cost) },
+      ];
+    } else {
+      builder.lots = [{ quantity, totalCost: cost }];
+    }
+  }
+  builder.openQuantity = builder.openQuantity.plus(quantity);
+  builder.totalEntryQty = builder.totalEntryQty.plus(quantity);
+  builder.totalEntryNotional = builder.totalEntryNotional.plus(cost);
+}
+
+/**
+ * Consomme `quantityToClose` du trade (sortie), en appariant contre les
+ * lots existants dans l'ordre du tableau `lots` — c'est le même code pour
+ * FIFO (plusieurs lots, appariés du plus ancien au plus récent) et moyenne
+ * pondérée (un seul lot mélangé). Accumule le P&L brut réalisé **à ce
+ * jour** (multiplicateur de contrat appliqué ici) : pour la portion de coût
+ * consommée sur un lot, `consumedCost = lot.totalCost * consumed / lot.quantity`
+ * (une seule division, à la consommation — jamais accumulée d'une fusion à
+ * l'autre) puis `lot.totalCost -= consumedCost` par soustraction exacte, de
+ * sorte que la somme des `consumedCost` successifs plus le coût restant du
+ * lot reste **toujours** égale au coût total d'origine (aucune dérive
+ * possible, la dernière soustraction absorbe l'écart d'arrondi).
+ *
+ * Pour un trade **clôturé**, ce P&L brut interim n'est de toute façon pas
+ * celui renvoyé : {@link finalizeTrade} le recalcule exactement sur les
+ * notionnels totaux (voir `GroupedTrade.grossPnl`). Il ne sert donc qu'au
+ * P&L réalisé affiché pour un trade encore `open` après une sortie partielle.
+ */
+function consumeExit(builder: TradeBuilder, quantityToClose: Decimal, price: Decimal): void {
+  let remaining = quantityToClose;
+  while (remaining.greaterThan(0)) {
+    const lot = builder.lots[0];
+    /* c8 ignore start -- invariant garanti par l'appelant (qtyToClose <= openQuantity) */
+    if (!lot) {
+      throw new Error('Invariant violé : plus de lot à consommer alors que remaining > 0.');
+    }
+    /* c8 ignore stop */
+    const consumed = Decimal.min(remaining, lot.quantity);
+    const consumedCost = lot.quantity.isZero()
+      ? new Decimal(0)
+      : lot.totalCost.times(consumed).dividedBy(lot.quantity);
+    const consumedProceeds = consumed.times(price);
+    builder.realizedGrossPnl = builder.realizedGrossPnl.plus(
+      consumedProceeds
+        .minus(consumedCost)
+        .times(builder.positionSign)
+        .times(builder.contractMultiplier),
+    );
+    lot.totalCost = lot.totalCost.minus(consumedCost);
+    lot.quantity = lot.quantity.minus(consumed);
+    if (lot.quantity.isZero()) {
+      builder.lots.shift();
+    }
+    remaining = remaining.minus(consumed);
+  }
+  builder.openQuantity = builder.openQuantity.minus(quantityToClose);
+  builder.totalExitQty = builder.totalExitQty.plus(quantityToClose);
+  builder.totalExitNotional = builder.totalExitNotional.plus(quantityToClose.times(price));
+}
+
+/**
+ * État de répartition, propre à une exécution, de sa commission/ses frais
+ * entre les (au plus deux, voir {@link allocateShare}) trades auxquels elle
+ * contribue — clé par référence d'objet, une instance fraîche créée par
+ * {@link groupExecutionsIntoTrades} à chaque appel (jamais partagée entre
+ * deux appels), donc sans risque de collision même si `exec.id` était réutilisé.
+ */
+type ExecutionShareState = Map<ExecutionInput, { commissionRest: Decimal; feesRest: Decimal }>;
+
+/**
+ * Répartit la commission/les frais d'une exécution entre les trades qui la
+ * consomment. Une exécution est consommée par **au plus deux** trades (une
+ * position ne peut s'inverser qu'une fois par exécution, voir
+ * `groupSingleInstrument`) : si `quantityAllocated` couvre la quantité totale
+ * de `exec`, aucun partage n'est nécessaire (valeurs exactes de `exec`) ;
+ * sinon, la commission/les frais sont répartis au prorata des deux portions
+ * de quantité via {@link allocateProRata} (revue M3, boucle 2 #6) — **la
+ * seconde portion absorbe l'écart d'arrondi**, exactement comme
+ * `allocateProRata` le fait déjà en interne, de sorte que la somme des deux
+ * parts reste **exactement** égale à `exec.commission`/`exec.fees` une fois
+ * chacune arrondie à l'échelle DB (`toDbAmount`) — un partage indépendant
+ * (`exec.commission * quantityAllocated / exec.quantity` calculé séparément
+ * pour chaque portion) pouvait auparavant laisser dévier la somme d'une
+ * fraction de centime.
+ */
+function allocateShare(
+  builder: TradeBuilder,
+  exec: ExecutionInput,
+  quantityAllocated: Decimal,
+  shareState: ExecutionShareState,
+): void {
+  builder.executionIds.push(exec.id);
+
+  if (quantityAllocated.equals(exec.quantity)) {
+    // Seule portion (cas courant) : rien à répartir, valeurs exactes.
+    builder.commission = builder.commission.plus(exec.commission);
+    builder.fees = builder.fees.plus(exec.fees);
+    return;
+  }
+
+  const existing = shareState.get(exec);
+  if (!existing) {
+    // Première des deux portions : calcule et mémorise la seconde (le reste
+    // exact), pour l'appliquer telle quelle au second appel.
+    const remainder = exec.quantity.minus(quantityAllocated);
+    const [commissionFirst, commissionRest] = allocateProRata(exec.commission, [
+      quantityAllocated,
+      remainder,
+    ]);
+    const [feesFirst, feesRest] = allocateProRata(exec.fees, [quantityAllocated, remainder]);
+    shareState.set(exec, {
+      commissionRest: commissionRest ?? new Decimal(0),
+      feesRest: feesRest ?? new Decimal(0),
+    });
+    builder.commission = builder.commission.plus(commissionFirst ?? new Decimal(0));
+    builder.fees = builder.fees.plus(feesFirst ?? new Decimal(0));
+    return;
+  }
+
+  // Seconde (et dernière) portion : valeur déjà calculée, absorbe l'écart d'arrondi.
+  builder.commission = builder.commission.plus(existing.commissionRest);
+  builder.fees = builder.fees.plus(existing.feesRest);
+}
+
+function weightedAveragePrice(lots: readonly Lot[]): Decimal {
+  const totalQty = lots.reduce((acc, lot) => acc.plus(lot.quantity), new Decimal(0));
+  const totalCost = lots.reduce((acc, lot) => acc.plus(lot.totalCost), new Decimal(0));
+  return totalCost.dividedBy(totalQty);
+}
+
+function finalizeTrade(
+  builder: TradeBuilder,
+  status: TradeStatus,
+  closedAt: Date | null,
+): GroupedTrade {
+  const quantity = status === 'closed' ? builder.totalEntryQty : builder.openQuantity;
+  const avgEntry =
+    status === 'closed'
+      ? builder.totalEntryNotional.dividedBy(builder.totalEntryQty)
+      : weightedAveragePrice(builder.lots);
+  const avgExit = builder.totalExitQty.isZero()
+    ? null
+    : builder.totalExitNotional.dividedBy(builder.totalExitQty);
+  // Trade clôturé : grossPnl recalculé exactement sur les notionnels totaux
+  // (identité vraie une fois toute la quantité entrée appariée à de la
+  // quantité sortie, quelle que soit `method`) plutôt que de réutiliser
+  // `realizedGrossPnl`, qui peut porter un résidu d'arrondi en méthode
+  // moyenne pondérée (voir `GroupedTrade.grossPnl`, `consumeExit`).
+  const grossPnl =
+    status === 'closed'
+      ? builder.totalExitNotional
+          .minus(builder.totalEntryNotional)
+          .times(builder.positionSign)
+          .times(builder.contractMultiplier)
+      : builder.realizedGrossPnl;
+  return {
+    accountId: builder.accountId,
+    instrumentId: builder.instrumentId,
+    direction: builder.direction,
+    status,
+    openedAt: builder.openedAt,
+    closedAt,
+    quantity,
+    avgEntry,
+    avgExit,
+    grossPnl,
+    commission: builder.commission,
+    fees: builder.fees,
+    executionIds: builder.executionIds,
+  };
+}
+
+/** Comparaison ordinale (indépendante de la locale/ICU, voir revue M3) de deux identifiants. */
+function compareIds(a: string, b: string): number {
+  if (a < b) return -1;
+  if (a > b) return 1;
+  return 0;
+}
+
+/**
+ * Ordre déterministe de deux exécutions à `executedAt` égal : les exécutions
+ * qui portent une `sequence` (voir {@link ExecutionInput.sequence}) passent
+ * **toujours** avant celles qui n'en portent pas — départagées entre elles
+ * par `sequence`, puis par `id` (comparaison ordinale) à égalité de
+ * `sequence` ; les exécutions sans `sequence` sont départagées entre elles
+ * par `id`.
+ *
+ * Revue M3 (boucle 2) #2 (important) : classer d'abord par « porte une
+ * séquence ou non » (plutôt que de ne comparer par `sequence` que lorsque
+ * LES DEUX exécutions en portent une, et de retomber sur `id` dans tous les
+ * autres cas, y compris quand une seule des deux en porte une) est
+ * nécessaire à la **transitivité** du comparateur — condition requise par
+ * `Array.prototype.sort` pour un résultat correct et déterministe. L'ancienne
+ * version pouvait produire un cycle non transitif dès qu'un groupe simultané
+ * mélangeait exécutions séquencées et non séquencées (ex. A séquencée id
+ * `a`, B non séquencée id `m`, C séquencée id `z`, avec `A.sequence >
+ * C.sequence` : l'ancien comparateur donnait A < B (par id), B < C (par id),
+ * mais C < A (par sequence) — un cycle), avec un résultat de tri dépendant
+ * alors de l'ordre d'entrée plutôt que déterministe (voir tests).
+ */
+function compareBySequenceThenId(a: ExecutionInput, b: ExecutionInput): number {
+  if (a.sequence !== undefined && b.sequence !== undefined) {
+    if (a.sequence !== b.sequence) return a.sequence - b.sequence;
+    return compareIds(a.id, b.id);
+  }
+  if (a.sequence !== undefined) return -1; // a séquencée, b non séquencée : a d'abord.
+  if (b.sequence !== undefined) return 1; // b séquencée, a non séquencée : b d'abord.
+  return compareIds(a.id, b.id);
+}
+
+/**
+ * Au sein d'un groupe d'exécutions strictement au même `executedAt` (déjà
+ * ordonné par {@link compareBySequenceThenId}), place en premier celles qui
+ * **augmentent** la position ouverte (même sens que `currentSign`), puis
+ * celles qui la **réduisent** — évite qu'un id alphabétiquement plus petit
+ * fasse passer à tort une sortie avant l'entrée qui l'accompagne à la même
+ * seconde (voir tests, cas `zzz-entry`/`aaa-exit`). Ordre préservé au sein
+ * de chaque sous-groupe (partition stable). Ne s'applique qu'« à défaut de
+ * séquence » (voir {@link ExecutionInput.sequence}) : si **toutes** les
+ * exécutions du groupe simultané portent une `sequence`, celle-ci prime et
+ * l'ordre déjà fixé par le tri n'est pas modifié ici. Si la position est à
+ * plat (`currentSign === null`), rien à départager par sens non plus : ordre
+ * déjà fixé par `sequence`/`id`.
+ */
+function orderSimultaneousCluster(
+  cluster: readonly ExecutionInput[],
+  currentSign: 1 | -1 | null,
+): readonly ExecutionInput[] {
+  if (currentSign === null) return cluster;
+  if (cluster.every((exec) => exec.sequence !== undefined)) return cluster;
+  const increasing: ExecutionInput[] = [];
+  const reducing: ExecutionInput[] = [];
+  for (const exec of cluster) {
+    const execSign: 1 | -1 = exec.side === 'buy' ? 1 : -1;
+    (execSign === currentSign ? increasing : reducing).push(exec);
+  }
+  return [...increasing, ...reducing];
+}
+
+/**
+ * Regroupe les exécutions d'un seul (compte, instrument) en trades
+ * successifs, dans l'ordre chronologique.
+ */
+function groupSingleInstrument(
+  executions: readonly ExecutionInput[],
+  contractMultiplier: Decimal,
+  method: GroupingMethod,
+  shareState: ExecutionShareState,
+): GroupedTrade[] {
+  const sorted = [...executions].sort((a, b) => {
+    const diff = a.executedAt.getTime() - b.executedAt.getTime();
+    if (diff !== 0) return diff;
+    return compareBySequenceThenId(a, b);
+  });
+
+  const results: GroupedTrade[] = [];
+  let current: TradeBuilder | null = null;
+
+  let clusterStart = 0;
+  while (clusterStart < sorted.length) {
+    const clusterStartExec = sorted[clusterStart];
+    /* c8 ignore start -- invariant garanti par la borne de la boucle englobante (clusterStart < sorted.length) */
+    if (!clusterStartExec) {
+      throw new Error('Invariant violé : clusterStart hors bornes.');
+    }
+    /* c8 ignore stop */
+    let clusterEnd = clusterStart + 1;
+    while (
+      clusterEnd < sorted.length &&
+      sorted[clusterEnd]?.executedAt.getTime() === clusterStartExec.executedAt.getTime()
+    ) {
+      clusterEnd += 1;
+    }
+    const cluster = orderSimultaneousCluster(
+      sorted.slice(clusterStart, clusterEnd),
+      current?.positionSign ?? null,
+    );
+
+    for (const exec of cluster) {
+      const execSign: 1 | -1 = exec.side === 'buy' ? 1 : -1;
+      let remainingQty = exec.quantity;
+
+      while (remainingQty.greaterThan(0)) {
+        if (!current) {
+          // Position à plat : cette exécution ouvre un nouveau trade.
+          current = createBuilder(exec, remainingQty, execSign, contractMultiplier);
+          allocateShare(current, exec, remainingQty, shareState);
+          remainingQty = new Decimal(0);
+        } else if (execSign === current.positionSign) {
+          // Même sens que la position ouverte : ajoute une entrée.
+          addEntry(current, method, remainingQty, exec.price);
+          allocateShare(current, exec, remainingQty, shareState);
+          remainingQty = new Decimal(0);
+        } else {
+          // Sens opposé : ferme tout ou partie de la position ouverte.
+          const quantityToClose = Decimal.min(remainingQty, current.openQuantity);
+          consumeExit(current, quantityToClose, exec.price);
+          allocateShare(current, exec, quantityToClose, shareState);
+          remainingQty = remainingQty.minus(quantityToClose);
+          if (current.openQuantity.isZero()) {
+            results.push(finalizeTrade(current, 'closed', exec.executedAt));
+            current = null;
+            // S'il reste une quantité non allouée sur cette même exécution,
+            // c'est une inversion de position : la boucle rouvre un nouveau
+            // trade (sens opposé) au tour suivant, avec le même exec.id.
+          }
+        }
+      }
+    }
+
+    clusterStart = clusterEnd;
+  }
+
+  if (current) {
+    results.push(finalizeTrade(current, 'open', null));
+  }
+  return results;
+}
+
+/**
+ * Regroupe des exécutions (fills bruts) en trades (positions aller-retour),
+ * DATA_MODEL `executions` -> `trades` (ADR-004). Traite indépendamment
+ * chaque paire (compte, instrument), dans l'ordre chronologique des
+ * exécutions ; à horodatage égal, l'ordre est départagé par `sequence` (voir
+ * {@link ExecutionInput.sequence}) puis par `id` (comparaison ordinale), et
+ * — à défaut de `sequence` distinguant deux exécutions — les exécutions qui
+ * **augmentent** la position ouverte sont traitées avant celles qui la
+ * **réduisent** (voir {@link orderSimultaneousCluster}).
+ *
+ * Gère : entrées/sorties partielles, position longue/courte, inversion de
+ * position (une exécution qui clôture puis rouvre dans l'autre sens, voir
+ * `GroupedTrade.executionIds`), trade encore ouvert (`status: 'open'`),
+ * multiplicateur de contrat de l'instrument (appliqué au P&L brut réalisé).
+ *
+ * Limite MVP (ADR-019) : `GroupedTrade.grossPnl` est dans la devise de
+ * cotation de l'instrument (`instruments.quoteCurrency`) — cette fonction
+ * exige qu'elle soit identique à `accountCurrency` et lève sinon une erreur
+ * typée, plutôt que de produire silencieusement un montant dans la mauvaise
+ * devise (aucune conversion n'est effectuée pendant le MVP).
+ *
+ * @param executions exécutions à regrouper (plusieurs comptes/instruments possibles)
+ * @param instruments informations de contrat par `instrumentId` (DATA_MODEL `instruments.contract_multiplier`/`instruments.quote_ccy`)
+ * @param method méthode d'appariement des entrées/sorties (`accounts.grouping_method`)
+ * @param accountCurrency devise du compte (`accounts.currency`) — voir limite MVP ci-dessus
+ * @returns les trades, triés par `openedAt` puis `accountId`/`instrumentId`
+ * @throws {InvalidExecutionError} si une exécution a une quantité/un prix `<= 0` ou une commission/des frais négatifs
+ * @throws {UnknownInstrumentError} si `instruments` ne couvre pas un `instrumentId` référencé
+ * @throws {InvalidContractMultiplierError} si le multiplicateur de contrat d'un instrument référencé n'est pas strictement positif
+ * @throws {InstrumentCurrencyMismatchError} si la devise de cotation d'un instrument référencé diffère de `accountCurrency`
+ */
+export function groupExecutionsIntoTrades(
+  executions: readonly ExecutionInput[],
+  instruments: ReadonlyMap<string, InstrumentContractInfo>,
+  method: GroupingMethod,
+  accountCurrency: string,
+): GroupedTrade[] {
+  for (const exec of executions) {
+    assertValidExecution(exec);
+  }
+
+  // Instance fraîche à chaque appel (voir {@link ExecutionShareState}) : la
+  // répartition commission/frais d'une exécution partagée entre deux trades
+  // ne doit jamais fuiter d'un appel de `groupExecutionsIntoTrades` à l'autre.
+  const shareState: ExecutionShareState = new Map();
+
+  // Regroupement par (accountId, instrumentId) via une Map imbriquée : évite
+  // de fabriquer une clé composite par concaténation de chaînes (un séparateur
+  // choisi à la main peut collisionner, ou — écueil vécu — être un octet NUL
+  // littéral qui fait passer le fichier source pour du binaire aux yeux de git).
+  const groups = new Map<string, Map<string, ExecutionInput[]>>();
+  for (const exec of executions) {
+    let byInstrument = groups.get(exec.accountId);
+    if (!byInstrument) {
+      byInstrument = new Map<string, ExecutionInput[]>();
+      groups.set(exec.accountId, byInstrument);
+    }
+    const list = byInstrument.get(exec.instrumentId);
+    if (list) {
+      list.push(exec);
+    } else {
+      byInstrument.set(exec.instrumentId, [exec]);
+    }
+  }
+
+  const trades: GroupedTrade[] = [];
+  for (const byInstrument of groups.values()) {
+    for (const [instrumentId, group] of byInstrument) {
+      const instrument = instruments.get(instrumentId);
+      if (!instrument) {
+        throw new UnknownInstrumentError(instrumentId);
+      }
+      if (!instrument.contractMultiplier.greaterThan(0)) {
+        throw new InvalidContractMultiplierError(
+          instrumentId,
+          instrument.contractMultiplier.toString(),
+        );
+      }
+      if (instrument.quoteCurrency !== accountCurrency) {
+        throw new InstrumentCurrencyMismatchError(
+          instrumentId,
+          instrument.quoteCurrency,
+          accountCurrency,
+        );
+      }
+      trades.push(
+        ...groupSingleInstrument(group, instrument.contractMultiplier, method, shareState),
+      );
+    }
+  }
+
+  return trades.sort((a, b) => {
+    const diff = a.openedAt.getTime() - b.openedAt.getTime();
+    if (diff !== 0) return diff;
+    // Revue M3 (boucle 2), mineur : comparer `accountId` puis `instrumentId`
+    // séparément — jamais leur concaténation (`a.accountId + a.instrumentId`),
+    // qui peut faire correspondre deux paires (compte, instrument)
+    // différentes à la même chaîne concaténée (ex. `accountId: 'a'` +
+    // `instrumentId: 'bc'` et `accountId: 'ab'` + `instrumentId: 'c'`
+    // donnent toutes deux `'abc'`), rendant l'ordre relatif de ces deux
+    // trades non déterministe (dépendant de l'ordre d'entrée, `sort` étant
+    // stable) au lieu de suivre l'ordre lexicographique de `accountId`.
+    const accountDiff = compareIds(a.accountId, b.accountId);
+    if (accountDiff !== 0) return accountDiff;
+    return compareIds(a.instrumentId, b.instrumentId);
+  });
+}

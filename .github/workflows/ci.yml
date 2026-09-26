@@ -21,8 +21,10 @@ permissions:
 
 jobs:
   # Lint, typecheck, tests unitaires (packages/core, packages/schemas, packages/db,
-  # packages/i18n, packages/ui, apps/app), secrets, build web. Indépendant du job `db`
-  # (aucune des deux tâches n'a besoin de l'autre) : les deux tournent en parallèle.
+  # packages/i18n, apps/web), secrets, build web. `apps/app` et `packages/ui` sont gelés
+  # depuis ADR-023 : exclus des commandes racine (`--filter=!@repo/app`,
+  # `vitest.config.ts` racine) et donc de ce job. Indépendant du job `db` (aucune des
+  # deux tâches n'a besoin de l'autre) : les deux tournent en parallèle.
   quality:
     name: Lint, typecheck, tests, build web
     runs-on: ubuntu-latest
@@ -35,6 +37,11 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          # Aucun step de ce job (ni aucun autre du workflow) ne pousse vers le dépôt :
+          # le jeton `GITHUB_TOKEN` n'a donc pas besoin de rester configuré dans le
+          # `git` local après le checkout (moindre surface, recommandation courante pour
+          # un job qui ne fait que lire).
+          persist-credentials: false
 
       # Version pnpm lue depuis `packageManager` (package.json racine) : aucune version
       # à dupliquer ici.
@@ -62,6 +69,22 @@ jobs:
       - name: Unit tests
         run: pnpm test
 
+      # Rejoue la même suite (`pnpm test`, `packages/core/src/time/**` compris,
+      # ARCHITECTURE §5 — « jour de trading ») sous un fuseau différent (`TZ=Europe/Paris`)
+      # de celui du runner GitHub (UTC) : détecte un calcul qui dépendrait implicitement du
+      # fuseau du système d'exécution plutôt que du fuseau explicite du compte (bug de
+      # fuseau qui ne se verrait jamais sur un runner déjà en UTC).
+      - name: Unit tests (core, sous TZ=Europe/Paris)
+        run: pnpm --filter @repo/core test:tz
+
+      # Vulnérabilités connues des dépendances de production — informatif seulement
+      # (`continue-on-error`) : un rapport `pnpm audit` peut légitimement varier d'un run
+      # à l'autre (nouvel avis publié) sans qu'un correctif existe toujours immédiatement ;
+      # bloquer la CI dessus casserait des PR sans rapport avec la dépendance concernée.
+      - name: Audit dependencies (prod, non bloquant)
+        run: pnpm audit --prod
+        continue-on-error: true
+
       - name: Check secrets (source)
         run: pnpm check:secrets
 
@@ -70,32 +93,60 @@ jobs:
       - name: Check secrets (history)
         run: node scripts/check-secrets.mjs --history
 
-      # `turbo run build` → seul `apps/app` définit un script `build`
-      # (`expo export --platform web` → `apps/app/dist`, voir turbo.json). Pas de variables
-      # `EXPO_PUBLIC_SUPABASE_*` factices ici : `apps/app/lib/supabase/client.ts` ne lit ces
-      # variables qu'au runtime (`getSupabaseClientState()`, jamais à l'évaluation d'un
-      # module) et renvoie proprement `{ status: 'missing-env' }` sans lever d'exception ;
-      # le build web (sortie `web.output: 'single'`, aucun rendu statique par route) n'a
-      # donc besoin d'aucune variable Supabase pour réussir.
-      - name: Build (web export)
+      # `turbo run build --filter=!@repo/app` (script racine `build`, `package.json`) :
+      # seul `apps/web` définit un script `build` dans le périmètre CI (`vite build` →
+      # `apps/web/dist`, sortie statique). Pas de `VITE_SUPABASE_*` factices ici : Vite
+      # remplace `import.meta.env.VITE_*` par leur valeur littérale **au build** (pas au
+      # runtime) — en leur absence ici, ces expressions sont simplement inlinées à
+      # `undefined`, et le client Supabase gère cette absence sans lever d'exception
+      # (mêmes garanties que documentées côté `apps/app`, gelé) ; le build n'a donc besoin
+      # d'aucune variable Supabase pour réussir.
+      - name: Build (apps/web)
         run: pnpm build
 
-      # Deuxième passage volontaire : `apps/app/dist` (bundle web exporté ci-dessus) doit
-      # être scanné comme le reste du dépôt, au cas où une variable EXPO_PUBLIC_* fautive
-      # ou une valeur sensible se serait glissée dans le JS embarqué (scripts/check-secrets.mjs
+      # `apps/web/src/routeTree.gen.ts` est versionné volontairement (voir
+      # `apps/web/.gitignore`), régénéré par le plugin TanStack Router à chaque build/dev :
+      # vérifie qu'aucune route n'a été ajoutée/modifiée localement sans que ce fichier
+      # généré, commité, n'ait été régénéré et recommité en conséquence (le build
+      # ci-dessus vient de le réécrire ; un `diff` non vide ici signifierait que la copie
+      # commitée était périmée par rapport au code des routes réellement bâti).
+      - name: Verify apps/web/src/routeTree.gen.ts is up to date
+        run: git diff --exit-code apps/web/src/routeTree.gen.ts
+
+      # Deuxième passage volontaire : `apps/web/dist` (bundle construit ci-dessus) doit
+      # être scanné comme le reste du dépôt, au cas où une variable VITE_* fautive ou une
+      # valeur sensible se serait glissée dans le JS embarqué (scripts/check-secrets.mjs
       # ne saute pas les dossiers `dist`, voir son commentaire).
       - name: Check secrets (build output)
         run: pnpm check:secrets
 
-  # Migrations, types générés, tests RLS — contre Supabase local (Docker du runner),
-  # jamais contre le projet cloud « dev » (ADR-020). Job indépendant de `quality`.
-  db:
-    name: Supabase (migrations, types, RLS)
+  # Parcours web Playwright fonctionnels — `apps/web/e2e/**` : le projet `chromium`
+  # (serveur de dev, tous les specs hors `e2e/prod/**`) et les specs *non liées à la
+  # fluidité* d'`e2e/prod/**` (`pwa.spec.ts`, `catalog-absent.spec.ts`, export de
+  # production) exécutés explicitement sur le projet `chromium-perf-prod`. Seul
+  # `performance.spec.ts` (fluidité, ADR-017) est sorti de ce job — voir `e2e-web-perf`
+  # ci-dessous : ce job-ci reste entièrement bloquant, aucun test fonctionnel n'y est
+  # rendu tolérant aux erreurs.
+  # Job séparé de `quality` (pas seulement un `step` de plus) : `pnpm e2e:web` démarre
+  # ses propres serveurs Vite (`playwright.config.ts`, `webServer`) et prend largement
+  # plus longtemps que les autres étapes de `quality` — l'isoler évite de ralentir le
+  # retour du job le plus fréquemment consulté (lint/typecheck/test) et permet de
+  # publier un rapport Playwright dédié en cas d'échec sans polluer les artefacts de
+  # `quality`.
+  # Aucun `apps/web/.env` n'est créé ici (ADR-020 : pas de secret Supabase en CI) : les
+  # tests qui exigent une configuration Supabase se `test.skip` proprement (mêmes
+  # helpers d'environnement qu'en local, vérifiés en simulant l'absence de `.env`).
+  # Les autres specs (`navigation`, `preferences`, `calendar`, `dashboard`, `smoke`,
+  # `reducedMotion`) tournent sur des données factices, indépendantes de Supabase.
+  e2e-web:
+    name: Playwright (web) — parcours fonctionnels
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Setup pnpm
         uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
@@ -109,11 +160,129 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # Installe la version de la CLI Supabase déclarée en devDependency
-      # (`supabase` dans package.json racine, résolue via pnpm-lock.yaml) : même version
-      # qu'en local, pas de dérive.
+      # Chromium uniquement (les deux projets de `playwright.config.ts`, `chromium` et
+      # `chromium-perf-prod`, utilisent le même navigateur) : pas de WebKit/Firefox à
+      # installer, moindre coût CI.
+      - name: Install Playwright browser (Chromium)
+        run: pnpm --filter @repo/web exec playwright install --with-deps chromium
+
+      - name: Run Playwright (web) — parcours (dev server)
+        run: pnpm --filter @repo/web exec playwright test --project chromium
+
+      # Fichiers explicites (pas tout `e2e/prod/**`) : exclut volontairement
+      # `performance.spec.ts`, seul test tolérant à l'échec de ce workflow
+      # (voir le job `e2e-web-perf`).
+      - name: Run Playwright (web) — PWA et absence du catalogue (export de production)
+        run: >
+          pnpm --filter @repo/web exec playwright test
+          e2e/prod/pwa.spec.ts e2e/prod/catalog-absent.spec.ts
+          --project chromium-perf-prod
+
+      # Rapport HTML (`playwright-report/`, config `reporter` de `playwright.config.ts`) +
+      # traces/captures d'échec (`test-results/`, `trace: 'retain-on-failure'`,
+      # `screenshot: 'only-on-failure'`) — uniquement en cas d'échec, pour ne pas
+      # accumuler des artefacts sur chaque run vert.
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: playwright-report
+          path: |
+            apps/web/playwright-report/
+            apps/web/test-results/
+          retention-days: 7
+
+  # Fluidité (ADR-017, `e2e/prod/performance.spec.ts`) : job séparé et volontairement
+  # **non bloquant**, décision de clôture de M1-web/W-10 (voir docs/DECISIONS.md, ADR-017,
+  # précision « clôture W-9/W-10 » — dette de fluidité assumée sur `Segmented`/`Sheet`/mois,
+  # suivie via ce job et ROADMAP M1-web, dette D1).
+  # `continue-on-error: true` est posé sur ce *job* dédié, jamais en silence sur une
+  # étape cachée dans `e2e-web` : son échec apparaît dans l'onglet Checks de la PR avec
+  # un statut distinct (⚠, jaune) et n'empêche jamais la fusion, mais reste visible.
+  # Condition de retrait exacte (docs/DECISIONS.md, ADR-017) : 3 runs CI consécutifs au
+  # seuil (moyenne ≥ 55 fps, aucune image > 50 ms sur `chromium-perf-prod`), ou décision de
+  # l'utilisateur — alors seulement retirer `continue-on-error` ici (ou fusionner ce job
+  # dans `e2e-web`).
+  e2e-web-perf:
+    name: Playwright (web) — fluidité (non bloquant, ADR-017)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browser (Chromium)
+        run: pnpm --filter @repo/web exec playwright install --with-deps chromium
+
+      # `pnpm run build && pnpm run preview` (webServer de `chromium-perf-prod`) :
+      # mesure sur l'export de production, jamais le bundle de dev (ADR-017).
+      - name: Run Playwright (web) — fluidité (export de production)
+        run: >
+          pnpm --filter @repo/web exec playwright test
+          e2e/prod/performance.spec.ts
+          --project chromium-perf-prod
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: playwright-report-perf
+          path: |
+            apps/web/playwright-report/
+            apps/web/test-results/
+          retention-days: 7
+
+  # Migrations, types générés, tests RLS — contre Supabase local (Docker du runner),
+  # jamais contre le projet cloud « dev » (ADR-020). Job indépendant de `quality`.
+  db:
+    name: Supabase (migrations, types, RLS)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Version épinglée explicitement : `supabase/setup-cli` sans `version:` tente de la
+      # déduire de `pnpm-lock.yaml`, mais ce lockfile contient deux documents YAML
+      # (séparateur `---`, pnpm workspaces) — l'action ne lit que le premier et retombait
+      # donc sur `latest`, une CLI plus récente ayant changé le format de sortie de
+      # `gen types` (job cassé sans aucune dérive réelle de schéma, diagnostiqué par
+      # l'agent database). Garder ce numéro synchronisé à la main avec la devDependency
+      # `supabase` de `package.json` racine : à chaque montée de version des deux côtés,
+      # relancer `pnpm db:types` (le format généré peut changer) et vérifier ce job.
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520 # v3.0.0
+        with:
+          version: 2.117.0
 
       # Démarre la stack Supabase locale (Postgres, Auth, PostgREST, Storage…) : applique
       # `supabase/migrations/**` et `supabase/seed.sql` une première fois.

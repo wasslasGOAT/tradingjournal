@@ -1,12 +1,12 @@
 ---
 description: Exécute une phase de la roadmap avec l'équipe d'agents (plan → implémentation → tests → revue → clôture)
-argument-hint: <identifiant de phase : M0…M9 (MVP) ou P1…P6 (après le MVP)>
+argument-hint: <identifiant de phase : M0…M9 ou M1-web (MVP), P1…P6 (après le MVP)>
 ---
 
 Exécute la **Phase $ARGUMENTS** de `docs/ROADMAP.md` (titre `## Phase $ARGUMENTS — …`) en suivant ce protocole.
 Si une phase `P*` est demandée alors que des phases `M*` ne sont pas `Terminée`, signale-le et demande confirmation avant de continuer.
 Pendant le MVP (phases `M*`), n'utilise pas les agents `backend`, `connectors` et `ai-coach` (ADR-015, ADR-016).
-Critère transversal de chaque phase `M*` : vérification sur web, iOS et Android, et respect des exigences UX d'ADR-017 pour les écrans livrés.
+Critère transversal de chaque phase `M*` : vérification sur navigateur de bureau, navigateur mobile et PWA installée (ADR-023), et respect des exigences UX d'ADR-017 (révision du 2026-09-25) pour les écrans livrés. `apps/app` (Expo) et `packages/ui` sont gelés : aucun agent ne les modifie.
 
 1. **Plan** — délègue à l'agent `architect` : plan des tâches de la phase (agent responsable, dépendances, vérification) et liste des décisions à prendre.
    Montre-moi ce plan et **attends ma validation** avant de coder. Si des ADR sont `Proposée`, pose-moi les questions maintenant.

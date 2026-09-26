@@ -39,8 +39,29 @@
  *      nom commence par `.env`, sauf `*.env.example`) suivi par git.
  *  10. (Mode `--history` uniquement) Un fichier `.env` réel qui a existé à un
  *      moment donné dans l'historique, même supprimé depuis.
- * Le mode par défaut vérifie aussi que `apps/app/.env` et `supabase/tests/.env`
- * seraient bien ignorés par git (sanity check du `.gitignore`).
+ *  11. Un nom de variable `VITE_*` contenant `SECRET`, `SERVICE`, `PRIVATE`,
+ *      `PASSWORD` ou `TOKEN` (ex. `VITE_SUPABASE_SECRET_KEY`,
+ *      `VITE_API_TOKEN`) — tout ce qui commence par `VITE_` est injecté en clair
+ *      dans le bundle JS livré au navigateur (Vite, `import.meta.env`) : ce nom à
+ *      lui seul est un signal fort d'un secret exposé côté client par erreur,
+ *      partout (y compris `.env.example`, voir plus haut).
+ *  12. Une clé secrète Stripe live (`sk_live_...`), partout.
+ *  13. Une clé secrète générique au format `sk-<valeur>` (OpenAI et compatibles,
+ *      ex. `sk-proj-...`, `sk-svcacct-...`) — motif distinct du préfixe
+ *      Anthropic (n° 7) : ce dernier contient des tirets internes
+ *      (`sk-ant-api03-...`) qui ne correspondent pas à ce motif générique
+ *      (valeur alphanumérique continue, avec au plus un préfixe `proj-`/
+ *      `svcacct-` reconnu explicitement), partout.
+ *  14. Le nom de variable `CLOUDFLARE_API_TOKEN` (ou `CF_API_TOKEN`) — comme pour
+ *      `SUPABASE_SERVICE_ROLE_KEY` (n° 3), le jeton Cloudflare Pages n'a pas de
+ *      préfixe reconnaissable (chaîne opaque de 40 caractères) : c'est le nom de
+ *      variable qui est détecté, partout — sauf la forme `${{ secrets.X }}` en
+ *      YAML (ex. `.github/workflows/ci.yml` référençant un secret GitHub Actions
+ *      par son nom, jamais sa valeur : ce n'est pas un secret exposé, c'est la
+ *      façon standard de le référencer).
+ * Le mode par défaut vérifie aussi que `apps/app/.env`, `apps/web/.env` et
+ * `supabase/tests/.env` seraient bien ignorés par git (sanity check du
+ * `.gitignore`).
  *
  * Les fichiers `*.env.example` sont volontairement scannés par les motifs 1 à 8
  * ci-dessus, dans les trois modes (défaut, `--staged`, `--history`) : ils sont
@@ -72,8 +93,11 @@ const SCRIPT_RELATIVE_PATH = toPosix(relative(ROOT, SCRIPT_PATH));
 // `.expo` n'est volontairement PAS ignoré totalement : voir `walkExpoLogs`
 // (seuls ses `*.log` sont scannés, pour garder une performance raisonnable).
 // Volontairement absent de cette liste : `dist` / `web-build` — un bundle web
-// généré peut embarquer une variable EXPO_PUBLIC_* fautive, donc on le scanne.
-const IGNORED_DIR_NAMES = new Set(['node_modules', '.git', '.turbo', 'coverage']);
+// généré (dont `apps/web/dist`, ADR-023/024) peut embarquer une variable
+// EXPO_PUBLIC_* ou VITE_* fautive, donc on le scanne. `apps/web/dev-dist`
+// (précache `vite-plugin-pwa` en dev) est ignoré au même titre que `.turbo` :
+// c'est un cache local jamais versionné, jamais buildé en CI.
+const IGNORED_DIR_NAMES = new Set(['node_modules', '.git', '.turbo', 'coverage', 'dev-dist']);
 
 // Extensions binaires : lues sans intérêt (bruit, risque d'erreur d'encodage).
 const BINARY_EXTENSIONS = new Set([
@@ -136,6 +160,30 @@ const JWT_RE = /eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g;
 const SUPABASE_PERSONAL_TOKEN_RE = /sbp_[a-f0-9]{20,}/;
 const POSTGRES_URL_WITH_PASSWORD_RE = /postgres(ql)?:\/\/[^:\s]+:[^@\s]+@/;
 const PRIVATE_KEY_HEADER_RE = /-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----/;
+// Toute variable `VITE_*` est injectée en clair dans le bundle client (Vite) : son nom
+// seul suffit à signaler un secret exposé par erreur (peu importe sa valeur réelle).
+const VITE_FORBIDDEN_ENV_NAME_RE =
+  /\bVITE_[A-Z0-9_]*(SECRET|SERVICE|PRIVATE|PASSWORD|TOKEN)[A-Z0-9_]*\b/;
+const STRIPE_LIVE_SECRET_KEY_RE = /sk_live_[A-Za-z0-9]{10,}/;
+// Motif générique (OpenAI et compatibles) : `sk-` suivi d'une valeur continue
+// (alphanumérique + tirets/underscores), avec deux préfixes reconnus explicitement
+// (`sk-proj-...`, `sk-svcacct-...`) en plus du format historique sans préfixe. Une vraie
+// clé Anthropic (`sk-ant-...`) matche aussi ce motif générique (elle contient bien un
+// tiret suivi d'une valeur continue) — sans conséquence : elle est de toute façon déjà
+// détectée séparément par `anthropicKeyPrefix` ci-dessus, donc jamais un secret manqué ;
+// « l'exclusion sk-ant- » à préserver est celle du motif *historique* (n° 7, préfixe exact
+// `sk-ant-`), qui reste un test dédié et continue de fonctionner indépendamment de celui-ci.
+const GENERIC_SK_DASH_SECRET_KEY_RE = /\bsk-(?:proj-|svcacct-)?[A-Za-z0-9_-]{20,}\b/;
+// Exempte la forme standard de référence à un secret GitHub Actions dans un workflow YAML
+// (`${{ secrets.CLOUDFLARE_API_TOKEN }}`, ou `CF_API_TOKEN`) : ce n'est jamais la valeur du
+// secret, seulement son nom référencé par la syntaxe d'expression GitHub Actions — la
+// vraie valeur vit dans les paramètres du dépôt/organisation GitHub, jamais dans ce
+// fichier. Nom capturé explicitement (pas un `${{ secrets.* }}` générique quelconque sur la
+// ligne) pour ne jamais exempter, par coïncidence, une vraie valeur de jeton collée à côté
+// d'une expression sans rapport.
+const CLOUDFLARE_API_TOKEN_SECRETS_EXPRESSION_RE =
+  /\$\{\{\s*secrets\.(?:CLOUDFLARE_API_TOKEN|CF_API_TOKEN)\s*\}\}/;
+const CLOUDFLARE_API_TOKEN_ENV_VAR_RE = /\bCLOUDFLARE_API_TOKEN\b|\bCF_API_TOKEN\b/;
 // Exige une valeur (pas seulement le préfixe nu) après `sb_secret_` : le SDK
 // `@supabase/supabase-js` embarque lui-même ce préfixe en dur (littéral, sans
 // suffixe) dans son code de validation « refuser une clé secrète côté client »
@@ -168,7 +216,7 @@ function isUnderTopLevelDir(relPosixPath, dirName) {
 
 /** Applique tous les motifs à une ligne et renvoie la liste des raisons
  * déclenchées (sans référence de fichier/ligne : ajoutée par l'appelant). */
-function checkLinePatterns(line, { inScopeForServiceRoleWord }) {
+function checkLinePatterns(line, { inScopeForServiceRoleWord, isMarkdown = false }) {
   const reasons = [];
 
   // Une ligne de commentaire dotenv/shell (`# ...`) qui *mentionne* le mot
@@ -220,6 +268,35 @@ function checkLinePatterns(line, { inScopeForServiceRoleWord }) {
     reasons.push('en-tête de clé privée (PRIVATE KEY) trouvé');
   }
 
+  if (!isCommentLine && VITE_FORBIDDEN_ENV_NAME_RE.test(line)) {
+    reasons.push(
+      'nom de variable VITE_* contenant SECRET/SERVICE/PRIVATE/PASSWORD/TOKEN trouvé ' +
+        '(toute variable VITE_* est injectée en clair dans le bundle client)',
+    );
+  }
+
+  if (STRIPE_LIVE_SECRET_KEY_RE.test(line)) {
+    reasons.push('clé secrète Stripe live (préfixe « sk_live_ ») trouvée');
+  }
+
+  if (GENERIC_SK_DASH_SECRET_KEY_RE.test(line)) {
+    reasons.push('clé secrète générique (préfixe « sk- » suivi d’une valeur continue) trouvée');
+  }
+
+  // Exempté en `.md` : la documentation (ex. docs/RELEASE.md §0.1) nomme ce jeton pour
+  // expliquer la configuration à venir, sans jamais en donner la valeur — même logique
+  // que l'exemption du mot-clé « service_role » en documentation ci-dessus. Exempté aussi
+  // quand la ligne référence le secret via la syntaxe GitHub Actions
+  // (`${{ secrets.CLOUDFLARE_API_TOKEN }}`, ex. `.github/workflows/ci.yml`) : ce n'est
+  // jamais la valeur du secret, seulement son nom référencé par expression.
+  if (
+    !isMarkdown &&
+    !CLOUDFLARE_API_TOKEN_SECRETS_EXPRESSION_RE.test(line) &&
+    CLOUDFLARE_API_TOKEN_ENV_VAR_RE.test(line)
+  ) {
+    reasons.push('variable de jeton API Cloudflare (CLOUDFLARE_API_TOKEN/CF_API_TOKEN) trouvée');
+  }
+
   return reasons;
 }
 
@@ -232,7 +309,7 @@ function scanTextContent(content, relPosixPath) {
   const lines = content.split(/\r\n|\r|\n/);
   lines.forEach((line, index) => {
     const lineNumber = index + 1;
-    for (const reason of checkLinePatterns(line, { inScopeForServiceRoleWord })) {
+    for (const reason of checkLinePatterns(line, { inScopeForServiceRoleWord, isMarkdown })) {
       findings.push({ file: relPosixPath, line: lineNumber, reason });
     }
   });
@@ -442,7 +519,7 @@ function scanHistory() {
       (isUnderTopLevelDir(currentFile, 'apps') || isUnderTopLevelDir(currentFile, 'packages')) &&
       !isMarkdown;
 
-    for (const reason of checkLinePatterns(content, { inScopeForServiceRoleWord })) {
+    for (const reason of checkLinePatterns(content, { inScopeForServiceRoleWord, isMarkdown })) {
       findings.push({
         file: currentFile,
         line: 0,
@@ -492,7 +569,7 @@ function main() {
         problems.push(`✖ ${file} : fichier .env réel suivi par git (ne doit jamais être committé)`);
       }
 
-      const pathsThatMustBeIgnored = ['apps/app/.env', 'supabase/tests/.env'];
+      const pathsThatMustBeIgnored = ['apps/app/.env', 'apps/web/.env', 'supabase/tests/.env'];
       for (const path of pathsThatMustBeIgnored) {
         if (!isPathGitIgnored(path)) {
           problems.push(

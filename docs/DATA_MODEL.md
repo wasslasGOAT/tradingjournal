@@ -28,7 +28,7 @@ Seules les tables du MVP sont créées pendant les phases M0–M9 ; les autres l
 | Post-MVP | `connections`, `balance_snapshots` | P4 |
 | Post-MVP | `subscriptions` | P5 |
 | Post-MVP | `jobs`, `audit_log`, `notifications`, `push_tokens` | P1–P6 selon besoin |
-| À décider | `fx_rates` : selon ADR-019 (non créée si l'option A est retenue) | M2 |
+| Post-MVP | `fx_rates` : **non créée** pendant le MVP (ADR-019, option A : un total par devise, sans conversion) | P1 |
 
 Particularités MVP :
 - Toutes les colonnes dérivées (`trading_day`, `gross_pnl`, `net_pnl`, `r_multiple`, `avg_entry`, `avg_exit`, `session`…) sont calculées par `packages/core` dans l'app, puis écrites via une fonction Postgres transactionnelle sans calcul (ADR-016).
@@ -68,17 +68,24 @@ erDiagram
 ### Utilisateur
 | Table | Colonnes principales |
 |---|---|
-| `profiles` | `id (= auth.users.id)`, `first_name`, `display_currency`, `locale`, `timezone`, `onboarding_completed_at`, `deleted_at` |
+| `profiles` | `id (= auth.users.id)`, `first_name`, `display_currency`, `locale`, `timezone`, `onboarding_completed_at`, `deleted_at` (créée dès M2, ADR-018) |
 | `preferences` | `user_id`, `trading_style` (`scalper`/`day`/`swing`/`position`), `markets text[]`, `sessions text[]`, `week_starts_on smallint`, `pnl_display` (`currency`/`percent`/`r`), `pnl_colors` (`blue_gray`/`green_red`), `hide_amounts bool`, `coach_tone`, `notifications jsonb` |
 | `subscriptions` | `user_id`, `entitlement`, `status`, `store`, `period_end`, `raw jsonb` |
+
+Précisions M2 :
+- **`profiles.deleted_at`** (nullable, ADR-018 option B) : marque une **demande de suppression** en attente de traitement manuel. Non nulle ⇒ l'app bloque l'accès (écran dédié) et la RLS ne renvoie plus les données. Elle n'efface rien : la purge reste la suppression d'`auth.users` (cascade) plus les fichiers Storage. La colonne existe dès M2 pour éviter une migration le jour de la bascule vers l'Edge Function.
+- **`profiles.display_currency`** et **`preferences.week_starts_on`** (0 = dimanche, 1 = lundi) : **pré-remplies à partir de la locale** à l'onboarding (FR → lundi / EUR, EN → dimanche / USD) par une fonction pure de `packages/core`, puis **modifiables** (onboarding et Réglages) — ADR-022. `display_currency` est une **devise d'affichage**, pas une conversion : « Tous les comptes » reste groupé par devise (ADR-019).
+- **Création du profil** : trigger `after insert on auth.users` → `public.handle_new_user()`, qui insère **une ligne `profiles` et une ligne `preferences`**. `security definer` (l'appelant n'a pas de session au moment de l'insertion), **`search_path` figé** (`set search_path = ''`, tous les objets qualifiés en `public.`/`auth.`), `revoke execute` pour `anon` et `authenticated` (jamais appelable via PostgREST). Les valeurs déduites de la locale sont écrites par l'app à l'onboarding, pas par le trigger (il pose des valeurs par défaut neutres).
 
 ### Comptes et connexions
 | Table | Colonnes principales |
 |---|---|
 | `connections` | `user_id`, `connector_id`, `label`, `credentials_encrypted bytea`, `status`, `last_error`, `last_synced_at` |
 | `accounts` | `user_id`, `connection_id?`, `name`, `kind`, `broker`, `platform`, `external_account_id`, `currency`, `starting_balance`, `starting_date`, `timezone`, `day_rollover_time time`, `grouping_method` (`fifo`/`average`), `rule_set_id?`, `rule_set_params jsonb`, `is_archived` |
-| `cash_movements` | `account_id`, `type` (`deposit`/`withdrawal`/`payout`/`fee`/`adjustment`), `amount`, `occurred_at`, `note` |
+| `cash_movements` | **`user_id`** (dénormalisé, voir ci-dessous), `account_id`, `type` (`deposit`/`withdrawal`/`payout`/`fee`/`adjustment`), `amount`, `occurred_at`, `note` |
 | `balance_snapshots` | `account_id`, `taken_at`, `balance`, `equity`, `source` (`broker`/`computed`) |
+
+Note (M2) — **`cash_movements.user_id` dénormalisé** : la colonne duplique `accounts.user_id` pour que la RLS s'écrive `user_id = auth.uid()` **sans policy croisée** (`exists (select 1 from accounts …)`). Une policy croisée dépend de la lisibilité d'`accounts` pour l'appelant : elle est plus coûteuse et, surtout, une erreur sur la policy d'`accounts` se propage silencieusement à `cash_movements`. Cohérence garantie par une contrainte : `foreign key (account_id, user_id) references accounts (id, user_id)` (clé unique `(id, user_id)` sur `accounts`) — impossible de rattacher un mouvement au compte d'un autre utilisateur. Même règle pour toute table fille créée ensuite (`executions`, `trades`, `trade_notes`…, M4).
 
 ### Marché
 | Table | Colonnes principales |
@@ -96,6 +103,10 @@ erDiagram
 | `trade_notes` | `trade_id`, `body`, `created_at` |
 | `attachments` | `user_id`, `owner_type` (`trade`/`journal`), `owner_id`, `storage_path`, `mime` |
 | `imports` | `user_id`, `account_id`, `connector_id`, `storage_path?`, `mapping jsonb`, `status`, `rows_total`, `rows_imported`, `rows_skipped`, `errors jsonb` |
+
+Notes :
+- `trades.session` est dérivée de **`opened_at`** (instant d'ouverture), comme le jour de semaine et l'heure des agrégats (« Conventions de calcul (M3) », point 5).
+- `executions` manque une colonne d'**ordre de saisie** (`sequence`) : voir « Conventions de calcul (M3) », point 9 (dette M4).
 
 ### Agrégats (écrits par le worker uniquement) — post-MVP
 | Table | Colonnes principales |
@@ -128,10 +139,30 @@ erDiagram
 Fonctions système (migration M0) :
 - `public.rls_disabled_tables()` : liste les tables de `public` sans RLS (`security definer`, `search_path` vide, exécutable par `anon`/`authenticated`). Garde-fou des tests RLS : doit renvoyer un ensemble vide.
 - `public.set_updated_at()` : trigger `updated_at` (convention ci-dessus), non appelable via l'API.
+- `public.handle_new_user()` (migration M2) : création de `profiles` + `preferences` à l'inscription (`security definer`, `search_path` figé, non appelable via l'API) — voir « Précisions M2 ».
 
 Post-MVP : `jobs` (pg-boss, schéma dédié), `audit_log` (`user_id`, `action`, `meta`, `at`), `notifications` (`user_id`, `type`, `payload`, `read_at`), `push_tokens` (`user_id`, `token`, `platform`).
 
+## Conventions de calcul (M3)
+
+> Implémentées en fonctions pures dans `packages/core` et verrouillées par le fixture golden (`packages/core/test/golden/`). Elles font foi pour l'app, le seed et, plus tard, le worker. **Toute modification de ces conventions passe par un ADR** (ROADMAP M3).
+
+1. **Trade à P&L net = 0** : neutre. Exclu du win rate et du profit factor ; compté dans le nombre de trades et dans l'espérance ; **casse** une série (gagnante ou perdante) sans en ouvrir une nouvelle. (Validé par l'utilisateur le 2026-09-18.)
+2. **Drawdown** : mesuré sur l'**equity de trading** (`solde initial + Σ P&L net`), sans les mouvements de trésorerie ; le pic de départ **inclut le solde initial** (un compte qui n'a jamais été au-dessus de son solde initial est en drawdown). Montant et pourcentage.
+3. **Rendement** : `Σ P&L net des trades clôturés / solde initial`. Un dépôt n'est jamais un gain, un retrait jamais une perte.
+4. **Courbe d'equity par jour** : deux séries explicites — `tradingEquity` (hors trésorerie, sert au drawdown et au rendement) et `balance` (solde réel, trésorerie incluse). `DayAggregate.endBalance` reste le **solde réel** du jour.
+5. **Heatmap et agrégats par heure ou par jour de semaine** : jour et heure dérivés du **même instant** (`openedAt`), dans le fuseau du compte — jamais un jour issu du `trading_day` combiné à une heure issue d'`openedAt`. Même instant pour `trades.session`.
+6. **Périmètre des stats** : seules les positions **clôturées** entrent dans les statistiques et les agrégats ; une position ouverte n'a ni P&L réalisé ni jour de trading de clôture.
+7. **Signes des mouvements de trésorerie** : `deposit` positif ; `withdrawal`, `payout`, `fee` négatifs ; `adjustment` pris tel quel (signe fourni par l'utilisateur).
+8. **Écriture en base** : tout montant passe par `toDbAmount(montant, scale)` (`ROUND_HALF_EVEN`) avant insertion — `scale = 8` pour les montants (`numeric(20,8)`) et les quantités (`numeric(24,8)`). La répartition d'une commission (ou de frais) entre plusieurs trades utilise `allocateProRata` : somme des parts strictement égale au total, la **dernière part de poids non nul** absorbe l'écart d'arrondi ; un poids nul reçoit exactement 0. Voir ADR-005.
+9. **Dette M4 — ordre de saisie et inversion** (à traiter avec les tables `executions`/`trades`, ADR à créer) :
+   - `executions` doit porter une colonne d'**ordre de saisie** (`sequence`) : deux exécutions au même horodatage doivent conserver leur ordre de saisie, sinon le sens du trade dépend de l'ordre des UUID. Valeur fournie par le formulaire, l'import CSV et la synchro. Impact schéma → ADR.
+   - Lors d'une **inversion de position**, une même exécution appartient à deux trades : elle est **scindée en deux lignes** à l'écriture (`executions.trade_id` reste une clé étrangère simple).
+10. **Messages de validation** (`packages/schemas`) : ce sont des **clés i18n** (`VALIDATION_KEYS`), jamais du texte en dur ; l'UI les traduit (ADR-013, M2/M4).
+
+Limite MVP : `grossPnl` suppose que l'instrument est **coté dans la devise du compte** ; sinon `InstrumentCurrencyMismatchError` (ADR-019).
+
 ## Données de démo (seed)
 - Utilisateur démo + 2 comptes : `Prop Challenge 200k` (USD, `prop_challenge` ; rule set type FTMO ajouté en P3 — pendant le MVP, règle perso de perte max 10 % en M8) et `Compte perso actions` (EUR).
-- Jeu de mars 2026 identique à la vidéo de référence (10 jours, 24 trades, P&L du mois −17 527,71, 3 jours gagnants / 7 perdants) + 1 trade le 1er avril (−2 215,72).
+- Jeu de mars 2026 (10 jours, 24 trades, P&L du mois −17 527,71, 3 jours gagnants / 7 perdants) + 1 trade le 1er avril (−2 215,72) : **généré à partir du fixture golden de `packages/core`** (jeu synthétique reproduisant les chiffres de référence, compte `Europe/Paris`, bascule 00:00 — ROADMAP M3).
 - Entrées de journal les 12 et 13 septembre 2026 sans trade.

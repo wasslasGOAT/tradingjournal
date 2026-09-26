@@ -31,10 +31,10 @@ export function HelloErrorState({
 }) {
   return (
     <View testID={testID} className="w-full max-w-sm items-center gap-sm" accessibilityRole="alert">
-      <Text testID="hello-heading" className="text-center text-lg font-bold text-danger">
+      <Text testID="hello-heading" className="text-center font-sans-semibold text-lg text-danger">
         {title}
       </Text>
-      <Text className="text-center text-base text-textSecondary">{description}</Text>
+      <Text className="text-center font-sans text-base text-textSecondary">{description}</Text>
       {onRetry ? <HelloRetryButton onPress={onRetry} disabled={isRefreshing} /> : null}
     </View>
   );

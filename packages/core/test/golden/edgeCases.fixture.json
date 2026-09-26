@@ -1,0 +1,247 @@
+{
+  "description": "Second fixture golden « cas limites » (revue M3 #13) — sorties partielles, inversion, trade ouvert, trade à 0 (FIFO), dépôt/retrait, trade traversant une bascule non-minuit (17:00 America/New_York), deux exécutions à la même seconde. Le cas « trade à 0 en moyenne pondérée » est testé séparément dans edgeCases.golden.test.ts via un appel direct à groupExecutionsIntoTrades (grouping_method de ce compte : fifo). Généré par edgeCases.build.mjs, ne pas éditer à la main.",
+  "account": {
+    "id": "d99e095d-2293-51f2-a493-1213624f47ae",
+    "name": "Cas limites",
+    "kind": "personal",
+    "currency": "USD",
+    "starting_balance": "50000",
+    "timezone": "America/New_York",
+    "day_rollover_time": "17:00",
+    "grouping_method": "fifo"
+  },
+  "instruments": [
+    {
+      "id": "c73838bc-e2d6-5eca-a618-31506e976b34",
+      "symbol": "EURUSD",
+      "asset_class": "forex",
+      "contract_multiplier": "100000",
+      "quote_ccy": "USD"
+    },
+    {
+      "id": "a54300af-c7fb-518a-9b0d-b2ddf69c8e73",
+      "symbol": "GBPUSD",
+      "asset_class": "forex",
+      "contract_multiplier": "100000",
+      "quote_ccy": "USD"
+    },
+    {
+      "id": "1e2cd2b8-a2fb-5f9c-8457-38b911bf87da",
+      "symbol": "XAUUSD",
+      "asset_class": "metal",
+      "contract_multiplier": "100",
+      "quote_ccy": "USD"
+    },
+    {
+      "id": "47e3dfb7-58ed-5156-8419-ef719fec364e",
+      "symbol": "AUDUSD",
+      "asset_class": "forex",
+      "contract_multiplier": "100000",
+      "quote_ccy": "USD"
+    },
+    {
+      "id": "d09c4248-a93e-5811-ad8a-3b68e06a547e",
+      "symbol": "NZDUSD",
+      "asset_class": "forex",
+      "contract_multiplier": "100000",
+      "quote_ccy": "USD"
+    }
+  ],
+  "executions": [
+    {
+      "id": "29f626e1-65ba-5f92-bd44-cc7831ffb453",
+      "account_id": "d99e095d-2293-51f2-a493-1213624f47ae",
+      "instrument_id": "c73838bc-e2d6-5eca-a618-31506e976b34",
+      "side": "buy",
+      "quantity": "10",
+      "price": "1.10000",
+      "commission": "0",
+      "fees": "0",
+      "executed_at": "2026-02-02T14:00:00Z",
+      "sequence": 1
+    },
+    {
+      "id": "83f227dc-bdbd-5687-ac7d-3910e34afc76",
+      "account_id": "d99e095d-2293-51f2-a493-1213624f47ae",
+      "instrument_id": "c73838bc-e2d6-5eca-a618-31506e976b34",
+      "side": "sell",
+      "quantity": "4",
+      "price": "1.10500",
+      "commission": "0",
+      "fees": "0",
+      "executed_at": "2026-02-02T15:00:00Z",
+      "sequence": 2
+    },
+    {
+      "id": "c9608ee4-5ac5-5867-99fb-40e82bc667f9",
+      "account_id": "d99e095d-2293-51f2-a493-1213624f47ae",
+      "instrument_id": "c73838bc-e2d6-5eca-a618-31506e976b34",
+      "side": "sell",
+      "quantity": "6",
+      "price": "1.11000",
+      "commission": "0",
+      "fees": "0",
+      "executed_at": "2026-02-02T16:00:00Z",
+      "sequence": 3
+    },
+    {
+      "id": "b7be7811-61f1-531b-8663-cb1e00c12552",
+      "account_id": "d99e095d-2293-51f2-a493-1213624f47ae",
+      "instrument_id": "a54300af-c7fb-518a-9b0d-b2ddf69c8e73",
+      "side": "buy",
+      "quantity": "10",
+      "price": "1.20000",
+      "commission": "0",
+      "fees": "0",
+      "executed_at": "2026-02-03T14:00:00Z",
+      "sequence": 4
+    },
+    {
+      "id": "5e80adfd-3e9e-5b5f-b667-ca076b1eb765",
+      "account_id": "d99e095d-2293-51f2-a493-1213624f47ae",
+      "instrument_id": "a54300af-c7fb-518a-9b0d-b2ddf69c8e73",
+      "side": "sell",
+      "quantity": "15",
+      "price": "1.21000",
+      "commission": "0",
+      "fees": "0",
+      "executed_at": "2026-02-03T15:00:00Z",
+      "sequence": 5
+    },
+    {
+      "id": "fb1b946a-509f-5f2e-8eb9-45436430f660",
+      "account_id": "d99e095d-2293-51f2-a493-1213624f47ae",
+      "instrument_id": "a54300af-c7fb-518a-9b0d-b2ddf69c8e73",
+      "side": "buy",
+      "quantity": "5",
+      "price": "1.19000",
+      "commission": "0",
+      "fees": "0",
+      "executed_at": "2026-02-03T16:00:00Z",
+      "sequence": 6
+    },
+    {
+      "id": "f094fe2e-7850-5779-ba9a-c40ef91286dd",
+      "account_id": "d99e095d-2293-51f2-a493-1213624f47ae",
+      "instrument_id": "1e2cd2b8-a2fb-5f9c-8457-38b911bf87da",
+      "side": "buy",
+      "quantity": "3",
+      "price": "1900.00",
+      "commission": "15.00",
+      "fees": "0",
+      "executed_at": "2026-02-04T14:00:00Z",
+      "sequence": 7
+    },
+    {
+      "id": "61a89328-04b7-5741-8552-d985c75501e9",
+      "account_id": "d99e095d-2293-51f2-a493-1213624f47ae",
+      "instrument_id": "47e3dfb7-58ed-5156-8419-ef719fec364e",
+      "side": "buy",
+      "quantity": "2",
+      "price": "0.65000",
+      "commission": "0",
+      "fees": "0",
+      "executed_at": "2026-02-05T14:00:00Z",
+      "sequence": 8
+    },
+    {
+      "id": "83a99c88-ef8e-5bd3-9912-eaafc2641508",
+      "account_id": "d99e095d-2293-51f2-a493-1213624f47ae",
+      "instrument_id": "47e3dfb7-58ed-5156-8419-ef719fec364e",
+      "side": "sell",
+      "quantity": "2",
+      "price": "0.65000",
+      "commission": "0",
+      "fees": "0",
+      "executed_at": "2026-02-05T15:00:00Z",
+      "sequence": 9
+    },
+    {
+      "id": "24aa9cd1-fc52-59c1-8680-70679805c8a5",
+      "account_id": "d99e095d-2293-51f2-a493-1213624f47ae",
+      "instrument_id": "c73838bc-e2d6-5eca-a618-31506e976b34",
+      "side": "buy",
+      "quantity": "1",
+      "price": "1.10000",
+      "commission": "0",
+      "fees": "0",
+      "executed_at": "2026-02-09T21:30:00Z",
+      "sequence": 10
+    },
+    {
+      "id": "01e6ab69-9852-5b4e-a86b-221bf0a70986",
+      "account_id": "d99e095d-2293-51f2-a493-1213624f47ae",
+      "instrument_id": "c73838bc-e2d6-5eca-a618-31506e976b34",
+      "side": "sell",
+      "quantity": "1",
+      "price": "1.11000",
+      "commission": "0",
+      "fees": "0",
+      "executed_at": "2026-02-09T22:30:00Z",
+      "sequence": 11
+    },
+    {
+      "id": "4b13b13a-3ba4-5672-9fc5-56ce22ea3ff3",
+      "account_id": "d99e095d-2293-51f2-a493-1213624f47ae",
+      "instrument_id": "d09c4248-a93e-5811-ad8a-3b68e06a547e",
+      "side": "buy",
+      "quantity": "8",
+      "price": "1.05000",
+      "commission": "0",
+      "fees": "0",
+      "executed_at": "2026-02-11T14:00:00Z",
+      "sequence": 12
+    },
+    {
+      "id": "c2b01b68-c4d2-529d-aeec-b566d41b21c5",
+      "account_id": "d99e095d-2293-51f2-a493-1213624f47ae",
+      "instrument_id": "d09c4248-a93e-5811-ad8a-3b68e06a547e",
+      "side": "buy",
+      "quantity": "2",
+      "price": "1.06000",
+      "commission": "0",
+      "fees": "0",
+      "executed_at": "2026-02-11T15:00:00Z"
+    },
+    {
+      "id": "01a0b37d-dff3-5f26-9c16-7e465fa5e4c5",
+      "account_id": "d99e095d-2293-51f2-a493-1213624f47ae",
+      "instrument_id": "d09c4248-a93e-5811-ad8a-3b68e06a547e",
+      "side": "sell",
+      "quantity": "5",
+      "price": "1.07000",
+      "commission": "0",
+      "fees": "0",
+      "executed_at": "2026-02-11T15:00:00Z"
+    },
+    {
+      "id": "a9ac4e92-982c-58cd-bd7e-055c291ece77",
+      "account_id": "d99e095d-2293-51f2-a493-1213624f47ae",
+      "instrument_id": "d09c4248-a93e-5811-ad8a-3b68e06a547e",
+      "side": "sell",
+      "quantity": "5",
+      "price": "1.08000",
+      "commission": "0",
+      "fees": "0",
+      "executed_at": "2026-02-11T16:00:00Z",
+      "sequence": 15
+    }
+  ],
+  "cash_movements": [
+    {
+      "id": "a30b0aa9-adf3-5795-94ce-5b280f2c8c62",
+      "account_id": "d99e095d-2293-51f2-a493-1213624f47ae",
+      "type": "deposit",
+      "amount": "5000",
+      "occurred_at": "2026-02-01T00:00:00Z"
+    },
+    {
+      "id": "2d86a1e5-7456-5a6d-a051-fbd23c1bdc36",
+      "account_id": "d99e095d-2293-51f2-a493-1213624f47ae",
+      "type": "withdrawal",
+      "amount": "2000",
+      "occurred_at": "2026-02-15T00:00:00Z"
+    }
+  ],
+  "trade_swaps": []
+}

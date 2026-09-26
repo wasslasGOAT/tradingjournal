@@ -6,7 +6,13 @@ appId: com.edgebook.app
 # `apps/app/scripts/e2e-mobile.mjs`). À lancer plus tard (`maestro test
 # .maestro/hello.yaml`), une fois un simulateur/émulateur disponible, avec
 # l'app démarrée via Expo Go ou un build de dev EAS (agent `release`).
+#
+# Route `/hello` (M1-8) : l'app s'ouvre désormais sur le Dashboard
+# (`(app)/index.tsx`) — l'écran Hello (déplacé vers `app/(dev)/hello.tsx`,
+# testIDs inchangés) est atteint par lien profond (`scheme: edgebook`,
+# `app.config.ts`) plutôt qu'au lancement.
 - launchApp
+- openLink: 'edgebook://hello'
 
 - assertVisible:
     id: 'hello-screen'

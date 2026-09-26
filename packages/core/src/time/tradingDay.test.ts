@@ -3,7 +3,9 @@ import { describe, expect, it } from 'vitest';
 import {
   InvalidRolloverTimeError,
   InvalidTimezoneError,
+  isTradingDayInMonth,
   tradingDayOf,
+  tradingDayParts,
   toTradingDay,
 } from './tradingDay';
 
@@ -81,6 +83,25 @@ describe('tradingDayOf', () => {
     );
   });
 
+  it('rejette un fuseau horaire inconnu de façon répétée (la mémoïsation par fuseau ne met jamais un fuseau invalide en cache comme valide)', () => {
+    expect(() =>
+      tradingDayOf(new Date('2026-03-30T21:30:00Z'), 'Repeated/Invalid', '00:00'),
+    ).toThrow(InvalidTimezoneError);
+    // Deuxième appel avec le même fuseau invalide : doit lever à nouveau, pas retourner un résultat mis en cache par erreur.
+    expect(() =>
+      tradingDayOf(new Date('2026-03-31T10:00:00Z'), 'Repeated/Invalid', '00:00'),
+    ).toThrow(InvalidTimezoneError);
+  });
+
+  it('un fuseau valide appelé juste après un fuseau invalide continue de fonctionner normalement (pas de pollution du cache)', () => {
+    expect(() =>
+      tradingDayOf(new Date('2026-03-30T21:30:00Z'), 'Another/Invalid', '00:00'),
+    ).toThrow(InvalidTimezoneError);
+    expect(tradingDayOf(new Date('2026-01-15T23:30:00Z'), 'Europe/Paris', '00:00')).toBe(
+      '2026-01-16',
+    );
+  });
+
   describe('changements d’heure (DST) — tests golden', () => {
     // Tableau de référence (revue code-reviewer), identique quel que soit le TZ du process
     // d'exécution (TZ=UTC, TZ=Europe/Paris, TZ=Asia/Tokyo, TZ=America/New_York...).
@@ -132,6 +153,17 @@ describe('tradingDayOf', () => {
   });
 });
 
+describe('tradingDayOf — indépendance au fuseau de la machine hôte', () => {
+  it('reste stable quel que soit `TZ` du process (voir aussi `pnpm test:tz`, TZ=Europe/Paris)', () => {
+    // Même instant/compte, indépendamment du fuseau du process qui exécute le test.
+    expect(tradingDayOf(new Date('2026-03-29T01:30:00Z'), 'UTC', '00:00')).toBe('2026-03-29');
+    // EDT (UTC-4) : 01:30Z -> 2026-03-28T21:30 local, après la bascule 17:00 -> jour suivant.
+    expect(tradingDayOf(new Date('2026-03-29T01:30:00Z'), 'America/New_York', '17:00')).toBe(
+      '2026-03-29',
+    );
+  });
+});
+
 describe('toTradingDay', () => {
   it('accepte une chaîne YYYY-MM-DD', () => {
     expect(toTradingDay('2026-03-31')).toBe('2026-03-31');
@@ -140,5 +172,38 @@ describe('toTradingDay', () => {
   it('rejette un format invalide', () => {
     expect(() => toTradingDay('31/03/2026')).toThrow();
     expect(() => toTradingDay('2026-03-31T00:00:00Z')).toThrow();
+  });
+});
+
+describe('tradingDayParts', () => {
+  it('découpe un TradingDay en composants calendaires', () => {
+    expect(tradingDayParts(toTradingDay('2026-03-09'))).toEqual({ year: 2026, month: 3, day: 9 });
+  });
+
+  it('gère les mois/jours à deux chiffres', () => {
+    expect(tradingDayParts(toTradingDay('2026-12-31'))).toEqual({
+      year: 2026,
+      month: 12,
+      day: 31,
+    });
+  });
+});
+
+describe('isTradingDayInMonth', () => {
+  it('vrai si le jour appartient au mois civil demandé', () => {
+    expect(isTradingDayInMonth(toTradingDay('2026-03-15'), 2026, 3)).toBe(true);
+  });
+
+  it('faux si le mois diffère', () => {
+    expect(isTradingDayInMonth(toTradingDay('2026-03-15'), 2026, 4)).toBe(false);
+  });
+
+  it("faux si l'année diffère (même mois civil)", () => {
+    expect(isTradingDayInMonth(toTradingDay('2026-03-15'), 2027, 3)).toBe(false);
+  });
+
+  it('vrai en bordure de mois (premier et dernier jour)', () => {
+    expect(isTradingDayInMonth(toTradingDay('2026-03-01'), 2026, 3)).toBe(true);
+    expect(isTradingDayInMonth(toTradingDay('2026-03-31'), 2026, 3)).toBe(true);
   });
 });

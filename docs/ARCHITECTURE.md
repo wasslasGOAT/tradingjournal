@@ -6,12 +6,13 @@
 
 ---
 
-## 0. Périmètre MVP (ADR-015, ADR-016, ADR-017)
+## 0. Périmètre MVP (ADR-015, ADR-016, ADR-017, ADR-023)
 
+Le MVP est construit **d'abord en application web** responsive et installable (PWA, `apps/web`, ADR-023/024) ; iOS et Android viendront en P6 en emballant le même code avec Capacitor. `apps/app` (Expo) et `packages/ui` (primitives React Native) sont **gelés** : conservés, plus développés.
 Le MVP est construit en premier (phases M0–M9 de `ROADMAP.md`). Tant qu'il n'est pas terminé, **cette section prévaut** sur les sections suivantes quand elles divergent ; les sections marquées **[post-MVP]** restent la cible.
 
 ### 0.1 Actif / reporté
-| Actif dans le MVP (web + iOS + Android) | Reporté après le MVP |
+| Actif dans le MVP (web responsive + PWA) | Reporté après le MVP |
 |---|---|
 | Auth Supabase, onboarding, comptes multiples saisis à la main (tous `account.kind`), dépôts/retraits | Import CSV (premier chantier post-MVP) |
 | Saisie et édition **manuelles** des trades (exécutions → trades), tags, setups, notes, captures | Synchro API et connecteurs brokers (§5.3) |
@@ -19,15 +20,15 @@ Le MVP est construit en premier (phases M0–M9 de `ROADMAP.md`). Tant qu'il n'e
 | Journal + psychologie (pré/post-session, humeur, émotions, captures) | `daily_stats` matérialisés (§5.4) |
 | Analytics (equity, drawdown, par symbole/setup/tag/session/heure/jour, distribution des R) | Modèles de règles prop firm `rule_sets` (§5.7) |
 | Règles perso + checklists de confluences, alertes in-app | Coach IA et score (§5.8), abonnements (§5.9), notifications push/e-mail (§5.10) |
-| FR/EN, sombre/clair, couleurs P&L, masquage des montants | Export RGPD, publication stores, Sentry/PostHog (§11, §12) |
-| Données de démo (seed) | Suppression de compte : décision en attente (ADR-018) |
+| FR/EN, sombre/clair, couleurs P&L, masquage des montants | Export RGPD, apps iOS/Android (Capacitor) et stores, Sentry/PostHog (§11, §12) |
+| Données de démo (seed) | Suppression de compte in-app (ADR-018 : option B pendant le MVP) |
 
 ### 0.2 Vue d'ensemble MVP
 ```mermaid
 flowchart LR
-  subgraph App[apps/app · Expo · web + iOS + Android]
+  subgraph App[apps/web · React + Vite · PWA]
     UI[Écrans features/*]
-    TQ[TanStack Query<br/>cache persisté]
+    TQ[TanStack Query<br/>cache persisté<br/>couche src/data sans DOM]
     CORE[packages/core<br/>calculs purs]
   end
   subgraph Supabase
@@ -42,7 +43,7 @@ flowchart LR
   UI --> AUTH
   UI --> STO
 ```
-Structure du monorepo pendant le MVP : celle du §4 **sans** `apps/server` ni `packages/api-client`, **avec** `packages/db` (types générés, §4) ; routes `coach/` et réglages connexions/abonnement absents.
+Structure du monorepo pendant le MVP : celle du §4 **sans** `apps/server` ni `packages/api-client`, **avec** `packages/db` (types générés, §4) ; routes `coach` et réglages connexions/abonnement absents ; `apps/app` et `packages/ui` gelés (ADR-023).
 
 ### 0.3 Règles d'accès aux données (MVP)
 - L'app n'utilise que la clé anon + la session utilisateur ; la RLS est l'unique barrière (tests RLS sur chaque table et sur Storage).
@@ -51,7 +52,7 @@ Structure du monorepo pendant le MVP : celle du §4 **sans** `apps/server` ni `p
 - Montants lus en chaîne (`net_pnl::text`…) puis convertis en `Decimal` : PostgREST sérialise `numeric` en nombre JSON.
 - Clés de requête : `[domaine, accountId | 'all', période/mois, filtres]` ; mutations optimistes avec invalidation ciblée des clés calendrier/dashboard/analytics.
 - Changement de fuseau ou d'heure de bascule d'un compte : recalcul et réécriture de `trades.trading_day` par l'app.
-- « Tous les comptes » multi-devises : ADR-019 (en attente).
+- « Tous les comptes » multi-devises : un total par devise, sans conversion (ADR-019).
 
 ### 0.4 Écarts avec les sections suivantes pendant le MVP
 | Section | Pendant le MVP |
@@ -61,7 +62,7 @@ Structure du monorepo pendant le MVP : celle du §4 **sans** `apps/server` ni `p
 | §5.7 | Règles perso et checklists uniquement ; `rule_violations` non stockées (évaluation à la volée) ; alertes in-app |
 | §5.11 | Auth et onboarding actifs ; suppression selon ADR-018 ; export reporté |
 | §9 | Pas de `service_role`, pas de rate limiting applicatif (limites Supabase) ; pas d'identifiants broker |
-| §11 | Environnements dev (Supabase cloud, ADR-020) + préproduction (web statique, builds EAS internes) ; pas de serveur à déployer |
+| §11 | Environnements dev (Supabase cloud, ADR-020) + préproduction web statique (Cloudflare Pages, ADR-025) ; pas de serveur, pas de build natif |
 
 ---
 
@@ -98,9 +99,9 @@ Exécution d'ordres, signaux de trading, social/copy trading, backtesting intég
 ```mermaid
 flowchart TB
   subgraph Clients
-    WEB[Web app<br/>Expo Router · export web]
-    IOS[iOS app<br/>Expo / EAS]
-    AND[Android app<br/>Expo / EAS]
+    WEB[Web app · PWA<br/>React + Vite]
+    IOS[iOS app<br/>Capacitor · P6]
+    AND[Android app<br/>Capacitor · P6]
   end
 
   subgraph Supabase
@@ -119,7 +120,7 @@ flowchart TB
     LLM[Claude API]
     BRK[Connecteurs brokers<br/>MetaApi, Tradovate, IBKR, CCXT…]
     RC[RevenueCat<br/>+ Stripe web]
-    PUSH[Expo Push / Resend]
+    PUSH[Push natif Capacitor / Resend]
     OBS[Sentry · PostHog]
   end
 
@@ -153,63 +154,65 @@ flowchart TB
 | Couche | Choix par défaut | Pourquoi | Alternatives acceptables |
 |---|---|---|---|
 | Monorepo | pnpm + Turborepo | Partage de code app/serveur | Nx |
-| App (web + iOS + Android) | **Expo + Expo Router** (une seule base de code, sortie web) | Un seul code UI pour 3 plateformes ; EAS pour les stores | Next.js (web) + Expo (mobile) avec UI séparées |
-| Styles | NativeWind (Tailwind pour RN) + tokens partagés | Même vocabulaire que Tailwind | Tamagui, Unistyles |
-| Composants | Kit maison dans `packages/ui` (primitives RN) | Contrôle total du design | react-native-reusables |
-| Icônes | lucide-react-native | Même set que l'app de référence | — |
-| Graphiques | Interface `Chart` avec adaptateurs : `victory-native` (natif) / `recharts` (web) | Aucune lib n'est excellente partout | Skia partout, ECharts web |
+| App | **React + Vite + TypeScript**, SPA responsive installable (PWA, `vite-plugin-pwa`), routeur **TanStack Router** ; iOS/Android en P6 via **Capacitor** (ADR-023/024) | Boucle de dev rapide, écosystème web, un seul code web + stores | Expo (gelé, `apps/app`), Next.js |
+| Styles | **Tailwind CSS v4**, thème généré depuis `packages/ui/src/tokens.data.cjs` | Tokens à source unique | — |
+| Composants | **shadcn/ui** (Radix) copiés dans `apps/web/src/components/ui` | Accessibles, contrôle total du design | — |
+| Icônes | lucide-react | Même set que l'app de référence | — |
+| Graphiques | Composant `Chart` (chart shadcn sur **recharts**), heatmap en grille CSS (ADR-024) | Types repris de `packages/ui/src/chart/types.ts` | ECharts |
 | Données client | TanStack Query (+ persistance) | Cache, offline, invalidation | — |
 | État UI | Zustand | Léger | Jotai |
 | Formulaires | react-hook-form + zod | Schémas zod partagés avec l'API | — |
-| i18n | i18next + expo-localization | FR/EN dès J1 | Lingui |
+| i18n | i18next + react-i18next, locale initiale `navigator.languages` → `resolveLocale` (`@repo/i18n`) | FR/EN dès J1 | Lingui |
 | Backend données/auth | **Supabase** (Postgres, Auth, Storage, Realtime) | Postgres + RLS + auth sociale clé en main | Neon + Better Auth |
 | API métier **[post-MVP]** | **Hono** sur Node (TypeScript) | Léger, typé, portable (Node, Bun, edge) | Fastify, Supabase Edge Functions |
 | Contrat API **[post-MVP]** | zod + `@hono/zod-openapi` → client typé généré | Typage de bout en bout | tRPC |
 | Jobs **[post-MVP]** | **pg-boss** (queue dans Postgres) | Zéro infra en plus | BullMQ + Redis, Inngest |
 | ORM / SQL | Drizzle (côté serveur, **[post-MVP]**) ; migrations SQL via Supabase CLI ; MVP : `supabase-js` + types générés | Types + SQL lisible | Kysely, Prisma |
-| Animations et interactions | react-native-reanimated, expo-haptics (derrière une interface), FlashList — ADR-017 | Fluidité 60 fps, web + natif | Moti |
+| Animations et interactions | Transitions CSS / `tw-animate-css` (+ `motion` si besoin), `@tanstack/react-virtual`, interface `Haptics` (vide sur le web, Capacitor en P6) — ADR-017/024 | Animations sur le compositeur, 60 fps | — |
 | IA **[post-MVP]** | Claude API (tool use + streaming) | Qualité d'analyse | Autre LLM derrière la même interface `CoachProvider` |
 | Paiements **[post-MVP]** | **RevenueCat** (IAP iOS/Android + Stripe pour le web) | Obligatoire en pratique pour les stores, entitlements unifiés | Stripe seul (web uniquement) |
-| Notifications **[post-MVP]** | expo-notifications + Resend (email) | — | OneSignal |
+| Notifications **[post-MVP]** | Push via Capacitor (P6) + Resend (email) | — | OneSignal |
 | Observabilité **[post-MVP]** | Sentry (app + serveur), PostHog (produit, feature flags) | — | — |
-| Hébergement | Web : Vercel ou Cloudflare Pages · Server **[post-MVP]** : Fly.io ou Railway · DB : Supabase Cloud (région UE) | Simple, RGPD | Render, AWS |
-| Builds mobiles | EAS Build / Submit / Update (OTA) | — | Fastlane |
-| Tests | Vitest · Playwright (web) · Maestro (mobile) | — | Detox |
+| Hébergement | Web : **Cloudflare Pages** (ADR-025) · Server **[post-MVP]** : Fly.io ou Railway · DB : Supabase Cloud (région UE) | Simple, RGPD | Render, AWS |
+| Builds mobiles **[P6]** | Capacitor (projets iOS/Android générés depuis `apps/web`) ; EAS gelé avec `apps/app` | — | Fastlane |
+| Tests | Vitest · Playwright (`apps/web`) · tests natifs Capacitor en P6 | — | — |
 | CI | GitHub Actions | — | — |
 
 Choix structurants retenus en M0 (versions exactes : `package.json` / lockfile, jamais figées ici) :
-- **TypeScript 6, pas 7** : typescript-eslint et le SDK Expo ne supportent pas encore TS 7. À réévaluer quand les deux le supportent.
-- **ESLint 9** (flat config), pas 10 : requis par les plugins Expo.
+- **TypeScript 6, pas 7** : typescript-eslint (et le SDK Expo d'`apps/app`, gelé) ne supportent pas encore TS 7.
+- **ESLint 9** (flat config), pas 10 : requis par les plugins Expo d'`apps/app` ; à réévaluer si `apps/app` quitte le workspace.
+- **React** : même version majeure.mineure dans `apps/web` et `apps/app` tant que les deux sont dans le workspace (`nodeLinker: hoisted`, ADR-024).
 - Montants : configuration `Decimal` dans ADR-005. Jour de trading : `formatInTimeZone` (date-fns-tz) dans `packages/core/time`.
-- Session native chiffrée (AES-256-GCM, clé SecureStore liée à l'appareil) : §9.
+- Session : web = `localStorage` (§9) ; session native chiffrée d'`apps/app` gelée, stockage sécurisé Capacitor choisi en P6.
 
 ---
 
 ## 4. Structure du monorepo
-> MVP : sans `apps/server`, `packages/api-client`, `(app)/coach/` ni réglages connexions/abonnement (§0.2) ; les données passent par `apps/app/lib` (client Supabase) + TanStack Query, typées par `packages/db`.
+> MVP : sans `apps/server`, `packages/api-client`, route `coach` ni réglages connexions/abonnement (§0.2) ; les données passent par `apps/web/src/data` (client Supabase + TanStack Query, **sans dépendance au DOM**, extractible en `packages/data`), typées par `packages/db`. `apps/app` et `packages/ui` sont gelés (ADR-023).
 
 ```
 .
 ├── CLAUDE.md
-├── docs/                         # ARCHITECTURE, DATA_MODEL, ROADMAP, DECISIONS, RELEASE
+├── docs/                         # ARCHITECTURE, DATA_MODEL, ROADMAP, DECISIONS, RELEASE, REPRISE
+├── scripts/                      # check-secrets, deploy-web, generate-web-headers (propriétaire `release`)
 ├── apps/
-│   ├── app/                      # Expo (iOS, Android, Web)
-│   │   ├── app/                  # Expo Router (routes = fichiers)
-│   │   │   ├── (auth)/           # login, signup, forgot, onboarding
-│   │   │   ├── (app)/            # zone connectée
-│   │   │   │   ├── _layout.tsx   # tabs (mobile) / sidebar (web large)
-│   │   │   │   ├── index.tsx     # dashboard
-│   │   │   │   ├── calendar/
-│   │   │   │   ├── journal/
-│   │   │   │   ├── trades/
-│   │   │   │   ├── analytics/
-│   │   │   │   ├── coach/
-│   │   │   │   ├── rules/
-│   │   │   │   └── settings/     # profil, comptes, connexions, abonnement, préférences
-│   │   │   └── +not-found.tsx
-│   │   ├── features/             # logique UI par domaine (hooks, composants)
-│   │   ├── lib/                  # supabase client, api client, i18n, analytics
-│   │   └── app.config.ts
+│   ├── web/                      # React + Vite + PWA (MVP ; Capacitor en P6) — ADR-023
+│   │   ├── src/
+│   │   │   ├── routes/           # TanStack Router (routes = fichiers)
+│   │   │   │   ├── _auth/        # login, signup, forgot, onboarding
+│   │   │   │   ├── _app/         # zone connectée : tabs (< 1024 px) / sidebar ; dashboard,
+│   │   │   │   │                 # calendar, trades, journal, analytics, rules, settings
+│   │   │   │   │                 # (coach post-MVP)
+│   │   │   │   └── dev/          # catalogue, exclu du build de production
+│   │   │   ├── features/         # UI par domaine (composants, hooks de vue)
+│   │   │   ├── components/ui/    # composants shadcn thémés + Chart
+│   │   │   ├── data/             # requêtes/mutations Supabase + clés TanStack Query, sans DOM
+│   │   │   └── lib/              # supabase client, i18n, stockage, flags
+│   │   ├── public/               # _headers (CSP), _redirects, robots.txt, icônes PWA,
+│   │   │                         # theme-init.js (anti-flash du thème, same-origin)
+│   │   ├── e2e/                  # Playwright ; e2e/prod = export de production (PWA, fluidité)
+│   │   └── vite.config.ts
+│   ├── app/                      # Expo — GELÉ (ADR-023), conservé, plus développé
 │   └── server/
 │       ├── src/
 │       │   ├── routes/v1/        # imports, sync, coach, billing, account, export
@@ -224,7 +227,7 @@ Choix structurants retenus en M0 (versions exactes : `package.json` / lockfile, 
 │   ├── schemas/                  # schémas zod partagés (DTO, formulaires)
 │   ├── api-client/               # client typé généré depuis l'OpenAPI (post-MVP)
 │   ├── db/                       # types générés Supabase (`db:types`), propriétaire `database`
-│   ├── ui/                       # primitives UI + tokens + Chart (adaptateurs)
+│   ├── ui/                       # GELÉ : primitives React Native ; tokens.data.cjs = source des tokens
 │   ├── i18n/                     # fichiers de traduction fr/en
 │   └── config/                   # tsconfig, eslint, APP_NAME, feature flags par défaut
 └── supabase/
@@ -239,7 +242,7 @@ Règle d'import **[invariant]** : `apps/*` → `packages/*` uniquement. `package
 
 ## 5. Domaines et modules
 
-Chaque domaine = un dossier dans `packages/core/<domaine>`, `apps/server/src/routes/v1/<domaine>` (post-MVP) et `apps/app/features/<domaine>`.
+Chaque domaine = un dossier dans `packages/core/<domaine>`, `apps/server/src/routes/v1/<domaine>` (post-MVP) et `apps/web/src/features/<domaine>`.
 
 ### 5.1 Comptes (`accounts`)
 - Création manuelle ou via connexion.
@@ -328,31 +331,38 @@ Synchro terminée/échouée, règle proche de la limite ou violée, rappel de jo
 
 ### 6.1 Navigation **[modifiable]**
 - **Mobile** : tab bar (Dashboard · Calendrier · Journal · Coach · Plus). « Plus » contient Trades, Analytics, Règles, Réglages.
-  MVP (ADR-011 appliqué par défaut, sans Coach) : Dashboard · Calendrier · Trades · Journal · Plus (Analytics, Règles, Réglages) ; ajout rapide de trade accessible depuis tous les onglets.
+  MVP (ADR-011, acceptée) : Dashboard · Calendrier · Trades · Journal · Plus (Analytics, Règles, Réglages) ; bouton d'ajout rapide de trade global.
 - **Web ≥ 1024 px** : sidebar fixe avec toutes les sections ; en dessous, même tab bar que le mobile.
 - Header : sélecteur de compte global (« Tous les comptes » inclus) + période, persistés dans Zustand + URL (web).
+- Tab bar **flottante** (détachée des bords, coins arrondis, ombre) et **translucide** (`backdrop-filter` ; `expo-blur` dans `apps/app` gelé) ; le contenu défile sous la barre (marge basse réservée sur chaque écran).
+- Web : « mobile » = largeur < 1024 px (navigateur ou PWA). Implémentation : TanStack Router (ADR-024).
 
 ### 6.2 Design system
-- Tokens dans `packages/ui/tokens.ts` (couleurs, rayons, espacements, typo), exposés à NativeWind.
-- Direction visuelle **acceptée** (ADR-012) : fond noir, cartes `#0E0E11`, accent bleu (`#5D99F9` comme point de départ), profits en bleu. Nom et logo restent provisoires (ADR-012). Aucun nom, logo, texte ni maquette de la référence n'est copié.
+- Tokens : source unique `packages/ui/src/tokens.data.cjs` (couleurs, rayons, espacements, typo, durées), exposée au thème Tailwind v4 d'`apps/web` via `@repo/ui/tokens-data` (et à NativeWind dans `apps/app`, gelé).
+- Direction visuelle **acceptée** (ADR-012) : fond noir, cartes `#0E0E11`, accent bleu légèrement décalé de `#5D99F9` (ADR-012), police Inter (ADR-021), profits en bleu. Nom et logo restent provisoires (ADR-012). Aucun nom, logo, texte ni maquette de la référence n'est copié.
 - Thème sombre par défaut, thème clair prévu dans les tokens.
 - Option « couleurs P&L » : bleu/gris (défaut) ou vert/rouge.
-- Composants de base : `Screen`, `Card`, `GlowCard`, `StatTile`, `Button`, `IconButton`, `Segmented`, `Select`, `DateRangePicker`, `Sheet`, `Skeleton`, `ShimmerBar`, `ProgressBar`, `ScoreRing` (post-MVP), `DayCell`, `EmptyState`, `Toast`, `Chart`.
+- Composants de base (shadcn/ui thémés, `apps/web/src/components/ui`) : `Screen`, `Card`, `GlowCard`, `StatTile`, `Button`, `IconButton`, `Segmented`, `Select`, `DateRangePicker`, `Sheet`, `Skeleton`, `ShimmerBar`, `ProgressBar`, `ScoreRing` (post-MVP), `DayCell`, `EmptyState`, `Toast`, `VirtualizedList` (`@tanstack/react-virtual`), `Chart`.
+- **Persistance des préférences d'affichage** (M1) : thème, couleurs P&L, masquage des montants et langue sont lus au démarrage depuis le stockage local (avant le premier rendu, avec repli sur les valeurs par défaut si la lecture échoue) et réécrits à chaque changement. Ils seront **synchronisés avec `preferences` en base** en M2 (§5.1, DATA_MODEL).
 - Masquage des montants (icône œil) global, persistant.
+- **Catalogue interne** de composants (route `/dev/catalog`) : activé par le mode développement de Vite, **exclu des builds de production**.
 - Accessibilité : tailles dynamiques, contraste AA, libellés pour lecteurs d'écran, respect de « réduire les animations ».
 
 ### 6.3 Fluidité et finition **[priorité n° 1 du MVP]**
 Exigences et protocole de mesure : ADR-017. En résumé, vérifiées à chaque clôture de phase :
 | Exigence | Cible |
 |---|---|
-| Animations, transitions | react-native-reanimated, durées/courbes en tokens |
+| Animations, transitions | CSS / `tw-animate-css` (+ `motion` si besoin), durées/courbes en tokens, `prefers-reduced-motion` |
 | Chargement | squelettes, jamais de spinner plein écran sur les écrans principaux |
 | Écritures | mises à jour optimistes avec retour arrière |
-| Mobile | retours haptiques sur les interactions clés |
-| Listes | FlashList au-delà de 50 éléments |
-| Interactions principales | 60 fps (Android milieu de gamme, build release) |
+| Mobile | retours haptiques sur les interactions clés (interface `Haptics` : vide sur le web, Capacitor en P6) |
+| Listes | `@tanstack/react-virtual` au-delà de 50 éléments |
+| Interactions principales | 60 fps (export de production, CPU ×4 ; Capacitor Android en P6) ; `Segmented` mesuré hors changement de thème |
+| Changement de thème | action ponctuelle hors seuil fps : sans rechargement, < 200 ms (ADR-017, amendement du 2026-09-25) |
 | Dashboard | premier affichage < 1,5 s |
 | Changement de mois/compte | aucune donnée périmée visible |
+
+Mesure de fluidité : la mesure **web** automatisée (Playwright, CPU ×4, `vite preview`) **fait foi et est bloquante** ; la mesure native se fera sur Capacitor Android en P6 — ADR-017, révision du 2026-09-25.
 
 ---
 
@@ -397,32 +407,33 @@ Le CRUD simple (journal, tags, règles, préférences, notes) passe par Supabase
 - Rate limiting par utilisateur sur l'API (surtout `/coach/chat`, `/imports`).
 - Validation zod de toutes les entrées ; taille max d'upload ; parsing CSV en streaming.
 - Identifiants broker : lecture seule exigée quand la plateforme le permet, chiffrés, rotation de clé documentée.
-- Stockage de session : natif = session chiffrée AES-256-GCM, clé dans SecureStore (`WHEN_UNLOCKED_THIS_DEVICE_ONLY`) ; web = `localStorage` (risque XSS assumé faute de serveur, ADR-016) → CSP stricte (ROADMAP M9).
+- Stockage de session : web = `localStorage` (risque XSS assumé faute de serveur, ADR-016) → CSP via `_headers` Cloudflare Pages : de base depuis M1-web (`script-src 'self'`, `connect-src` limité à l'hôte Supabase exact, injecté au déploiement par `scripts/generate-web-headers.mjs`), stricte en M9 (ROADMAP DW3) ; le service worker de la PWA ne met jamais en cache les réponses Supabase. Natif (P6, Capacitor) : stockage sécurisé à choisir (l'implémentation SecureStore + AES-256-GCM d'`apps/app` est gelée).
 - Anti-secrets : hook `.githooks/pre-commit` (`check:secrets --staged`) ; scan de tout l'historique en CI.
 - Journal d'audit pour les actions sensibles (connexion broker, suppression, export).
 
 ---
 
 ## 10. Hors-ligne et performance
-- TanStack Query persisté derrière une interface de stockage : dashboard et calendrier lisibles hors-ligne. MVP : AsyncStorage (natif et web) ; cible : MMKV natif / IndexedDB web, sans changer l'interface.
+- TanStack Query persisté derrière une interface de stockage : dashboard et calendrier lisibles hors-ligne. MVP web : `localStorage` ou IndexedDB, clé propre à chaque utilisateur, sans changer l'interface.
 - Journal : file d'écritures hors-ligne rejouée à la reconnexion.
-- Listes longues : FlashList, pagination par curseur.
+- Listes longues : `@tanstack/react-virtual`, pagination par curseur.
 - Objectif : premier affichage du dashboard < 1,5 s sur un mobile milieu de gamme, via les agrégats `daily_stats` (MVP : agrégats `packages/core` sur les trades de la période + cache persisté, §0.4).
 - MVP : cache de lecture persisté et brouillons locaux du journal ; la file d'écritures hors-ligne est reportée (backlog).
 
 ---
 
 ## 11. Environnements, CI/CD, publication
-> MVP : colonne Server sans objet ; environnements local et preview uniquement, pas de soumission aux stores (§0.4). Dépôt GitHub privé + GitHub Actions.
+> MVP : colonne Server sans objet ; environnements local et preview uniquement, pas d'app native ni de soumission aux stores (§0.4). Dépôt GitHub privé + GitHub Actions.
 | Env | DB | App | Server |
 |---|---|---|---|
-| local | Poste dev : projet Supabase cloud « dev » (UE, ADR-020) · CI : Supabase CLI (Docker du runner) | `expo start` (Expo Go iOS, build de dev EAS Android) | `tsx watch` |
-| preview | projet Supabase « staging » | EAS Update channel `preview` + web preview Vercel | Fly app staging |
-| production | Supabase prod (UE) | App Store / Play Store + web prod | Fly app prod |
+| local | Poste dev : projet Supabase cloud « dev » (UE, ADR-020) · CI : Supabase CLI (Docker du runner) | `pnpm dev:web` (Vite) ; téléphone : navigateur ou PWA via la préproduction | `tsx watch` |
+| preview | Supabase « dev » pendant le MVP, projet « staging » ensuite | Cloudflare Pages, URL fixe (ADR-025) ; builds Capacitor internes en P6 | Fly app staging |
+| production | Supabase prod (UE) | Web prod (Cloudflare Pages) + App Store / Play Store via Capacitor (P6) | Fly app prod |
 
-- CI (chaque PR) : lint, typecheck, tests unitaires, tests RLS, build web, Playwright.
+- CI (chaque PR) : lint, typecheck, tests unitaires, tests RLS, build web (`apps/web`), Playwright. `apps/app` (gelé) est exclu des commandes par défaut et de la CI.
 - Merge sur `main` → déploiement staging automatique ; tag `v*` → production.
-- Mobile : `eas build` (profils development / preview / production), `eas submit`, mises à jour JS via `eas update` (canaux), versioning natif automatique. Procédure détaillée : `docs/RELEASE.md`.
+- Préproduction web (MVP) : `pnpm deploy:web` depuis le poste (build, en-têtes générés, scan anti-secrets, `wrangler pages deploy`, URL fixe par branche) — `docs/RELEASE.md` §0.
+- Mobile (P6) : Capacitor ; la chaîne EAS (`apps/app/eas.json`) est gelée. Procédure détaillée : `docs/RELEASE.md`.
 - Migrations DB appliquées par la CI avant le déploiement du serveur.
 
 Checklist stores (à revalider à la soumission, les règles évoluent) : compte Apple Developer et Google Play Console, politique de confidentialité et CGU hébergées, suppression de compte in-app, Sign in with Apple, privacy manifest iOS, fiche Data safety Android, disclaimer « pas un conseil financier », compte de démo pour la review, captures d'écran.
@@ -430,7 +441,7 @@ Checklist stores (à revalider à la soumission, les règles évoluent) : compte
 ---
 
 ## 12. Observabilité et produit **[post-MVP]**
-- Sentry : erreurs app + serveur, releases liées aux builds EAS.
+- Sentry : erreurs app + serveur, releases liées aux builds web et Capacitor.
 - PostHog : événements clés (`import_completed`, `journal_saved`, `coach_message_sent`, `paywall_viewed`, `subscription_started`), feature flags pour les déploiements progressifs.
 - Logs structurés (pino) côté serveur, sans données sensibles.
 
@@ -445,8 +456,8 @@ Checklist stores (à revalider à la soumission, les règles évoluent) : compte
 | Modèle IA | implémentation de `CoachProvider` |
 | Nouveaux brokers | nouveau dossier dans `connectors/` |
 | Nouvelles prop firms | ligne dans `rule_sets` (données) |
-| Navigation | `apps/app/app/(app)/_layout.tsx` |
-| Web séparé en Next.js | possible plus tard : `packages/*` restent réutilisables |
+| Navigation | layout de `apps/web/src/routes/_app` |
+| Retour à une app Expo native | dégeler `apps/app` + extraire `apps/web/src/data` en `packages/data` (ADR-023, réversibilité) |
 | Hébergeur | Dockerfile + variables d'env, rien de spécifique à Fly |
 
 ---

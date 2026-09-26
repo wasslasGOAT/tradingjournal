@@ -1,0 +1,12 @@
+# src/routeTree.gen.ts est régénéré par le plugin TanStack Router à chaque build/dev,
+# mais volontairement VERSIONNÉ (pas ignoré) : recommandation TanStack pour un
+# monorepo/CI (https://tanstack.com/router) — sans lui, `lint`/`typecheck` en CI
+# (qui tournent *avant* tout build web) ne trouvent pas les types de route et une
+# cascade d'erreurs `no-unsafe-*` apparaît sur tous les fichiers qui importent
+# `./routeTree.gen`. Exclu de Prettier (`.prettierignore` racine) et d'ESLint
+# (`apps/web/eslint.config.js`, `ignores`) : jamais édité à la main, jamais formaté,
+# régénéré silencieusement au prochain `vite dev`/`vite build` (un diff après coup
+# n'est pas un bug, juste le fichier qui rattrape les routes ajoutées/retirées).
+
+# Généré depuis @repo/ui/tokens-data à chaque chargement de vite.config.ts (W-3).
+src/styles/theme.generated.css

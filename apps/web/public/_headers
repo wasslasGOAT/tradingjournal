@@ -1,0 +1,67 @@
+# Cloudflare Pages — en-têtes (ADR-025, ROADMAP M1-web W-8, corrections revue W-10/audit sécurité).
+# Réf. : CLAUDE.md, ARCHITECTURE §9, docs/RELEASE.md §0.
+#
+# `connect-src` : le placeholder `__SUPABASE_CONNECT_SRC__` ci-dessous n'est **jamais**
+# déployé tel quel. `scripts/generate-web-headers.mjs` (appelé par `scripts/deploy-web.mjs`
+# après le build, avant l'upload) le remplace dans `apps/web/dist/_headers` par le host
+# exact du projet Supabase, lu depuis `VITE_SUPABASE_URL` (`apps/web/.env`, jamais
+# commité) — ce fichier source, versionné, garde le placeholder. L'URL Supabase n'est pas
+# secrète (elle est de toute façon embarquée en clair dans le bundle JS livré au
+# navigateur) : seule la clé associée (`VITE_SUPABASE_ANON_KEY`) ne doit jamais être
+# affichée/loggée, et le script de génération ne lit/n'imprime que l'URL, jamais la clé.
+# Host exact plutôt qu'un joker `*.supabase.co` (même logique de prudence qu'ADR-020, même
+# si ce n'est pas une redirection d'auth). Si `apps/web/.env` est absent (CI, où aucun
+# secret Supabase n'est fourni : voir .github/workflows/ci.yml), le script retombe sur le
+# joker `https://*.supabase.co`/`wss://*.supabase.co` avec un avertissement — le build ne
+# doit jamais échouer faute de ce fichier.
+#
+# CSP « de base » (pas encore la CSP stricte exigée en M9, ARCHITECTURE §9) :
+# - `script-src 'self'` : le script anti-flash est servi depuis `/theme-init.js`
+#   (fichier statique same-origin, app-ui) — `'unsafe-inline'` n'est plus nécessaire.
+# - `style-src 'unsafe-inline'` : reste nécessaire jusqu'en M9 — styles posés en ligne via
+#   la CSSOM par Sonner (toasts) et `react-remove-scroll` (verrouillage du scroll des
+#   dialogues Radix) ; pas de hash/nonce praticable pour du style généré dynamiquement au
+#   runtime. À revisiter en M9 si une alternative existe.
+# - `worker-src 'self'` : enregistrement du service worker PWA (`/sw.js`, `vite-plugin-pwa`,
+#   W-7) et de son import `workbox-*.js`, même origine.
+# - `img-src`/`font-src` avec `data:` : icônes et police Inter auto-hébergée
+#   (`@fontsource-variable/inter`, ADR-024) peuvent embarquer une URI `data:`.
+# - `frame-ancestors 'none'` + `X-Frame-Options: DENY` : l'app ne doit jamais être chargée
+#   dans une iframe tierce (redondant volontairement, tous les navigateurs ciblés ne
+#   lisent pas `frame-ancestors` de la même façon qu'`X-Frame-Options`).
+# - `Cross-Origin-Opener-Policy: same-origin` : isole le contexte de navigation (protection
+#   contre certaines attaques inter-fenêtres/Spectre), sans effet de bord connu ici (pas de
+#   flux OAuth par fenêtre popup dans le MVP).
+# - `Permissions-Policy` : refuse aussi `usb`/`interest-cohort` (Topics API), en plus de
+#   `camera`/`microphone`/`geolocation`/`payment` déjà refusés.
+# - `X-Robots-Tag: noindex, nofollow` : app privée tant qu'elle n'est pas ouverte
+#   publiquement (docs/RELEASE.md §0) — voir aussi `public/robots.txt` (double protection,
+#   ce fichier ne couvre que les robots qui le respectent). À retirer à l'ouverture
+#   publique de l'app.
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' __SUPABASE_CONNECT_SRC__; manifest-src 'self'; worker-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()
+  Cross-Origin-Opener-Policy: same-origin
+  X-Frame-Options: DENY
+  X-Robots-Tag: noindex, nofollow
+
+# Fichiers construits avec un hash dans leur nom (`vite build`, dossier
+# `assets/`) : jamais réécrits sous le même nom, cache long et immuable.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Service worker et manifeste : jamais de cache long, pour que les mises à jour de
+# l'app (nouveau `sw.js` précaché) arrivent au prochain chargement (ADR-025 §0).
+/sw.js
+  Cache-Control: no-cache
+
+/manifest.webmanifest
+  Cache-Control: no-cache
+
+# Pas de règle `/index.html` : Cloudflare Pages redirige déjà `/index.html` vers `/` par
+# une redirection 308, donc une règle ciblant ce chemin exact ne s'applique jamais en
+# pratique (la coquille HTML est en réalité toujours servie via `/`, couverte par la règle
+# générique `/*` ci-dessus, elle-même sans `Cache-Control` explicite — comportement par
+# défaut de Pages pour le HTML : pas de cache long).

@@ -1,8 +1,7 @@
-import { formatInTimeZone } from 'date-fns-tz';
+import { getCachedFormatter, getLocalTimeParts } from './localTimeCache';
 
 const TRADING_DAY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const ROLLOVER_TIME_PATTERN = /^(\d{2}):(\d{2})(?::(\d{2}))?$/;
-const LOCAL_PARTS_PATTERN = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/;
 
 declare const tradingDayBrand: unique symbol;
 
@@ -40,11 +39,19 @@ export class InvalidTimezoneError extends Error {
  * `Intl.DateTimeFormat` lève une `RangeError` de façon synchrone à la
  * construction si le fuseau est inconnu (spec ECMA-402) — c'est le seul
  * moyen fiable de le valider sans table de fuseaux en dur.
+ *
+ * Perf : la construction est mémoïsée par fuseau ({@link getCachedFormatter},
+ * `packages/core/src/time/localTimeCache.ts`) — `tradingDayOf` est appelée
+ * une fois par trade dans les boucles d'agrégation (calendrier, heatmap...)
+ * pour un très petit nombre de fuseaux distincts (celui du compte). Un
+ * fuseau invalide n'est jamais mis en cache comme valide : la construction
+ * échoue à chaque appel (non mémoïsée en cas d'échec), donc cette fonction
+ * lève systématiquement, y compris au deuxième appel et suivants.
  * @throws {InvalidTimezoneError} si `timezone` n'est pas reconnu
  */
 function assertValidTimezone(timezone: string): void {
   try {
-    new Intl.DateTimeFormat('en-US', { timeZone: timezone });
+    getCachedFormatter(timezone);
   } catch {
     throw new InvalidTimezoneError(timezone);
   }
@@ -60,6 +67,40 @@ export function toTradingDay(value: string): TradingDay {
     throw new Error(`TradingDay invalide : attendu "YYYY-MM-DD", reçu ${JSON.stringify(value)}.`);
   }
   return value as TradingDay;
+}
+
+/** Composants calendaires d'un {@link TradingDay} — voir {@link tradingDayParts}. */
+export interface TradingDayParts {
+  readonly year: number;
+  readonly month: number; // 1-12
+  readonly day: number;
+}
+
+/**
+ * Découpe un {@link TradingDay} (`YYYY-MM-DD`) en ses composants calendaires
+ * `{ year, month, day }` (`month` 1-12). Pure arithmétique sur la chaîne, pas
+ * de fuseau à réappliquer (un `TradingDay` est déjà résolu, voir {@link tradingDayOf}).
+ *
+ * @param tradingDay jour de trading à décomposer
+ */
+export function tradingDayParts(tradingDay: TradingDay): TradingDayParts {
+  const [year = 0, month = 0, day = 0] = tradingDay.split('-').map(Number);
+  return { year, month, day };
+}
+
+/**
+ * Prédicat « `tradingDay` appartient au mois civil `year`/`month` » (Calendrier,
+ * ARCHITECTURE §5.5) — remplace le filtrage `isInMonth` fait à la main dans la
+ * couche web (`apps/web/src/data/calendar.ts`) par une fonction pure et testée
+ * de `packages/core`.
+ *
+ * @param tradingDay jour de trading à tester
+ * @param year année civile (ex. `2026`)
+ * @param month mois civil, 1-12
+ */
+export function isTradingDayInMonth(tradingDay: TradingDay, year: number, month: number): boolean {
+  const parts = tradingDayParts(tradingDay);
+  return parts.year === year && parts.month === month;
 }
 
 /** Nombre de secondes écoulées depuis minuit pour une heure `HH:mm[:ss]`. */
@@ -89,31 +130,28 @@ interface LocalDateTimeParts {
 /**
  * Décompose un instant UTC en date/heure civile dans `timezone`.
  *
- * Implémentation : {@link formatInTimeZone} (`date-fns-tz`) formate
- * directement `utc` dans `timezone` sans passer par un `Date` intermédiaire
- * dont on relirait les champs `getUTC*` — cette dernière approche est
- * fausse : elle consiste à décaler l'horodatage UTC d'un offset calculé
- * *pour cet instant*, puis à relire l'heure obtenue comme si c'était
- * l'heure locale, ce qui suppose que l'offset est constant entre l'instant
- * UTC et l'instant "décalé". Cette hypothèse casse pendant les |offset|
- * heures qui suivent chaque changement d'heure (le décalage recalculé à
- * l'instant décalé diffère de celui de l'instant d'origine). En formatant
- * directement l'instant UTC dans le fuseau cible, `formatInTimeZone`
- * n'exprime jamais cette hypothèse : le résultat est correct y compris
- * pendant les changements d'heure (voir les tests golden DST).
+ * Implémentation : {@link getLocalTimeParts} (`localTimeCache.ts`) formate
+ * directement `utc` dans `timezone` (via `Intl.DateTimeFormat#formatToParts`,
+ * la même primitive ECMA-402 qu'utilise `date-fns-tz` en interne, mémoïsée
+ * par fuseau) sans passer par un `Date` intermédiaire dont on relirait les
+ * champs `getUTC*` — cette dernière approche est fausse : elle consiste à
+ * décaler l'horodatage UTC d'un offset calculé *pour cet instant*, puis à
+ * relire l'heure obtenue comme si c'était l'heure locale, ce qui suppose que
+ * l'offset est constant entre l'instant UTC et l'instant "décalé". Cette
+ * hypothèse casse pendant les |offset| heures qui suivent chaque changement
+ * d'heure (le décalage recalculé à l'instant décalé diffère de celui de
+ * l'instant d'origine). En formatant directement l'instant UTC dans le
+ * fuseau cible, `formatToParts` n'exprime jamais cette hypothèse : le
+ * résultat est correct y compris pendant les changements d'heure (voir les
+ * tests golden DST).
  */
 function toLocalDateTimeParts(utc: Date, timezone: string): LocalDateTimeParts {
-  const formatted = formatInTimeZone(utc, timezone, 'yyyy-MM-dd HH:mm:ss');
-  const match = LOCAL_PARTS_PATTERN.exec(formatted);
-  if (!match) {
-    throw new Error(`Décomposition de l'horodatage local impossible (obtenu ${formatted}).`);
-  }
-  const [, year, month, day, hours, minutes, seconds] = match;
+  const { year, month, day, hour, minute, second } = getLocalTimeParts(utc, timezone);
   return {
-    year: Number(year),
-    month: Number(month),
-    day: Number(day),
-    secondsSinceMidnight: Number(hours) * 3600 + Number(minutes) * 60 + Number(seconds),
+    year,
+    month,
+    day,
+    secondsSinceMidnight: hour * 3600 + minute * 60 + second,
   };
 }
 

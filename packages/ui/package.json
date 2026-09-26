@@ -5,15 +5,68 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./tailwind-preset": "./tailwind-preset.cjs"
+    "./theme/preferencesStorage": "./src/theme/preferencesStorage.ts",
+    "./tailwind-preset": "./tailwind-preset.cjs",
+    "./tokens-data": "./src/tokens.data.cjs"
   },
   "scripts": {
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
+  "dependencies": {
+    "@repo/core": "workspace:*"
+  },
+  "peerDependencies": {
+    "@expo-google-fonts/inter": "*",
+    "@shopify/flash-list": "*",
+    "@shopify/react-native-skia": "*",
+    "expo-blur": "*",
+    "expo-font": "*",
+    "expo-haptics": "*",
+    "lucide-react-native": "*",
+    "react": "*",
+    "react-native": "*",
+    "react-native-svg": "*",
+    "recharts": "*",
+    "victory-native": "*",
+    "zustand": "*"
+  },
+  "peerDependenciesMeta": {
+    "@expo-google-fonts/inter": {
+      "optional": true
+    },
+    "@shopify/flash-list": {
+      "optional": true
+    },
+    "@shopify/react-native-skia": {
+      "optional": true
+    },
+    "expo-font": {
+      "optional": true
+    },
+    "expo-haptics": {
+      "optional": true
+    },
+    "lucide-react-native": {
+      "optional": true
+    },
+    "react-native-svg": {
+      "optional": true
+    },
+    "recharts": {
+      "optional": true
+    },
+    "victory-native": {
+      "optional": true
+    },
+    "expo-blur": {
+      "optional": true
+    }
+  },
   "devDependencies": {
     "@repo/config": "workspace:*",
-    "eslint-plugin-i18next": "^6.1.5"
+    "eslint-plugin-i18next": "^6.1.5",
+    "eslint-plugin-react-hooks": "^7.1.1"
   }
 }

@@ -8,6 +8,19 @@
   "compilerOptions": {
     "types": ["node"]
   },
-  "include": ["**/*.test.ts", "e2e/**/*.ts", "vitest.config.mts", "playwright.config.ts"],
+  // `nativewind-env.d.ts` (correctif M1-4) : jusqu'ici aucun `.test.ts` de ce package
+  // n'importait de type depuis `@repo/ui` — `formatDateRangeLabel.test.ts` (via
+  // `formatDateRangeLabel.ts`, qui importe `TradingDayRange`) est le premier, ce qui
+  // tire tout le graphe de `packages/ui` (barrels `export *`) dans ce programme `tsc`
+  // distinct (`include` propre, qui remplace celui de `tsconfig.json` plutôt que
+  // l'étendre) : sans cette déclaration ambiante, les classes `className` des
+  // composants RN de `@repo/ui` ne typent plus (augmentation de types NativeWind).
+  "include": [
+    "**/*.test.ts",
+    "e2e/**/*.ts",
+    "vitest.config.mts",
+    "playwright.config.ts",
+    "nativewind-env.d.ts"
+  ],
   "exclude": ["node_modules", "dist", "ios", "android"]
 }
